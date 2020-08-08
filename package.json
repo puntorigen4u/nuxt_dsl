@@ -36,11 +36,9 @@
     "test_dsl": "npm run dev && node test/pablo.js test/ejecutivos.dsl"
   },
   "dependencies": {
-    "ajv": "^6.12.3",
     "babel-runtime": "^6.26.0",
     "concepto": "github:puntorigen/concepto",
     "dsl_parser": "github:puntorigen/dsl_parser",
-    "highwayhash": "^3.0.0",
     "open_console": "github:puntorigen/console"
   },
   "devDependencies": {
