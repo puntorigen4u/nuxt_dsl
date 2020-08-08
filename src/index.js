@@ -53,7 +53,6 @@ export default class vue_dsl extends concepto {
 				'pages': 		'client/pages/',
 				'plugins': 		'client/plugins/',
 				'static': 		'client/static/',
-				'store': 		'client/store/',
 				'middleware': 	'client/middleware/',
 				'server': 		'client/server/',
 				'assets': 		'client/assets/',
@@ -376,7 +375,7 @@ export default class vue_dsl extends concepto {
 							resp[key][lang] = {
 								original: i18n_node.image,
 								css: '~assets'+sep+path.basename(i18n_node.image),
-								css: '~'+sep+'assets'+sep+path.basename(i18n_node.image)
+								js: '~'+sep+'assets'+sep+path.basename(i18n_node.image)
 							};
 						}
 					}
