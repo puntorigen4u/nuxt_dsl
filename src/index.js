@@ -1,4 +1,4 @@
-import concepto from 'concepto'
+const concepto = require('concepto');
 
 /**
 * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
@@ -28,6 +28,7 @@ export default class vue_dsl extends concepto {
 		// define and assign commands
 		await this.addCommands(internal_commands);
 		//this.debug('x_commands',this.x_commands);
+		this.x_crypto_key=require('crypto').randomBytes(32); // for hash helper method
 		// init vue
 		// set x_state defaults
 		this.x_state = { plugins:{} };
@@ -394,6 +395,23 @@ export default class vue_dsl extends concepto {
 		}
 		// create id if not given
 		if (!resp.id) resp.id = 'com.puntorigen.'+resp.name;
+		return resp;
+	}
+
+	// hash helper method
+	hash(thing) {
+		// returns a hash of the given object, using google highwayhash (fastest)
+		//this.debug_time({ id:`hash ${thing}` });
+		const highwayhash = require('highwayhash');
+		let input;
+		if (typeof thing === 'string') {
+			input = Buffer.from(thing);
+		} else if (typeof thing === 'object') {
+			// serialize object into buffer first
+			input = Buffer.from(JSON.stringify(thing));
+		}
+		let resp = highwayhash.asHexString(this.x_crypto_key, input);
+		//this.debug_timeEnd({ id:`hash ${thing}` });;
 		return resp;
 	}
 }

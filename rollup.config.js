@@ -1,15 +1,11 @@
-import nodeResolve from 'rollup-plugin-node-resolve';
-import babel       from 'rollup-plugin-babel';
-import replace     from 'rollup-plugin-replace';
-import commonjs    from 'rollup-plugin-commonjs';
-import uglify      from 'rollup-plugin-uglify';
-
-const env = process.env.NODE_ENV;
+import babel            from '@rollup/plugin-babel';
+import { nodeResolve }  from '@rollup/plugin-node-resolve';
 
 const config = {
   input: 'src/index.js',
   external: [],
   output: {
+    file: 'lib/index.js',
     format: 'umd',
     name: 'vue_dsl',
     sourcemap: false
@@ -18,27 +14,18 @@ const config = {
   plugins: [
     nodeResolve(),
     babel({
+      presets: [
+        ['@babel/preset-env',
+        {
+          targets: {
+            esmodules: true,
+          },
+        }]
+      ],
       exclude: '**/node_modules/**',
-      runtimeHelpers: true,
-    }),
-    replace({
-      'process.env.NODE_ENV': JSON.stringify(env),
-    }),
-    commonjs(),
-  ],
+      babelHelpers: 'bundled',
+    })
+  ]
 };
-
-if (env === 'production') {
-  config.plugins.push(
-    uglify({
-      compress: {
-        pure_getters: true,
-        unsafe: true,
-        unsafe_comps: true,
-        warnings: false,
-      },
-    }),
-  );
-}
 
 export default config;

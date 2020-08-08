@@ -1,5 +1,5 @@
 export default async function(context) {
-	let dad = context, state = context.x_state;
+	let state = context.x_state;
 	let null_template = {	hint:'Allowed node type that must be ommited',
 							func:async function(node) {
 								return context.reply_template({ hasChildren:false });
