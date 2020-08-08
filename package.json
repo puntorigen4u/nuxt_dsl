@@ -24,12 +24,16 @@
     "dev": "cross-env NODE_ENV=development rollup -c",
     "build": "cross-env NODE_ENV=production rollup -c && npm run docs",
     "docs": "jsdoc2md -t README.hbs src/*.js > README.md",
-    "test_dsl": "npm run dev && node test/pablo.js test/ejecutivos.dsl"
+    "test_dsl": "npm run dev && node test/pablo.js test/spotify/vue.dsl",
+    "test_dsle": "npm run dev && node test/pablo.js test/ejecutivos/vue.dsl"
   },
   "dependencies": {
     "concepto": "github:puntorigen/concepto",
     "dsl_parser": "github:puntorigen/dsl_parser",
-    "open_console": "github:puntorigen/console"
+    "highwayhash": "^3.0.0",
+    "is-port-reachable": "^3.0.0",
+    "open_console": "github:puntorigen/console",
+    "recursive-copy": "^2.0.10"
   },
   "devDependencies": {
     "@babel/core": "^7.11.1",

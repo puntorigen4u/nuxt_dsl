@@ -24,14 +24,13 @@ export default class vue_dsl extends concepto {
 
 	//Called after init method finishes
 	async onInit() {
-		this.x_console.outT({ message:`hello from vue`, color:`yellow` });
 		// define and assign commands
 		await this.addCommands(internal_commands);
 		//this.debug('x_commands',this.x_commands);
 		this.x_crypto_key=require('crypto').randomBytes(32); // for hash helper method
 		// init vue
 		// set x_state defaults
-		this.x_state = { plugins:{} };
+		this.x_state = { plugins:{}, npm:{}, dev_npm:{}, envs:{} };
 		this.x_state.config_node = await this._readConfig();
 		//this.debug('config_node',this.x_state.config_node);
 		this.x_state.central_config = await this._readCentralConfig();
@@ -63,12 +62,132 @@ export default class vue_dsl extends concepto {
 				'lang': 		'client/lang/'
 			});
 		}
-		this.debug('app dirs',this.x_state.dirs);
 		// read modelos node (virtual DB)
 		this.x_state.models = await this._readModelos(); //alias: database tables
-		//this.debug('models',this.x_state.models);
-		//
-		this.debug('plugins info',this.x_state.plugins);
+		//is local server running? if so, don't re-launch it
+		this.x_state.nuxt_is_running = await this._isLocalServerRunning();
+		this.debug('is Server Running: '+this.x_state.nuxt_is_running);
+		// init terminal diagnostics (not needed here)
+		// copy sub-directories if defined in node 'config.copiar' key
+		if (this.x_state.config_node.copiar) {
+			let path = require('path'), basepath = path.dirname(path.resolve(this.x_flags.dsl));
+			let copy = require('recursive-copy');
+			this.x_console.outT({ message:`copying config:copiar directories to 'static' target folder`, color:`yellow` });
+			await Object.keys(this.x_state.config_node.copiar).map(async function(key) {
+				let abs = path.join(basepath,key);
+				try {
+					await copy(abs,this.x_state.dirs.static);
+				} catch(err_copy) {
+					if (err_copy.code!='EEXIST') this.x_console.outT({ message:`error: copying directory ${abs}`, data:err_copy });
+				}
+				//console.log('copying ',{ from:abs, to:this.x_state.dirs.static });
+			}.bind(this));
+			this.x_console.outT({ message:`copying config:copiar directories ... READY`, color:`yellow` });
+		}
+		// *********************************************
+		// install requested modules within config node
+		// *********************************************
+		// NUXT:ICON
+		if (this.x_state.config_node['nuxt:icon']) {
+			// add @nuxtjs/pwa module to app
+			this.x_state.npm['@nuxtjs/pwa']='*';
+			// copy icon to static dir
+			let path = require('path'), basepath = path.dirname(path.resolve(this.x_flags.dsl));
+			let source = path.join(basepath,this.x_state.config_node['nuxt:icon']);
+			let target = this.x_state.dirs.static+'icon.png';
+			this.debug({ message:`NUXT ICON dump (copy icon)`, color:`yellow`, data:source });
+			let fs = require('fs').promises;
+			try {
+				await fs.copyFile(source,target);
+			} catch(err_fs) {
+				this.x_console.outT({ message:`error: copying NUXT icon`, data:err_fs });
+			}
+		}
+		// GOOGLE:ADSENSE
+		if (this.x_state.config_node['google:adsense']) {
+			this.x_state.npm['vue-google-adsense']='*';
+			this.x_state.npm['vue-script2']='*';
+		}
+		// GOOGLE:ANALYTICS
+		if (this.x_state.config_node['google:analytics']) {
+			this.x_state.npm['@nuxtjs/google-gtag']='*';
+		}
+		// DEFAULT NPM MODULES & PLUGINS if dsl is not 'componente' type
+		if (!this.x_state.central_config.componente) {
+			this.x_console.outT({ message:`vue initialized() ->` });
+			this.x_state.plugins['vue-moment'] = {
+				global:true,
+				npm: { 'vue-moment':'*' },
+				extra_imports: ['moment'],
+				requires: ['moment/locale/es'],
+				config: '{ moment }'
+			};
+			// axios
+			this.x_state.npm['@nuxtjs/axios']='*';
+			if (this.x_state.central_config.nuxt=='latest') {
+				this.x_state.npm['nuxt']='*';
+			} else {
+				this.x_state.npm['nuxt']='2.11.0'; // default for compatibility issues with existing dsl maps	
+			}
+			// express things
+			this.x_state.npm['express']='*';
+			this.x_state.npm['serverless-http']='*';
+			this.x_state.npm['serverless-apigw-binary']='*';
+			this.x_state.npm['underscore']='*';
+			// dev tools
+			this.x_state.dev_npm['serverless-prune-plugin']='*';
+			this.x_state.dev_npm['serverless-offline']='*';
+			this.x_state.dev_npm['vue-beautify-loader']='*';
+			//
+			if (this.x_state.central_config.dominio) {
+				this.x_state.dev_npm['serverless-domain-manager']='*';
+			}
+		} else {
+			// If DSL mode 'component(e)' @TODO this needs a revision (converting directly from CFC)
+			this.x_console.outT({ message:`vue initialized() -> as component/plugin` });
+			this.x_state.npm['global']='^4.4.0';
+			this.x_state.npm['poi']='9';
+			this.x_state.npm['underscore']='*';
+			this.x_state.dev_npm['@vue/test-utils']='^1.0.0-beta.12';
+			this.x_state.dev_npm['babel-core']='^6.26.0';
+			this.x_state.dev_npm['babel-preset-env']='^1.6.1';
+			this.x_state.dev_npm['jest']='^22.4.0';
+			this.x_state.dev_npm['jest-serializer-vue']='^0.3.0';
+			this.x_state.dev_npm['vue']='*';
+			this.x_state.dev_npm['vue-jest']='*';
+			this.x_state.dev_npm['vue-server-renderer']='*';
+			this.x_state.dev_npm['vue-template-compiler']='*';
+		}
+		// serialize 'secret' config keys as json files in app secrets sub-directory (if any)
+		// extract 'secret's from config keys; this is not needed in VUE DSL, but in EB DSL
+		// commented for future reference
+		/*
+		this.x_state.secrets={}; //await _extractSecrets(config_node)
+		for (let key in this.x_state.config_node) {
+			if (this.x_state.config_node[key][':secret']) {
+				let new_obj = {...this.x_state.config_node[key]};
+				delete new_obj[':secret']
+				if (new_obj[':link']) delete new_obj[':link']
+				// set object keys to uppercase
+				this.x_state.secrets[key]={};
+				let obj_keys = Object.keys(new_obj);
+				obj_keys.map(function(x) {
+					this.x_state.secrets[key][x.toUpperCase()] = new_obj[x];
+				}.bind(this));
+			}
+		}*/
+		// set config keys as ENV accesible variables (ex. $config.childnode.attributename)
+		for (let key in this.x_state.config_node) {
+			// omit special config 'reserved' node keys
+			if (['aurora','vpc','aws'].includes(key) && typeof this.x_state.config_node[key] === 'object') {
+				Object.keys(this.x_state.config_node[key]).map(function(attr) {
+					this.x_state.envs[`config.${key}.${attr}`]=`process.env.${(key+'_'+attr).toUpperCase()}`;
+				}.bind(this));
+			}
+		}
+
+		// show this.x_state contents
+		//this.debug('x_state says',this.x_state);
 	}
 
 	//Called after parsing nodes
@@ -125,6 +244,15 @@ export default class vue_dsl extends concepto {
 	// **************************
 	// 	Helper Methods
 	// **************************
+
+	/*
+	* Returns true if a local server is running on the DSL defined port
+	*/
+	async _isLocalServerRunning() {
+		let is_reachable = require('is-port-reachable');
+		let resp = await is_reachable(this.x_state.central_config.port);
+		return resp;
+	}
 
 	/*
 	* Reads the node called modelos and creates tables definitions and managing code (alias:database).
@@ -297,6 +425,7 @@ export default class vue_dsl extends concepto {
 			'keep-warm': true,
 			port: 3000,
 			git: true,
+			nuxt: '2.11.0',
 			idiomas: 'es',
 			':cache': this.x_config.cache,
 			':mode': 'spa',
@@ -329,7 +458,7 @@ export default class vue_dsl extends concepto {
 	*/
 	async _readConfig() {
 		this.debug('_readConfig');
-		let resp = { id:'', meta:[], seo:{} }, config_node = {};
+		let resp = { id:'', meta:[], seo:{}, secrets:{} }, config_node = {};
 		let search = await this.dsl_parser.getNodes({ text:'config', level:'2', icon:'desktop_new', recurse:true });
 		//this.debug({ message:'search says',data:search, prefix:'_readConfig,dim' });
 		//
@@ -368,12 +497,18 @@ export default class vue_dsl extends concepto {
 				} else {
 					// apply keys as config keys (standard config node by content types)
 					if (key.attributes.length>0) {
-						// @TODO: test
+						// prepare config key
+						let config_key = key.text.toLowerCase().replace(/ /g,'');
 						let values = {};
 						key.attributes.map(function(x) {
 							values = {...values,...x};
-						});
-						resp[key.text.toLowerCase().replace(/ /g,'')] = values;
+						});						
+						resp[config_key] = values;
+						// mark secret status true if contains 'password' icon
+						if (key.icons.includes('password')) resp[config_key][':secret'] = true;
+						// add link attribute if defined
+						if (key.link!='') resp[config_key][':link'] = key.link;
+
 					} else if (key.nodes.length>0) {
 						resp[key.text] = key.nodes[0].text;
 					} else if (key.link!='') {
