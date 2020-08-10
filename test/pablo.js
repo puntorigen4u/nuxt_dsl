@@ -4,9 +4,16 @@ var myArgs = process.argv.slice(2);
 (async () => {
     // testing code here
     let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
-    let base = new vue(file,{ debug:false });
-    await base.addCommands(require('./more_commands.js'));
+    let base = new vue(file,{ debug:true });
     await base.init();
+    // test node ID_1679802330 (should match def_store)
+    //await base.addCommands(require('./more_commands.js'));
+    await base.process(); //aka writer()
+    /*let nodetest = await base.dsl_parser.getNode({ id: 'ID_1679802330', recurse:false });
+    console.log('ID_1679802330 info',nodetest);
+    let test = await base.findCommand(nodetest,false);
+    console.log('ID_1679802330 findCommand (should be def_store)',test);
+    */
     /*
     nodetest = await base.dsl_parser.getNode({ id: 'ID_861168397' }); // ID_789178185=imagen
     console.log('nodetest dice',nodetest);

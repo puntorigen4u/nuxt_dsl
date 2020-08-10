@@ -31,6 +31,7 @@
     "concepto": "github:puntorigen/concepto",
     "dsl_parser": "github:puntorigen/dsl_parser",
     "highwayhash": "^3.0.0",
+    "ini": "^1.3.5",
     "is-port-reachable": "^3.0.0",
     "open_console": "github:puntorigen/console",
     "recursive-copy": "^2.0.10"

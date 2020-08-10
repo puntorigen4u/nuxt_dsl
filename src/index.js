@@ -1,5 +1,5 @@
-const concepto = require('concepto');
-
+//const concepto = require('concepto');
+import concepto from '../../concepto/src/index'
 /**
 * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
 * @name 	vue_dsl
@@ -30,7 +30,14 @@ export default class vue_dsl extends concepto {
 		this.x_crypto_key=require('crypto').randomBytes(32); // for hash helper method
 		// init vue
 		// set x_state defaults
-		this.x_state = { plugins:{}, npm:{}, dev_npm:{}, envs:{} };
+		this.x_state = { plugins:{}, npm:{}, dev_npm:{}, envs:{}, 
+			funciones:{},
+			proxies:{},
+			pages:{},
+			current_func:'',
+			current_folder:'',
+			current_proxy:''
+		};
 		this.x_state.config_node = await this._readConfig();
 		//this.debug('config_node',this.x_state.config_node);
 		this.x_state.central_config = await this._readCentralConfig();
@@ -223,6 +230,22 @@ export default class vue_dsl extends concepto {
 
 	//Defines preparation steps before processing nodes.
 	async onPrepare() {
+		if (!this.x_state.central_config.componente) {
+			let ini = require('ini'), path = require('path'), fs = require('fs').promises;
+			if (this.x_state.config_node.aws) {
+				// if DSL defines temporal AWS credentials for this app, make backup, replace defaults and recover them later
+			} else {
+				// if DSL doesnt define AWS credentials, read them from system if they exist
+				let aws_ini_file = path.join(os.homedir(),'/.aws/')+'credentials';
+				try {
+					this.debug('trying to read AWS credentials:',aws_ini_file);
+					let aws_ini = fs.readFile(aws_ini_file,'utf-8');
+					this.debug('AWS credentials:',aws_ini);
+
+				} catch(err_reading) {
+				}
+			}
+		}
 	}
 
 	//Executed when compiler founds an error processing nodes.
@@ -239,10 +262,120 @@ export default class vue_dsl extends concepto {
 	}
 	*/
 
+	// *****************************************************************************
+	// ADVANCED PROCESSING METHODS (@TODO move to Concepto Class after testing it)
+	// *****************************************************************************
+	
+	/**
+	* This method traverses the dsl parsed tree, finds/execute x_commands and generated code as files.
+	* @return 	{Object}
+	*/
+	async process() {
+		if (!this.x_flags.init_ok) throw new Error('error! the first called method must be init()!');
+		this.debug_time({ id:'process/writer' }); let tmp = {}, resp = { nodes:[] };
+		// read nodes
+		this.x_console.outT({ prefix:'process,yellow', message:`parsing raw nodes ..`, color:'cyan' });
+		let x_dsl_nodes = await this.dsl_parser.getNodes({ level:2, nodes_raw:true });	
+		// 
+		for (let level2 of x_dsl_nodes) {
+			let node = { 
+				id: level2.id,
+				name: await this.onDefineNodeName(level2),
+				file: await this.onDefineFilename(level2),
+				init: '',
+				title: await this.onDefineTitle(level2),
+				attributes: level2.attributes,
+				code: '',
+				open: '',
+				close: '',
+				x_ids: [],
+				subnodes: level2.nodes_raw.length
+			};
+			//this.debug('node',node);
+			this.x_console.outT({ prefix:'process,yellow', message:`processing node ${node.title} ..`, color:'yellow' });
+			// find x_command and append .open code to node.code, and then .close to node.code at the end.
+			let main = await this.process_node({ node:level2,add_main_keys:node });
+			resp.nodes.push(main);
+			/*try {
+				let main = await this.findValidCommand(level2);
+				if (main) {
+					node.init += main.exec.init;
+					node.code += main.exec.open;
+				}
+			}
+			if (main && main.hasChildren) {
+				this.debug('level2 (main) found match',main);
+				for (let level3 of level2.nodes_raw) {
+					let child = await this.process_node(level3);
+					if (!child.error && child.hasChildren) {
+						for (let level4 of child.nodes_raw) {
+							let child = await this.process_node(level4);
+
+						}
+					}
+					//let search = this.findValidCommand()
+				}
+			}*/
+		}
+		this.debug_timeEnd({ id:'process/writer' });
+		this.debug('process resp says:',resp);
+		return resp;
+	}
+
 
 	// **************************
 	// 	Helper Methods
 	// **************************
+
+	// improved in my imagination ...
+	async process_node({ node,add_main_keys,custom_state={} }={}) {
+		let resp={ state:custom_state };
+		if (typeof add_main_keys === 'object') {
+			resp={...resp,...add_main_keys};
+			resp.children=[];
+		}
+		try {
+			let test = await this.findValidCommand(node,false,custom_state);
+			console.log(`test para node: text:${node.text}`,test);
+			if (test && test.exec) {
+				resp = {...resp,...test.exec};
+				resp.error = false;
+				if (typeof add_main_keys !== 'object') resp.init += resp.init;
+				resp.code += resp.open;
+				if (resp.hasChildren) {
+					let sub_nodes = await node.getNodes();
+					for (let e_child of sub_nodes) {
+						if ('id' in e_child) {
+							let node_test = await this.dsl_parser.getNode({ id:e_child.id, nodes_raw:true, recurse:false });
+							if (node_test) {
+								let new_state = {...custom_state};
+								if (test.state) new_state = test.state; // inherint state from last command if defined
+								let child = await this.process_node({ node:node_test, custom_state:new_state });
+								if (child && child.exec && !child.error && resp.children) {
+									resp.children.push(child);
+								} else if (child.error) {
+									// break current loop
+									break;
+								}
+							}
+						}
+					}
+				}
+				resp.code += resp.close;
+			} else {
+				this.x_console.outT({ message:'error: FATAL, no method found for node processing.', data:{ id:node.id, level:node.level, text:node.text} });
+				await this.onErrors([`No method found for given node id ${node.id}, text: ${node.text} `]);
+				resp.valid=false, resp.hasChildren=false, resp.error=true;
+			}
+		} catch(err) {
+			// @TODO currently findValidCommand doesn't throw an error when an error is found.
+			this.x_console.outT({ message:`error: Executing func x_command for node: id:${node.id}, level ${node.level}, text: ${node.text}.`, data:{ id:node.id, level:node.level, text:node.text, error:err }});
+			await this.onErrors([`Error executing func for x_command for node id ${node.id}, text: ${node.text} `]);
+			resp.valid=false, resp.hasChildren=false, resp.error=true;
+		}
+		// return
+		return resp;
+	}
 
 	/*
 	* Returns true if a local server is running on the DSL defined port
@@ -458,7 +591,7 @@ export default class vue_dsl extends concepto {
 	async _readConfig() {
 		this.debug('_readConfig');
 		let resp = { id:'', meta:[], seo:{}, secrets:{} }, config_node = {};
-		let search = await this.dsl_parser.getNodes({ text:'config', level:'2', icon:'desktop_new', recurse:true });
+		let search = await this.dsl_parser.getNodes({ text:'config', level:2, icon:'desktop_new', recurse:true });
 		//this.debug({ message:'search says',data:search, prefix:'_readConfig,dim' });
 		//
 		if (search.length>0) {
@@ -532,6 +665,16 @@ export default class vue_dsl extends concepto {
 		return resp;
 	}
 
+	async getParentNodes(id=this.throwIfMissing('id')) {
+		let parents = await this.dsl_parser.getParentNodesIDs({ id, array:true });
+		let resp = [];
+		for (let parent_id of parents) {
+			let node = await this.dsl_parser.getNode({ id:parent_id, recurse:false });
+			let command = await this.findValidCommand(node);
+			if (command) resp.push(command);
+		}
+		return resp;
+	}
 	// hash helper method
 	hash(thing) {
 		// returns a hash of the given object, using google highwayhash (fastest)
