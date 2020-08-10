@@ -1,6 +1,6 @@
 {
   "name": "vue_dsl",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -24,7 +24,8 @@
     "dev": "cross-env NODE_ENV=development rollup -c",
     "build": "cross-env NODE_ENV=production rollup -c && npm run docs",
     "docs": "jsdoc2md -t README.hbs src/*.js > README.md",
-    "test_dsl": "npm run dev && node test/pablo.js test/spotify/vue.dsl",
+    "test_dsl": "npm run dev && node test/pablo.js test/testchico/vue.dsl",
+    "test_dsls": "npm run dev && node test/pablo.js test/spotify/vue.dsl",
     "test_dsle": "npm run dev && node test/pablo.js test/ejecutivos/vue.dsl"
   },
   "dependencies": {

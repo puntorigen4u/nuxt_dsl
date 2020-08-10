@@ -1,5 +1,5 @@
-//const concepto = require('concepto');
-import concepto from '../../concepto/src/index'
+const concepto = require('concepto');
+//import concepto from '../../concepto/src/index'
 /**
 * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
 * @name 	vue_dsl
@@ -36,7 +36,8 @@ export default class vue_dsl extends concepto {
 			pages:{},
 			current_func:'',
 			current_folder:'',
-			current_proxy:''
+			current_proxy:'',
+			strings_i18n: {}
 		};
 		this.x_state.config_node = await this._readConfig();
 		//this.debug('config_node',this.x_state.config_node);
@@ -197,8 +198,8 @@ export default class vue_dsl extends concepto {
 	}
 
 	//Called after parsing nodes
-	async onAfterWritten(processedNodes) {
-		return processedNodes;
+	async onAfterProcess(processedNode) {
+		return processedNode;
 	}
 
 	//Called for defining the title of class/page by testing node.
@@ -223,9 +224,9 @@ export default class vue_dsl extends concepto {
 		return node.text.replace(' ','_');
 	}
 
-	//Defines template for code given the processedNodes of writer()
-	async onCompleteCodeTemplate(processedNodes) {
-		return processedNodes;
+	//Defines template for code given the processedNode of process() - for each level2 node
+	async onCompleteCodeTemplate(processedNode) {
+		return processedNode;
 	}
 
 	//Defines preparation steps before processing nodes.
@@ -266,116 +267,10 @@ export default class vue_dsl extends concepto {
 	// ADVANCED PROCESSING METHODS (@TODO move to Concepto Class after testing it)
 	// *****************************************************************************
 	
-	/**
-	* This method traverses the dsl parsed tree, finds/execute x_commands and generated code as files.
-	* @return 	{Object}
-	*/
-	async process() {
-		if (!this.x_flags.init_ok) throw new Error('error! the first called method must be init()!');
-		this.debug_time({ id:'process/writer' }); let tmp = {}, resp = { nodes:[] };
-		// read nodes
-		this.x_console.outT({ prefix:'process,yellow', message:`parsing raw nodes ..`, color:'cyan' });
-		let x_dsl_nodes = await this.dsl_parser.getNodes({ level:2, nodes_raw:true });	
-		// 
-		for (let level2 of x_dsl_nodes) {
-			let node = { 
-				id: level2.id,
-				name: await this.onDefineNodeName(level2),
-				file: await this.onDefineFilename(level2),
-				init: '',
-				title: await this.onDefineTitle(level2),
-				attributes: level2.attributes,
-				code: '',
-				open: '',
-				close: '',
-				x_ids: [],
-				subnodes: level2.nodes_raw.length
-			};
-			//this.debug('node',node);
-			this.x_console.outT({ prefix:'process,yellow', message:`processing node ${node.title} ..`, color:'yellow' });
-			// find x_command and append .open code to node.code, and then .close to node.code at the end.
-			let main = await this.process_node({ node:level2,add_main_keys:node });
-			resp.nodes.push(main);
-			/*try {
-				let main = await this.findValidCommand(level2);
-				if (main) {
-					node.init += main.exec.init;
-					node.code += main.exec.open;
-				}
-			}
-			if (main && main.hasChildren) {
-				this.debug('level2 (main) found match',main);
-				for (let level3 of level2.nodes_raw) {
-					let child = await this.process_node(level3);
-					if (!child.error && child.hasChildren) {
-						for (let level4 of child.nodes_raw) {
-							let child = await this.process_node(level4);
-
-						}
-					}
-					//let search = this.findValidCommand()
-				}
-			}*/
-		}
-		this.debug_timeEnd({ id:'process/writer' });
-		this.debug('process resp says:',resp);
-		return resp;
-	}
-
-
-	// **************************
-	// 	Helper Methods
-	// **************************
-
-	// improved in my imagination ...
-	async process_node({ node,add_main_keys,custom_state={} }={}) {
-		let resp={ state:custom_state };
-		if (typeof add_main_keys === 'object') {
-			resp={...resp,...add_main_keys};
-			resp.children=[];
-		}
-		try {
-			let test = await this.findValidCommand(node,false,custom_state);
-			console.log(`test para node: text:${node.text}`,test);
-			if (test && test.exec) {
-				resp = {...resp,...test.exec};
-				resp.error = false;
-				if (typeof add_main_keys !== 'object') resp.init += resp.init;
-				resp.code += resp.open;
-				if (resp.hasChildren) {
-					let sub_nodes = await node.getNodes();
-					for (let e_child of sub_nodes) {
-						if ('id' in e_child) {
-							let node_test = await this.dsl_parser.getNode({ id:e_child.id, nodes_raw:true, recurse:false });
-							if (node_test) {
-								let new_state = {...custom_state};
-								if (test.state) new_state = test.state; // inherint state from last command if defined
-								let child = await this.process_node({ node:node_test, custom_state:new_state });
-								if (child && child.exec && !child.error && resp.children) {
-									resp.children.push(child);
-								} else if (child.error) {
-									// break current loop
-									break;
-								}
-							}
-						}
-					}
-				}
-				resp.code += resp.close;
-			} else {
-				this.x_console.outT({ message:'error: FATAL, no method found for node processing.', data:{ id:node.id, level:node.level, text:node.text} });
-				await this.onErrors([`No method found for given node id ${node.id}, text: ${node.text} `]);
-				resp.valid=false, resp.hasChildren=false, resp.error=true;
-			}
-		} catch(err) {
-			// @TODO currently findValidCommand doesn't throw an error when an error is found.
-			this.x_console.outT({ message:`error: Executing func x_command for node: id:${node.id}, level ${node.level}, text: ${node.text}.`, data:{ id:node.id, level:node.level, text:node.text, error:err }});
-			await this.onErrors([`Error executing func for x_command for node id ${node.id}, text: ${node.text} `]);
-			resp.valid=false, resp.hasChildren=false, resp.error=true;
-		}
-		// return
-		return resp;
-	}
+	// 
+	// This method traverses the dsl parsed tree, finds/execute x_commands and generated code as files.
+	// @return 	{Object}
+	// async process() {}
 
 	/*
 	* Returns true if a local server is running on the DSL defined port
@@ -675,6 +570,66 @@ export default class vue_dsl extends concepto {
 		}
 		return resp;
 	}
+
+	//gets the asset code for a given string like: assets:assetname
+	getAsset(text=this.throwIfMissing('text'),type='js') {
+		//this.x_state.assets
+		let resp=text, type_o = text.replaceAll('jsfunc','js').toLowerCase();
+		if (resp.toLowerCase().indexOf('assets:')!=-1) {
+			if (resp in this.x_state.assets) {
+				if (this.x_state.central_config.idiomas.indexOf(',')!=-1 && this.x_state.assets[resp].i18n==true) {
+					let first_key = this.x_state.assets[resp].i18n_keys.split(',')[0];
+					resp = this.x_state.assets[resp][first_key][type_o];
+					if (type.toLowerCase()=='js') {
+						resp = resp.replaceAll(`/${first_key}/`,`/' + $i18n.locale + '/`);
+						resp = `require('${resp}')`;
+					} else if (type.toLowerCase()=='jsfunc') {
+						resp = resp.replaceAll(`/${first_key}/`,`/' + this.$i18n.locale + '/`);
+						resp = `require('${resp}')`;
+					}
+
+				} else if (resp in this.x_state.assets && type_o in this.x_state.assets[resp]) {
+					resp = this.x_state.assets[resp][type_o];
+					if (type.toLowerCase().indexOf('js')!=-1) {
+						resp = `require('${resp}')`;
+					}
+
+				} else {
+					// throw error: invalid type of asset (valid values: css,js - given: ${type})
+				}
+			}
+		}
+		return resp;
+	}
+
+	//tag constructor helper
+	tagParams(tag='',params={}, selfclose=false) {
+		let t_params={...params}, resp='';
+		if ('aos' in params) {
+			let aos_p = params['aos'].split(',');
+			if (aos_p.length==3) {
+				t_params['data-aos']=aos_p[0]; 
+				t_params['data-aos-duration']=aos_p[1];
+				t_params['data-aos-delay']=aos_p[2];
+			} else {
+				t_params['data-aos']=aos_p[0];
+				t_params['data-aos-duration']=aos_p[1];
+			}
+			delete t_params['aos'];
+		}
+		let x_params = this.struct2params(t_params);
+		if (x_params!='') {
+			resp=`<${tag} ${x_params}`;
+			if (selfclose==true) resp+='/';
+			resp+='>';
+		} else {
+			resp=`<${tag}`;
+			if (selfclose==true) resp+='/';
+			resp+='>';
+		}
+		return resp;
+	};
+
 	// hash helper method
 	hash(thing) {
 		// returns a hash of the given object, using google highwayhash (fastest)
@@ -691,23 +646,53 @@ export default class vue_dsl extends concepto {
 		//this.debug_timeEnd({ id:`hash ${thing}` });;
 		return resp;
 	}
-}
 
-
-// private methods
-//sets/creates the same value to all keys in an object
-function setObjectKeys(obj,value) {
-	let resp=obj;
-	if (typeof resp === 'string') {
-		resp = {}
-		let keys=obj.split(',');
-		for (let i in keys) {
-			resp[keys[i]]=value;
-		}
-	} else {
-		for (let i in resp) {
-			resp[i]=value;
+	/**
+	* Helper method for measuring (start) time in ms from this method until debug_timeEnd() method and show it in the console.
+	* @param 	{string}		id		- id key (which can also have spaces and/or symbols) with a unique id to identify the stopwatch.
+	*/
+	debug_time() {
+		// instead of marking and showing time, we want in vue to build a time table and show it with another method
+		if (arguments.length>0) {
+			let keys = {...arguments[0]};
+			if (typeof keys.id !== 'undefined' && keys.id.indexOf('def_')!=-1) { //&& keys.id.indexOf('_x')!=-1
+				let filter_key = keys.id.split(' ')[0];
+				if (typeof this.x_time_stats.times[filter_key] === 'undefined') {
+					this.x_time_stats.times[filter_key] = new Date();
+					this.x_time_stats.tables[filter_key] = { command:filter_key, calls:0, average_call:0, total_ms:0 };
+				}
+			} else if (this.x_config.debug) {
+				this.x_console.time({...arguments[0]});
+			}
 		}
 	}
-	return resp;
+
+	/**
+	* Helper method for measuring (end) time in ms from the call of debug_time() method.
+	* @param 	{string}		id		- id key used in the call for debug_time() method.
+	*/
+	debug_timeEnd() {
+		if (arguments.length>0) { 
+			let keys = {...arguments[0]}, filter_key=''; // && keys.id.indexOf('_x')!=-1
+			if (typeof keys.id !== 'undefined') filter_key = keys.id.split(' ')[0];
+			if (typeof keys.id !== 'undefined' && keys.id.indexOf('def_')!=-1 && filter_key in this.x_time_stats.times) {
+				//if (!this.x_time_stats.tables[keys.id]) this.x_time_stats.tables[keys.id] = {};
+				if (typeof this.x_time_stats.tables[filter_key] !== 'undefined') {
+					let timePassed = new Date().getTime() - this.x_time_stats.times[filter_key].getTime();
+					this.x_time_stats.tables[filter_key].calls += 1;
+					this.x_time_stats.tables[filter_key].total_ms = timePassed;
+					this.x_time_stats.tables[filter_key].average_call = Math.round(this.x_time_stats.tables[filter_key].total_ms/this.x_time_stats.tables[filter_key].calls);
+				}
+			} else if (this.x_config.debug) {
+				this.x_console.timeEnd({...{ color:'dim',prefix:'debug,dim' },...arguments[0]});
+			}
+		}
+	}
+
+	debug_table(title) {
+		// build a table with x_time_stats and show it on the console
+		let table = [];
+		Object.keys(this.x_time_stats.tables).map(function(key) { table.push(this.x_time_stats.tables[key]); }.bind(this));
+		this.x_console.table({ title:(title)?title:'Times per Command', data:table, color:'cyan' });
+	}
 }

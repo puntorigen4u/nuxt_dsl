@@ -1,3 +1,10 @@
+String.prototype.replaceAll = function(strReplace, strWith) {
+    // See http://stackoverflow.com/a/3561711/556609
+    var esc = strReplace.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    var reg = new RegExp(esc, 'ig');
+    return this.replace(reg, strWith);
+};
+
 export default async function(context) {
 	// context.x_state; shareable var scope contents between commands and methods.
 	let null_template = {	hint:'Allowed node type that must be ommited',
@@ -38,8 +45,8 @@ export default async function(context) {
 				}
 			}
 		},
-		func: async function(node) {
-			let resp = me.reply_template();
+		func: async function(node,state) {
+			let resp = me.reply_template({ state });
 			return resp;
 		}
 	}
@@ -192,16 +199,6 @@ export default async function(context) {
 		//def_enviarpantalla
 		//def_layout_view
 
-		'def_center': {
-			x_icons: 'idea',
-			x_text_contains: 'center',
-			hint: 'Centra nodos hijos',
-			func: async function(node,state) {
-				let resp = context.reply_template({ state });
-				return resp;
-			}
-		},
-
 		//def_html y otros
 
 		'def_page': {
@@ -211,6 +208,197 @@ export default async function(context) {
 			hint: 'Archivo vue',
 			func: async function(node,state) {
 				let resp = context.reply_template({ state });
+				resp.state.current_page = node.text;
+				// set global page defaults for current page
+				if (!context.x_state.pages[resp.state.current_page]) {
+					context.x_state.pages[resp.state.current_page] = {
+						tipo: 'page',
+						acceso: '*',
+						params: '',
+						layout: '',
+						defaults: {},
+						imports: {},
+						components: {},
+						directives: {},
+						variables: {},
+						seo: {},
+						meta: {},
+						head: { script:[], meta:[], seo:{} },
+						var_types: {},
+						proxies: '',
+						return: '',
+						styles: {},
+						script: {},
+						path: '/'+resp.state.current_page
+					};
+				}
+				// is this a 'home' page ?
+				if (node.icons.includes('gohome')) context.x_state.pages[resp.state.current_page].path='/';
+				// attributes overwrite anything
+				// parse attributes
+				let attr = {}, params = {};
+				node.attributes.map(function(x) {
+					attr = {...attr,...x};
+				});
+				Object.keys(attr).map(function(key) {
+					let value = attr[key];
+					// preprocess value
+					value = value.replaceAll('$variables.','')
+								 .replaceAll('$vars.','')
+								 .replaceAll('$params.','')
+								 .replaceAll('$config.','process.env')
+								 .replaceAll('$store.','$store.state.');
+					// query attributes
+					if (['proxy'].includes(key.toLowerCase())) {
+						context.x_state.pages[resp.state.current_page].proxies = value;
+
+					} else if (['acceso','method'].includes(key.toLowerCase())) {
+						context.x_state.pages[resp.state.current_page].acceso = value;
+
+					} else if (['path','url','ruta'].includes(key.toLowerCase())) {
+						context.x_state.pages[resp.state.current_page].path = value;
+
+					} else if (['layout'].includes(key.toLowerCase())) {
+						context.x_state.pages[resp.state.current_page].layout = value;
+
+					} else if (['meta:title','meta:titulo'].includes(key.toLowerCase())) {
+						context.x_state.pages[resp.state.current_page].xtitle = value;
+
+					} else if (['background','fondo'].includes(key.toLowerCase())) {
+						params.id = 'tapa';
+						let background = context.getAsset(value,'css');
+						context.x_state.pages[resp.state.current_page].styles['#tapa'] = {
+							'background-image': `url('${background}')`,
+							'background-repeat': 'no-repeat',
+							'background-size': '100vw'
+						};
+					
+					} else {
+						if (key.charAt(0)==':' && value!=attr[key]) {
+							params[':'+key] = value;
+						} else {
+							params[key] = value;
+						}
+						//context.x_state.pages[resp.state.current_page].xtitle = value;
+
+					}
+				}.bind(this));
+				// has comments ?
+				if (node.text_note!='') {
+					resp.open = `<!-- ${node.text_note.replaceAll('<br/ >','\n')} -->\n`;
+				}
+				// set code
+				resp.open += `<template>\n`;
+				if (context.x_state.pages[resp.state.current_page]['layout'] == '') {
+					resp.open += '\t'+context.tagParams('v-app',params,false)+'\n';
+					resp.close += '\t</v-app>\n';
+				}
+				resp.close += `</template>\n`;
+				// return
+				return resp;
+			}
+		},
+
+		'def_margen': {
+			x_icons: 'idea',
+			x_text_contains: 'margen',
+			hint: 'Define un margen alrededor del contenido',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				// parse attributes
+				let attr = {}, params = {};
+				node.attributes.map(function(x) {
+					attr = {...attr,...x};
+				});
+				Object.keys(attr).map(function(key) {
+					let value = attr[key];
+					// preprocess value
+					value = value.replaceAll('$variables.','')
+								 .replaceAll('$vars.','')
+								 .replaceAll('$params.','')
+								 .replaceAll('$config.','process.env')
+								 .replaceAll('$store.','$store.state.');
+					// query attributes
+					if (key.toLowerCase()=='props') {
+						for (let i of value.split(',')) {
+							params[i] = 'vue:prop';
+						}
+					} else {
+						params[key] = value;
+					}
+				});
+				//
+				resp.open += context.tagParams('v-container',params,false) + '\n';
+				resp.close += '</v-container>\n';
+				//
+				return resp;
+			}
+		},
+
+		'def_center': {
+			x_icons: 'idea',
+			x_text_contains: 'centrar',
+			hint: 'Centra nodos hijos',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = { refx:node.id, class:'text-xs-center' };
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				resp.open = context.tagParams('div',params,false) + '<center>\n';
+				resp.close += '</center></div>\n';
+				return resp;
+			}
+		},
+
+		'def_html': {
+			x_icons: 'idea',
+			x_text_contains: 'html:',
+			hint: 'html:x, donde x es cualquier tag',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = { refx:node.id };
+				// parse attributes
+				let attr = {};
+				node.attributes.map(function(x) {
+					attr = {...attr,...x};
+				});
+				Object.keys(attr).map(function(key) {
+					let value = attr[key];
+					// preprocess value
+					value = value.replaceAll('$variables.','')
+								 .replaceAll('$vars.','')
+								 .replaceAll('$params.','')
+								 .replaceAll('$config.','process.env')
+								 .replaceAll('$store.','$store.state.');
+					// query attributes
+					if (key.toLowerCase()=='props') {
+						for (let i of value.split(',')) {
+							params[i] = 'vue:prop';
+						}
+					} else if (key.charAt(0)!=':' && value!=attr[key]) {
+						params[':'+key] = value;
+					} else if (key!='v-model') {
+						if (context.x_state.central_config.idiomas.indexOf(',')!=-1) {
+							// value needs i18n keys
+							let def_lang = context.x_state.centrar.idiomas.split(',')[0];
+							if (!context.x_state.strings_i18n[def_lang]) {
+								context.x_state.strings_i18n[def_lang]={};
+							}
+							let crc32 = 't_'+context.hash(value);
+							context.x_state.strings_i18n[def_lang][crc32] = value;
+							params[':'+key] = `$t('${crc32}')`;
+						} else {
+							params[key] = value;
+						}
+
+					} else {
+						params[key] = value;
+					}
+				}.bind(this));
+				//
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let tag = node.text.replace('html:','');
+				resp.open += context.tagParams(tag,params,false) + '\n';
+				resp.close += `</${tag}>\n`;
 				return resp;
 			}
 		},
@@ -225,6 +413,11 @@ export default async function(context) {
 			func:async function(node,state) {
 				return context.reply_template({ otro:'Pablo', state });
 			}
-		}
+		},
+
+		//
 	}
 };
+
+//private helper methods
+
