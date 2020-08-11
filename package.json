@@ -1,6 +1,6 @@
 {
   "name": "vue_dsl",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -19,7 +19,7 @@
     "mail": "pablo@puntorigen.com",
     "url": "http://github.com/puntorigen/vue_dsl/issues"
   },
-  "main": "bin/cli",
+  "main": "./bin/cli",
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -c",
     "build": "cross-env NODE_ENV=production rollup -c && npm run docs",
