@@ -216,7 +216,36 @@ export default class vue_dsl extends concepto {
 
 	//Called for naming filename of class/page by testing node.
 	async onDefineFilename(node) {
-		return node.text;
+		let resp = node.text;
+		// @idea we could use some 'slug' method here
+		resp = resp.replace(/\ /g,'_') + '.vue';
+		if (node.icons.includes('gohome')) {
+			if (this.x_state.central_config.componente==true && this.x_state.central_config.service_name) {
+				resp = this.x_state.central_config.service_name + '.vue';
+			} else {
+				resp = 'index.vue';
+			}
+		} else if (node.icons.includes('desktop_new')) {
+			if (node.text.indexOf('assets')!=-1) {
+				resp = 'internal_assets.omit';
+			} else if (node.text.indexOf('store')!=-1) {
+				resp = 'internal_stores.omit';
+			} else if (node.text.indexOf('proxy')!=-1 || node.text.indexOf('proxies')!=-1) {
+				resp = 'internal_middleware.omit';
+			} else if (node.text.indexOf('config')!=-1) {
+				resp = 'config.omit';
+			} else if (node.text.indexOf('modelos')!=-1) {
+				resp = 'modelos.omit';
+			} else if (['servidor','server','api'].includes(node.text)) {
+				resp = 'server.omit';
+			} 
+
+		} else if (node.text.indexOf('componente:')!=-1) {
+			resp = node.text.split(':')[node.text.split(':').length-1] + '.vue';
+		} else if (node.text.indexOf('layout:')!=-1) {
+			resp = node.text.split(':')[node.text.split(':').length-1] + '.vue';
+		}
+		return resp;
 	}
 
 	//Called for naming the class/page by testing node.

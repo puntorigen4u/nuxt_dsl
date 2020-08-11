@@ -274,7 +274,7 @@ export default async function(context) {
 						};
 					
 					} else {
-						if (key.charAt(0)==':' && value!=attr[key]) {
+						if (key.charAt(0)!=':' && value!=attr[key]) {
 							params[':'+key] = value;
 						} else {
 							params[key] = value;
@@ -399,6 +399,81 @@ export default async function(context) {
 				let tag = node.text.replace('html:','');
 				resp.open += context.tagParams(tag,params,false) + '\n';
 				resp.close += `</${tag}>\n`;
+				return resp;
+			}
+		},
+		'def_textonly': {
+			x_level: '>2',
+			x_empty: 'icons',
+			x_priority: 10000000,
+			x_or_hasparent: 'def_page,def_componente,def_layout',
+			hint: 'Texto a mostrar',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state }), params={ class:[] }, tmp={};
+				let text = node.text.replaceAll('$variables','')
+									.replaceAll('$vars.','')
+									.replaceAll('$params.','')
+									.replaceAll('$env.','process.env.')
+									.replaceAll('$store.','$store.state.');
+				if (text=='') text = '&nbsp;';
+				// some extra validation
+				if (context.hasParentID(node.id,'def_toolbar')==true && context.hasParentID(node.id,'def_slot')==false) {
+					resp.valid=false;
+					resp.invalidated_me='def_toolbar';
+				} else if (context.hasParentID(node.id,'def_variables')==true) {
+					resp.valid=false;
+					resp.invalidated_me='def_variables';
+				} else if (context.hasParentID(node.id,'def_page_estilos')==true) {
+					resp.valid=false;
+					resp.invalidated_me='def_page_estilos';
+				} else if (context.hasParentID(node.id,'def_datatable_headers')==true) {
+					resp.valid=false;
+					resp.invalidated_me='def_datatable_headers';
+				} else {
+					if (node.text_note!='') resp.open += `<!-- ${node.text_note} -->\n`;
+					//@TODO implement ..lorem.. and numeral() filters
+					//node styles
+					if (node.font.bold==true) params.class.push('font-weight-bold');
+					if (node.font.size>=10) params.class.push('caption');
+					if (node.font.italic==true) params.class.push('font-italic');
+					// - process attributes
+					for (let [key, value] of Object.entries(node.attributes)) {
+					}
+					// - generate lorem.. ipsum text if within text
+					// - i18n
+					// - normalize class values (depending on vuetify version)
+					params.class = params.class.map(function(x) {
+						let resp = x;
+						x 	.replaceAll('text-h1','display-4')
+							.replaceAll('text-h2','display-3')
+							.replaceAll('text-h3','display-2')
+							.replaceAll('text-h4','display-1')
+							.replaceAll('text-h5','headline')
+							.replaceAll('text-subtitle-1','subtitle-1')
+							.replaceAll('text-subtitle-2','subtitle-2')
+							.replaceAll('text-h6','title')
+							.replaceAll('text-body-1','body-1')
+							.replaceAll('text-body-2','body-2')
+							.replaceAll('text-caption','caption')
+							.replaceAll('text-overline','overline')
+						return resp;
+					});
+					//normalize params
+					if (params.class.length>0) params.class=params.class.join(' ');
+					//write code
+					if (!tmp.omit) {
+						if (context.hasParentID(node.id,'def_textonly') || tmp.span) {
+							resp.open += context.tagParams('span',params) + text + '</span>\n';
+						} else if (context.hasParentID(node.id,'def_card_title') && !params.class) {
+							resp.open += text + '\n';
+						} else {
+							resp.open += context.tagParams('div',params) + text + '</div>\n';
+						}
+					}
+					//
+				}
+				// return
+				console.log('def_textonly',resp);
 				return resp;
 			}
 		},

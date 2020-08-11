@@ -9,11 +9,15 @@ var myArgs = process.argv.slice(2);
     // test node ID_1679802330 (should match def_store)
     //await base.addCommands(require('./more_commands.js'));
     await base.process(); //aka writer()
-    /*let nodetest = await base.dsl_parser.getNode({ id: 'ID_1679802330', recurse:false });
-    console.log('ID_1679802330 info',nodetest);
+    /*let nodetest = await base.dsl_parser.getNode({ id: 'ID_340889188', recurse:false });
+    console.log('ID_340889188 nodetest',nodetest);
     let test = await base.findCommand(nodetest,false);
-    console.log('ID_1679802330 findCommand (should be def_store)',test);
+    console.log('ID_340889188 findCommand (should be def_textonly)',test);
     */
+    // does this node have a def_server exact parent x_id ? (it shouldn't)
+    //let test2 = await base.isExactParentID(nodetest.id,'def_server');
+    //console.log('ID_340889188 isExactParentID def_server says:'+test2);
+    /* */
     /*
     nodetest = await base.dsl_parser.getNode({ id: 'ID_861168397' }); // ID_789178185=imagen
     console.log('nodetest dice',nodetest);
