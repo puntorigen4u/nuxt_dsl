@@ -594,7 +594,7 @@ export default class vue_dsl extends concepto {
 		let resp = [];
 		for (let parent_id of parents) {
 			let node = await this.dsl_parser.getNode({ id:parent_id, recurse:false });
-			let command = await this.findValidCommand(node);
+			let command = await this.findValidCommand({ node });
 			if (command) resp.push(command);
 		}
 		return resp;

@@ -444,7 +444,7 @@ export default async function(context) {
 					// - normalize class values (depending on vuetify version)
 					params.class = params.class.map(function(x) {
 						let resp = x;
-						x 	.replaceAll('text-h1','display-4')
+						resp.replaceAll('text-h1','display-4')
 							.replaceAll('text-h2','display-3')
 							.replaceAll('text-h3','display-2')
 							.replaceAll('text-h4','display-1')
@@ -473,7 +473,6 @@ export default async function(context) {
 					//
 				}
 				// return
-				console.log('def_textonly',resp);
 				return resp;
 			}
 		},
