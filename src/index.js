@@ -37,7 +37,8 @@ export default class vue_dsl extends concepto {
 			current_func:'',
 			current_folder:'',
 			current_proxy:'',
-			strings_i18n: {}
+			strings_i18n: {},
+			stores_types: { versions:{}, expires:{} },
 		};
 		this.x_state.config_node = await this._readConfig();
 		//this.debug('config_node',this.x_state.config_node);
@@ -284,6 +285,7 @@ export default class vue_dsl extends concepto {
 
 	//Transforms the processed nodes into files.
 	async onCreateFiles(processedNodes) {
+		this.x_console.out({ message:'onCreateFiles', data:processedNodes });
 	}
 
 	//overwrites default reply structure and value for command's functions
@@ -631,7 +633,7 @@ export default class vue_dsl extends concepto {
 		return resp;
 	}
 
-	//tag constructor helper
+	//vue tag constructor helper
 	tagParams(tag='',params={}, selfclose=false) {
 		let t_params={...params}, resp='';
 		if ('aos' in params) {
@@ -676,52 +678,4 @@ export default class vue_dsl extends concepto {
 		return resp;
 	}
 
-	/**
-	* Helper method for measuring (start) time in ms from this method until debug_timeEnd() method and show it in the console.
-	* @param 	{string}		id		- id key (which can also have spaces and/or symbols) with a unique id to identify the stopwatch.
-	*/
-	debug_time() {
-		// instead of marking and showing time, we want in vue to build a time table and show it with another method
-		if (arguments.length>0) {
-			let keys = {...arguments[0]};
-			if (typeof keys.id !== 'undefined' && keys.id.indexOf('def_')!=-1) { //&& keys.id.indexOf('_x')!=-1
-				let filter_key = keys.id.split(' ')[0];
-				if (typeof this.x_time_stats.times[filter_key] === 'undefined') {
-					this.x_time_stats.times[filter_key] = new Date();
-					this.x_time_stats.tables[filter_key] = { command:filter_key, calls:0, average_call:0, total_ms:0 };
-				}
-			} else if (this.x_config.debug) {
-				this.x_console.time({...arguments[0]});
-			}
-		}
-	}
-
-	/**
-	* Helper method for measuring (end) time in ms from the call of debug_time() method.
-	* @param 	{string}		id		- id key used in the call for debug_time() method.
-	*/
-	debug_timeEnd() {
-		if (arguments.length>0) { 
-			let keys = {...arguments[0]}, filter_key=''; // && keys.id.indexOf('_x')!=-1
-			if (typeof keys.id !== 'undefined') filter_key = keys.id.split(' ')[0];
-			if (typeof keys.id !== 'undefined' && keys.id.indexOf('def_')!=-1 && filter_key in this.x_time_stats.times) {
-				//if (!this.x_time_stats.tables[keys.id]) this.x_time_stats.tables[keys.id] = {};
-				if (typeof this.x_time_stats.tables[filter_key] !== 'undefined') {
-					let timePassed = new Date().getTime() - this.x_time_stats.times[filter_key].getTime();
-					this.x_time_stats.tables[filter_key].calls += 1;
-					this.x_time_stats.tables[filter_key].total_ms = timePassed;
-					this.x_time_stats.tables[filter_key].average_call = Math.round(this.x_time_stats.tables[filter_key].total_ms/this.x_time_stats.tables[filter_key].calls);
-				}
-			} else if (this.x_config.debug) {
-				this.x_console.timeEnd({...{ color:'dim',prefix:'debug,dim' },...arguments[0]});
-			}
-		}
-	}
-
-	debug_table(title) {
-		// build a table with x_time_stats and show it on the console
-		let table = [];
-		Object.keys(this.x_time_stats.tables).map(function(key) { table.push(this.x_time_stats.tables[key]); }.bind(this));
-		this.x_console.table({ title:(title)?title:'Times per Command', data:table, color:'cyan' });
-	}
 }

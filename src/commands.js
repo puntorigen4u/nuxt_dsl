@@ -34,6 +34,7 @@ export default async function(context) {
 		x_all_hasparent: 'def_padre_otro',
 		x_or_hasparent: '',
 		x_or_isparent: '',
+		x_not_hasparent: '', //@TODO create this meta_attribute in Concepto
 		autocomplete: {
 			'key_text': 'otro', //activate autocomplete if the node text equals to this
 			'key_icon': 'idea', //activate autocomplete if the node has this icon
@@ -134,11 +135,11 @@ export default async function(context) {
 				// create store in app state if not already there
 				resp.state.current_store = node.text;
 				if (!context.x_state.stores) context.x_state.stores={};
-				if (context.x_state.stores && !node.text in context.x_state.stores) context.x_state.stores[node.text]={};
+				if (context.x_state.stores && node.text in context.x_state.stores===false) context.x_state.stores[node.text]={};
 				//@TODO evaluate if we should change the format for node.attributes within dsl_parser, instead of doing this each time.
 				// parse attributes
 				let attr = {};
-				key.attributes.map(function(x) {
+				node.attributes.map(function(x) {
 					attr = {...attr,...x};
 				});
 				Object.keys(attr).map(function(keym) {
@@ -162,17 +163,17 @@ export default async function(context) {
 					//
 				});
 				// set store type, version and expire attributes for app state
-				if (!context.x_state.stores_types) context.x_state.stores_types={ versions:{}, expires:{} };
+				//if (!context.x_state.stores_types) context.x_state.stores_types={ versions:{}, expires:{} };
 				// prepare stores_type, and keys local or session. 
-				if (context.x_state.stores_types && !tmp.type in context.x_state.stores_types) context.x_state.stores_types[tmp.type]={};
-				if (!resp.state.current_store in context.x_state.stores_types[tmp.type]) context.x_state.stores_types[tmp.type][resp.state.current_store]={};
+				if (context.x_state.stores_types && tmp.type in context.x_state.stores_types===false) context.x_state.stores_types[tmp.type]={};
+				if (resp.state.current_store in context.x_state.stores_types[tmp.type]===false) context.x_state.stores_types[tmp.type][resp.state.current_store]={};
 				// set version value
 				if (tmp.version!='') {
-					if (!resp.state.current_store in context.x_state.stores_types['versions']) context.x_state.stores_types['versions'][resp.state.current_store]={};
+					if (resp.state.current_store in context.x_state.stores_types['versions']===false) context.x_state.stores_types['versions'][resp.state.current_store]={};
 				}
 				// set expire value
 				if (tmp.version!='') {
-					if (!resp.state.current_store in context.x_state.stores_types['expires']) context.x_state.stores_types['expires'][resp.state.current_store]={};
+					if (resp.state.current_store in context.x_state.stores_types['expires']===false) context.x_state.stores_types['expires'][resp.state.current_store]={};
 				}
 				// return
 				return resp;
@@ -407,6 +408,7 @@ export default async function(context) {
 			x_empty: 'icons',
 			x_priority: 10000000,
 			x_or_hasparent: 'def_page,def_componente,def_layout',
+			// @TODO (idea) x_not_hasparent: 'def_toolbar+!def_slot,def_variables,def_page_estilos,def_page_estilos', 
 			hint: 'Texto a mostrar',
 			func: async function(node,state) {
 				let resp = context.reply_template({ state }), params={ class:[] }, tmp={};
@@ -426,21 +428,108 @@ export default async function(context) {
 				} else if (context.hasParentID(node.id,'def_page_estilos')==true) {
 					resp.valid=false;
 					resp.invalidated_me='def_page_estilos';
-				} else if (context.hasParentID(node.id,'def_datatable_headers')==true) {
+				} else if (context.hasParentID(node.id,'def_page_estilos')==true) {
 					resp.valid=false;
 					resp.invalidated_me='def_datatable_headers';
 				} else {
 					if (node.text_note!='') resp.open += `<!-- ${node.text_note} -->\n`;
-					//@TODO implement ..lorem.. and numeral() filters
+					//
+					if (node.text.indexOf('..lorem..')!=-1 && node.text.indexOf(':')!=-1) {
+						//lorem ipsum text
+						let lorem = node.text.split(':');
+						tmp.lorem = lorem[lorem.length-1];
+					}
+					if (node.text.indexOf('numeral(')!=-1) {
+						//numeral() filter
+						context.x_state.plugins['vue-numeral-filter'] = {
+							global: true,
+							npm: {
+								'vue-numeral-filter':'*'
+							},
+							config: `{ locale: 'es-es' }`
+						};
+					}
 					//node styles
 					if (node.font.bold==true) params.class.push('font-weight-bold');
 					if (node.font.size>=10) params.class.push('caption');
 					if (node.font.italic==true) params.class.push('font-italic');
 					// - process attributes
 					for (let [key, value] of Object.entries(node.attributes)) {
+							let keytest = key.toLowerCase();
+							if (keytest=='class') {
+								params.class.push(value);
+							} else if (keytest==':span') {
+								tmp.span = true;
+							} else if (keytest==':omit') {
+								tmp.omit = true;
+							} else if (':length,:largo,len,length,largo'.split(',').includes(key)) {
+								tmp.lorem = value;
+							} else if (key=='small') {
+								tmp.small = true;
+							} else if ('ucase,mayusculas,mayuscula'.split(',').includes(key)) {
+								if (value=='true' || value==true) params.class.push('text-uppercase');
+							} else if ('capitales,capitalize,capital'.split(',').includes(key)) {
+								if (value=='true' || value==true) params.class.push('text-capitalize');
+							} else if ('lcase,minusculas,minuscula'.split(',').includes(key)) {
+								if (value=='true' || value==true) params.class.push('text-lowercase');
+							} else if (key=='truncate') {
+								if (value=='true' || value==true) params.class.push('text-truncate');
+							} else if (key=='no-wrap') {
+								if (value=='true' || value==true) params.class.push('text-no-wrap');
+							} else if ('weight,peso,grosor'.split(',').includes(key)) {
+								let valuetest = value.toLowerCase();
+								if ('thin,fina,100'.split(',').includes(valuetest)) {
+									params.class.push('font-weight-thin');
+								} else if ('light,300'.split(',').includes(valuetest)) {
+									params.class.push('font-weight-light');
+								} else if ('regular,400'.split(',').includes(valuetest)) {
+									params.class.push('font-weight-light');
+								} else if ('medium,500'.split(',').includes(valuetest)) {
+									params.class.push('font-weight-medium');
+								} else if ('bold,700'.split(',').includes(valuetest)) {
+									params.class.push('font-weight-bold');
+								} else if ('black,gruesa,900'.split(',').includes(valuetest)) {
+									params.class.push('font-weight-black');
+								}
+
+							} else if (key=='color') {
+								if (key.indexOf(' ')!=-1) {
+									let color_values = value.split(' ');
+									params.class.push(`${color_values[0]}--text text--${color_values[1]}`);									
+								} else {
+									params.class.push(`${value}--text`);
+								}
+							} else if (key=='align') {
+								let valuetest = value.toLowerCase();
+								if ('center,centro,centrar'.split(',').includes(valuetest)) {
+									params.class.push('text-xs-center');
+								} else if ('right,derecha'.split(',').includes(valuetest)) {
+									params.class.push('text-xs-right');
+								} else if ('left,izquierda,izquierdo'.split(',').includes(valuetest)) {
+									params.class.push('text-xs-left');
+								}
+
+							} else if (key=='style') {
+								if (!params.style) params.styles=[];
+								params.styles.push(value);
+							} else {
+								if (key.charAt(0)!=':' && node.text!='' && text!=node.text) {
+									params[':'+key] = value;
+								} else {
+									params[key] = values;
+								}
+							}
 					}
 					// - generate lorem.. ipsum text if within text
+					if (tmp.lorem) {
+						let loremIpsum = require('lorem-ipsum').loremIpsum;
+						text = loremIpsum({ count:parseInt(tmp.lorem), units:'words' });
+					}
 					// - i18n
+					// - tmp.small
+					if (tmp.small) {
+						text = `<small>${text}</small>`;
+					}
 					// - normalize class values (depending on vuetify version)
 					params.class = params.class.map(function(x) {
 						let resp = x;
@@ -460,6 +549,7 @@ export default async function(context) {
 					});
 					//normalize params
 					if (params.class.length>0) params.class=params.class.join(' ');
+					if (params.style) params.styles=params.styles.join(';');
 					//write code
 					if (!tmp.omit) {
 						if (context.hasParentID(node.id,'def_textonly') || tmp.span) {
