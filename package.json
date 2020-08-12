@@ -8,7 +8,7 @@
     "concepto",
     "dsl"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "author": "Pablo Schaffner",
   "homepage": "http://github.com/puntorigen/vue_dsl.git",
   "repository": {
