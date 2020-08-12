@@ -118,17 +118,15 @@
 <attribute NAME=":style" VALUE="$variables.fondo"/>
 <attribute NAME="height" VALUE="100"/>
 <attribute NAME=":fixed" VALUE="true"/>
-<node CREATED="1594005762741" ID="ID_1472918639" MODIFIED="1597095305618" TEXT="spacer">
+<node CREATED="1594005762741" ID="ID_1472918639" MODIFIED="1597205280196" TEXT="spacer">
 <icon BUILTIN="idea"/>
-<icon BUILTIN="button_cancel"/>
 </node>
-<node CREATED="1594005771247" ID="ID_592041341" MODIFIED="1597095305618" TEXT="flex">
+<node CREATED="1594005771247" ID="ID_592041341" MODIFIED="1597207841838" TEXT="flex">
 <icon BUILTIN="idea"/>
-<icon BUILTIN="button_cancel"/>
 <attribute NAME="ancho" VALUE="70%"/>
 <node CREATED="1594005783057" ID="ID_49252319" MODIFIED="1594005786574" TEXT="centrar">
 <icon BUILTIN="idea"/>
-<node CREATED="1594005100193" ID="ID_923953027" MODIFIED="1597068114095" TEXT="Otro texto de prueba">
+<node CREATED="1594005100193" ID="ID_923953027" MODIFIED="1597205487414" TEXT="Otro texto de prueba">
 <font ITALIC="true" NAME="SansSerif" SIZE="12"/>
 <attribute NAME="color" VALUE="white"/>
 <attribute NAME="class" VALUE="title"/>
@@ -136,12 +134,11 @@
 </node>
 </node>
 </node>
-<node CREATED="1594005762741" ID="ID_1976167438" MODIFIED="1597095305618" TEXT="spacer">
+<node CREATED="1594005762741" ID="ID_1976167438" MODIFIED="1597205283241" TEXT="spacer">
 <icon BUILTIN="idea"/>
-<icon BUILTIN="button_cancel"/>
 </node>
 </node>
-<node CREATED="1594004881822" FOLDED="true" ID="ID_1586770012" MODIFIED="1597072636491" TEXT="variables">
+<node CREATED="1594004881822" ID="ID_1586770012" MODIFIED="1597208275863" TEXT="variables">
 <icon BUILTIN="xmag"/>
 <icon BUILTIN="button_cancel"/>
 <node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1594004328950" TEXT="fondo">

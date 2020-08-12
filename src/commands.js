@@ -336,6 +336,100 @@ export default async function(context) {
 			}
 		},
 
+		//def_contenedor
+		'def_flex': {
+			x_icons: 'idea',
+			x_text_contains: 'flex',
+			x_not_text_contains: ':',
+			hint: 'Columna de ancho flexible',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = { refx:node.id };
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				// process attributes
+				let attr = {};
+				node.attributes.map(function(x) {
+					attr = {...attr,...x};
+				});
+				Object.keys(attr).map(function(key) {
+					let value = attr[key];
+					let keytest = key.toLowerCase().trim();
+					let tvalue = value.toString().replaceAll('$variables','')
+									.replaceAll('$vars.','')
+									.replaceAll('$params.','')
+									.replaceAll('$env.','process.env.')
+									.replaceAll('$store.','$store.state.').trim();
+					let numsize = 0;
+					if (tvalue.indexOf('%')!=-1) {
+						tvalue = parseInt(tvalue.replaceAll('%','').trim());
+						numsize = Math.round((tvalue*12)/100);
+					}
+					// start testing attributes
+					if (keytest=='class') {
+						params.class = tvalue;
+					} else if (keytest=='props') {
+						for (let i of tvalue.split(',')) {
+							params[i] = 'vue:prop';
+						}
+					} else if ('padding,margen'.split(',').includes(keytest)) {
+						params['pa-'+tvalue] = 'vue:prop';
+					} else if (keytest=='ancho') {
+						params = {...params,...setObjectKeys(`xs-${numsize},sm-${numsize},md-${numsize},lg-${numsize}`,'vue:prop')};
+					} else if (keytest=='offset') {
+						params = {...params,...setObjectKeys(`offset-xs-${numsize},offset-sm-${numsize},offset-md-${numsize},offset-lg-${numsize}`,'vue:prop')};
+					} else if ('muy chico,movil,small,mobile'.split(',').includes(keytest)) {
+						params[`xs${numsize}`] = 'vue:prop';
+					} else if ('chico,tablet,small,tableta'.split(',').includes(keytest)) {
+						params[`sm${numsize}`] = 'vue:prop';
+					} else if ('medio,medium,average'.split(',').includes(keytest)) {
+						params[`md${numsize}`] = 'vue:prop';
+					} else if ('grande,pc,desktop,escritorio'.split(',').includes(keytest)) {
+						params[`lg${numsize}`] = 'vue:prop';
+					} else if ('xfila:grande,xfila:pc,xfila:desktop,pc,escritorio,xfila:escritorio'.split(',').includes(keytest)) {
+						params[`lg${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('xfila:medio,xfila:tablet,tablet,xfila'.split(',').includes(keytest)) {
+						params[`md${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('xfila:chico,xfila:movil,xfila:mobile'.split(',').includes(keytest)) {
+						params[`sm${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('xfila:muy chico,xfila:movil chico,xfila:small mobile'.split(',').includes(keytest)) {
+						params[`xs${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('muy chico:offset,movil:offset,small:offset,mobile:offset'.split(',').includes(keytest)) {
+						params[`offset-xs${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('chico:offset,tablet:offset,small:offset,tableta:offset'.split(',').includes(keytest)) {
+						params[`offset-sm${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('medio:offset,medium:offset,average:offset'.split(',').includes(keytest)) {
+						params[`offset-md${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else if ('grande:offset,pc:offset,desktop:offset,escritorio:offset,grande:left'.split(',').includes(keytest)) {
+						params[`offset-lg${Math.round(12/tvalue)}`] = 'vue:prop';
+					} else {
+						if (keytest.charAt(0)!=':' && value!='' && value!=tvalue) {
+							params[':'+key.trim()] = tvalue;
+						} else {
+							params[key.trim()] = tvalue;
+						}
+
+					}
+				});
+				// write tag
+				resp.open += context.tagParams('v-flex',params,false) + '\n';
+				resp.close = '</v-flex>\n';
+				// return
+				return resp;
+			}
+		},
+
+		'def_spacer': {
+			x_icons: 'idea',
+			x_text_contains: 'spacer',
+			hint: 'Spacer es un espaciador flexible',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				resp.open += context.tagParams('v-spacer',{},true) + '\n';
+				return resp;
+			}
+		},
+
 		'def_center': {
 			x_icons: 'idea',
 			x_text_contains: 'centrar',
@@ -516,7 +610,7 @@ export default async function(context) {
 								if (key.charAt(0)!=':' && node.text!='' && text!=node.text) {
 									params[':'+key] = value;
 								} else {
-									params[key] = values;
+									params[key] = value;
 								}
 							}
 					}
@@ -584,4 +678,18 @@ export default async function(context) {
 };
 
 //private helper methods
-
+function setObjectKeys(obj,value) {
+	let resp=obj;
+	if (typeof resp === 'string') {
+		resp = {};
+		let keys=obj.split(',');
+		for (let i in keys) {
+			resp[keys[i]]=value;
+		}
+	} else {
+		for (let i in resp) {
+			resp[i]=value;
+		}
+	}
+	return resp;
+}
