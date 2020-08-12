@@ -5,10 +5,10 @@
 <attribute NAME="deploy" VALUE="local"/>
 <node CREATED="1552681609586" ID="ID_861168397" MODIFIED="1597108994794" POSITION="left" TEXT="config">
 <icon BUILTIN="desktop_new"/>
-<node CREATED="1552681609586" ID="ID_1162429478" MODIFIED="1597100491163" TEXT="aws">
+<node CREATED="1552681609586" ID="ID_900432032" MODIFIED="1597202084211" TEXT="aws">
 <attribute_layout NAME_WIDTH="91" VALUE_WIDTH="291"/>
-<attribute NAME="access" VALUE="AKIAI5W2ESZOTHERCODESFROMAWSACCESS"/>
-<attribute NAME="secret" VALUE="g4P5ILIYO/AnotherSecretStringFromAWS"/>
+<attribute NAME="access" VALUE="PLACE_YOUR_AWS_IAM_ACCESS_ID_HERE"/>
+<attribute NAME="secret" VALUE="pLace_yOur_Aws_SecreT_key_here"/>
 </node>
 <node CREATED="1567095818640" ID="ID_521087574" MODIFIED="1597068150647" TEXT="axios">
 <attribute_layout NAME_WIDTH="65" VALUE_WIDTH="183"/>

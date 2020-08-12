@@ -261,20 +261,47 @@ export default class vue_dsl extends concepto {
 
 	//Defines preparation steps before processing nodes.
 	async onPrepare() {
-		if (!this.x_state.central_config.componente) {
+		if (!this.x_state.central_config.componente && this.x_state.central_config.deploy && this.x_state.central_config.deploy.indexOf('eb:')!=-1) {
+			// if deploying to AWS eb:x, then recover/backup AWS credentials from local system
 			let ini = require('ini'), path = require('path'), fs = require('fs').promises;
+			// read existing AWS credentials if they exist
+			let os = require('os'); let aws_ini = '';
+			let aws_ini_file = path.join(os.homedir(),'/.aws/')+'credentials';
+			try {
+				//this.debug('trying to read AWS credentials:',aws_ini_file);
+				aws_ini = await fs.readFile(aws_ini_file,'utf-8');
+				//this.debug('AWS credentials:',aws_ini);
+			} catch(err_reading) {
+			}
+			// 
 			if (this.x_state.config_node.aws) {
-				// if DSL defines temporal AWS credentials for this app, make backup, replace defaults and recover them later
-			} else {
-				// if DSL doesnt define AWS credentials, read them from system if they exist
-				let aws_ini_file = path.join(os.homedir(),'/.aws/')+'credentials';
-				try {
-					this.debug('trying to read AWS credentials:',aws_ini_file);
-					let aws_ini = fs.readFile(aws_ini_file,'utf-8');
-					this.debug('AWS credentials:',aws_ini);
-
-				} catch(err_reading) {
+				// if DSL defines temporal AWS credentials for this app .. 
+				// create backup of aws credentials, if existing previously
+				if (aws_ini!='') {
+					let basepath = path.dirname(path.resolve(this.x_flags.dsl));
+					let aws_bak = path.join(basepath,'aws_backup.ini');
+					this.x_console.outT({ message:`config:aws:creating .aws/credentials backup`, color:'yellow' });
+					await fs.writeFile(aws_bak,aws_ini,'utf-8');
 				}
+				// debug
+				this.x_console.outT({ message:`config:aws:access ->${this.x_state.config_node.aws.access}` });
+				this.x_console.outT({ message:`config:aws:secret ->${this.x_state.config_node.aws.secret}` });
+				// transform config_node.aws keys into ini
+				let to_ini = ini.stringify({ 
+					aws_access_key_id: this.x_state.config_node.aws.access,
+					aws_secret_access_key: this.x_state.config_node.aws.secret
+				},{ section:'default' });
+				this.debug('Setting .aws/credentials from config node');
+				// save as .aws/credentials (ini file)
+				await fs.writeFile(aws_ini_file,to_ini,'utf-8');
+
+			} else if (aws_ini!='') {
+				// if DSL doesnt define AWS credentials, use the ones defined within the local system.
+				let parsed = ini.parse(aws_ini);
+				if (parsed.default) this.debug('Using local system AWS credentials',parsed.default);
+				this.x_state.config_node.aws = { access:'', secret:'' };
+				if (parsed.default.aws_access_key_id) this.x_state.config_node.aws.access = parsed.default.aws_access_key_id;
+				if (parsed.default.aws_secret_access_key) this.x_state.config_node.aws.secret = parsed.default.aws_secret_access_key;
 			}
 		}
 	}
@@ -288,21 +315,10 @@ export default class vue_dsl extends concepto {
 		this.x_console.out({ message:'onCreateFiles', data:processedNodes });
 	}
 
-	//overwrites default reply structure and value for command's functions
-	/*
-	reply_template(init={}) {
-	}
-	*/
-
-	// *****************************************************************************
-	// ADVANCED PROCESSING METHODS (@TODO move to Concepto Class after testing it)
-	// *****************************************************************************
+	// ************************
+	// INTERNAL HELPER METHODS 
+	// ************************
 	
-	// 
-	// This method traverses the dsl parsed tree, finds/execute x_commands and generated code as files.
-	// @return 	{Object}
-	// async process() {}
-
 	/*
 	* Returns true if a local server is running on the DSL defined port
 	*/
