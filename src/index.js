@@ -1,5 +1,5 @@
-//const concepto = require('concepto');
-import concepto from '../../concepto/src/index'
+const concepto = require('concepto');
+//import concepto from '../../concepto/src/index'
 /**
 * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
 * @name 	vue_dsl
