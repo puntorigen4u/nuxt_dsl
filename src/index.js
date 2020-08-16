@@ -313,6 +313,7 @@ export default class vue_dsl extends concepto {
 	//Transforms the processed nodes into files.
 	async onCreateFiles(processedNodes) {
 		this.x_console.out({ message:'onCreateFiles', data:processedNodes });
+		this.x_console.out({ message:'pages state', data:this.x_state.pages });
 	}
 
 	// ************************
@@ -607,12 +608,12 @@ export default class vue_dsl extends concepto {
 		return resp;
 	}
 
-	async getParentNodes(id=this.throwIfMissing('id')) {
+	async getParentNodes(id=this.throwIfMissing('id'),exec=false) {
 		let parents = await this.dsl_parser.getParentNodesIDs({ id, array:true });
 		let resp = [];
 		for (let parent_id of parents) {
 			let node = await this.dsl_parser.getNode({ id:parent_id, recurse:false });
-			let command = await this.findValidCommand({ node });
+			let command = await this.findValidCommand({ node, object:exec });
 			if (command) resp.push(command);
 		}
 		return resp;

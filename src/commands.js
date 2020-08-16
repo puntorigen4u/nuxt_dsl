@@ -5,6 +5,14 @@ String.prototype.replaceAll = function(strReplace, strWith) {
     return this.replace(reg, strWith);
 };
 
+String.prototype.contains = function(test) {
+	if (this.indexOf(test)!=-1) {
+		return true;
+	} else {
+		return false;
+	}
+};
+
 export default async function(context) {
 	// context.x_state; shareable var scope contents between commands and methods.
 	let null_template = {	hint:'Allowed node type that must be ommited',
@@ -500,7 +508,7 @@ export default async function(context) {
 		'def_textonly': {
 			x_level: '>2',
 			x_empty: 'icons',
-			x_priority: 10000000,
+			x_priority: -5,
 			x_or_hasparent: 'def_page,def_componente,def_layout',
 			// @TODO (idea) x_not_hasparent: 'def_toolbar+!def_slot,def_variables,def_page_estilos,def_page_estilos', 
 			hint: 'Texto a mostrar',
@@ -513,16 +521,16 @@ export default async function(context) {
 									.replaceAll('$store.','$store.state.');
 				if (text=='') text = '&nbsp;';
 				// some extra validation
-				if (context.hasParentID(node.id,'def_toolbar')==true && context.hasParentID(node.id,'def_slot')==false) {
+				if (await context.hasParentID(node.id,'def_toolbar')==true && await context.hasParentID(node.id,'def_slot')==false) {
 					resp.valid=false;
 					resp.invalidated_me='def_toolbar';
-				} else if (context.hasParentID(node.id,'def_variables')==true) {
+				} else if (await context.hasParentID(node.id,'def_variables')==true) {
 					resp.valid=false;
 					resp.invalidated_me='def_variables';
-				} else if (context.hasParentID(node.id,'def_page_estilos')==true) {
+				} else if (await context.hasParentID(node.id,'def_page_estilos')==true) {
 					resp.valid=false;
 					resp.invalidated_me='def_page_estilos';
-				} else if (context.hasParentID(node.id,'def_page_estilos')==true) {
+				} else if (await context.hasParentID(node.id,'def_page_estilos')==true) {
 					resp.valid=false;
 					resp.invalidated_me='def_datatable_headers';
 				} else {
@@ -548,78 +556,83 @@ export default async function(context) {
 					if (node.font.size>=10) params.class.push('caption');
 					if (node.font.italic==true) params.class.push('font-italic');
 					// - process attributes
-					for (let [key, value] of Object.entries(node.attributes)) {
-							let keytest = key.toLowerCase();
-							if (keytest=='class') {
-								params.class.push(value);
-							} else if (keytest==':span') {
-								tmp.span = true;
-							} else if (keytest==':omit') {
-								tmp.omit = true;
-							} else if (':length,:largo,len,length,largo'.split(',').includes(key)) {
-								tmp.lorem = value;
-							} else if (key=='small') {
-								tmp.small = true;
-							} else if ('ucase,mayusculas,mayuscula'.split(',').includes(key)) {
-								if (value=='true' || value==true) params.class.push('text-uppercase');
-							} else if ('capitales,capitalize,capital'.split(',').includes(key)) {
-								if (value=='true' || value==true) params.class.push('text-capitalize');
-							} else if ('lcase,minusculas,minuscula'.split(',').includes(key)) {
-								if (value=='true' || value==true) params.class.push('text-lowercase');
-							} else if (key=='truncate') {
-								if (value=='true' || value==true) params.class.push('text-truncate');
-							} else if (key=='no-wrap') {
-								if (value=='true' || value==true) params.class.push('text-no-wrap');
-							} else if ('weight,peso,grosor'.split(',').includes(key)) {
-								let valuetest = value.toLowerCase();
-								if ('thin,fina,100'.split(',').includes(valuetest)) {
-									params.class.push('font-weight-thin');
-								} else if ('light,300'.split(',').includes(valuetest)) {
-									params.class.push('font-weight-light');
-								} else if ('regular,400'.split(',').includes(valuetest)) {
-									params.class.push('font-weight-light');
-								} else if ('medium,500'.split(',').includes(valuetest)) {
-									params.class.push('font-weight-medium');
-								} else if ('bold,700'.split(',').includes(valuetest)) {
-									params.class.push('font-weight-bold');
-								} else if ('black,gruesa,900'.split(',').includes(valuetest)) {
-									params.class.push('font-weight-black');
-								}
-
-							} else if (key=='color') {
-								if (key.indexOf(' ')!=-1) {
-									let color_values = value.split(' ');
-									params.class.push(`${color_values[0]}--text text--${color_values[1]}`);									
-								} else {
-									params.class.push(`${value}--text`);
-								}
-							} else if (key=='align') {
-								let valuetest = value.toLowerCase();
-								if ('center,centro,centrar'.split(',').includes(valuetest)) {
-									params.class.push('text-xs-center');
-								} else if ('right,derecha'.split(',').includes(valuetest)) {
-									params.class.push('text-xs-right');
-								} else if ('left,izquierda,izquierdo'.split(',').includes(valuetest)) {
-									params.class.push('text-xs-left');
-								}
-
-							} else if (key=='style') {
-								if (!params.style) params.styles=[];
-								params.styles.push(value);
-							} else {
-								if (key.charAt(0)!=':' && node.text!='' && text!=node.text) {
-									params[':'+key] = value;
-								} else {
-									params[key] = value;
-								}
+					let attr = {};
+					node.attributes.map(function(x) {
+						attr = {...attr,...x};
+					});
+					Object.keys(attr).map(function(key) {
+						let keytest = key.toLowerCase().trim();
+						let value = attr[key];
+						if (keytest=='class') {
+							params.class.push(value);
+						} else if (keytest==':span') {
+							tmp.span = true;
+						} else if (keytest==':omit') {
+							tmp.omit = true;
+						} else if (':length,:largo,len,length,largo'.split(',').includes(key)) {
+							tmp.lorem = value;
+						} else if (key=='small') {
+							tmp.small = true;
+						} else if ('ucase,mayusculas,mayuscula'.split(',').includes(key)) {
+							if (value=='true' || value==true) params.class.push('text-uppercase');
+						} else if ('capitales,capitalize,capital'.split(',').includes(key)) {
+							if (value=='true' || value==true) params.class.push('text-capitalize');
+						} else if ('lcase,minusculas,minuscula'.split(',').includes(key)) {
+							if (value=='true' || value==true) params.class.push('text-lowercase');
+						} else if (key=='truncate') {
+							if (value=='true' || value==true) params.class.push('text-truncate');
+						} else if (key=='no-wrap') {
+							if (value=='true' || value==true) params.class.push('text-no-wrap');
+						} else if ('weight,peso,grosor'.split(',').includes(key)) {
+							let valuetest = value.toLowerCase();
+							if ('thin,fina,100'.split(',').includes(valuetest)) {
+								params.class.push('font-weight-thin');
+							} else if ('light,300'.split(',').includes(valuetest)) {
+								params.class.push('font-weight-light');
+							} else if ('regular,400'.split(',').includes(valuetest)) {
+								params.class.push('font-weight-light');
+							} else if ('medium,500'.split(',').includes(valuetest)) {
+								params.class.push('font-weight-medium');
+							} else if ('bold,700'.split(',').includes(valuetest)) {
+								params.class.push('font-weight-bold');
+							} else if ('black,gruesa,900'.split(',').includes(valuetest)) {
+								params.class.push('font-weight-black');
 							}
-					}
+
+						} else if (key=='color') {
+							if (key.indexOf(' ')!=-1) {
+								let color_values = value.split(' ');
+								params.class.push(`${color_values[0]}--text text--${color_values[1]}`);									
+							} else {
+								params.class.push(`${value}--text`);
+							}
+						} else if (key=='align') {
+							let valuetest = value.toLowerCase();
+							if ('center,centro,centrar'.split(',').includes(valuetest)) {
+								params.class.push('text-xs-center');
+							} else if ('right,derecha'.split(',').includes(valuetest)) {
+								params.class.push('text-xs-right');
+							} else if ('left,izquierda,izquierdo'.split(',').includes(valuetest)) {
+								params.class.push('text-xs-left');
+							}
+
+						} else if (key=='style') {
+							if (!params.style) params.styles=[];
+							params.styles.push(value);
+						} else {
+							if (key.charAt(0)!=':' && node.text!='' && text!=node.text) {
+								params[':'+key] = value;
+							} else {
+								params[key] = value;
+							}
+						}
+					});
 					// - generate lorem.. ipsum text if within text
 					if (tmp.lorem) {
 						let loremIpsum = require('lorem-ipsum').loremIpsum;
 						text = loremIpsum({ count:parseInt(tmp.lorem), units:'words' });
 					}
-					// - i18n
+					// - @TODO i18n here
 					// - tmp.small
 					if (tmp.small) {
 						text = `<small>${text}</small>`;
@@ -661,6 +674,215 @@ export default async function(context) {
 			}
 		},
 
+		'def_variables': {
+			x_icons: 'xmag',
+			x_level: 3,
+			x_text_contains: 'variables',
+			hint: 'Definicion local de variables observadas',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = {};
+				// process attributes as variables
+				// set vars
+				if (typeof state.current_page !== 'undefined') {
+					if (typeof context.x_state.pages[state.current_page] === 'undefined') context.x_state.pages[state.current_page]={};
+					if ('variables' in context.x_state.pages[state.current_page]===false) context.x_state.pages[state.current_page].variables={};
+					if ('types' in context.x_state.pages[state.current_page]===false) context.x_state.pages[state.current_page].types={};
+				}
+				return resp;
+			}
+		},
+
+		'def_variables_field': {
+			x_priority: 1,
+			x_empty: 'icons',
+			x_level: '>3',
+			x_all_hasparent: 'def_variables',
+			hint: 'Campo con nombre de variable observada y tipo',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = {}, tmp = { type:'string', field:node.text.trim(), level:node.level-3 };
+				//
+				if ((tmp.field.contains('[') && tmp.field.contains(']')) ||
+					(tmp.field.contains('{') && tmp.field.contains('}'))) {
+					// this is a script node
+					tmp.type = 'string'; tmp.field = `script${node.id}`;
+
+				} else if (tmp.field.contains(':')) {
+					tmp.type = tmp.field.split(':').pop().toLowerCase().trim(); //listlast
+					tmp.field = tmp.field.split(':')[0].trim();
+				} else if (node.nodes_raw && node.nodes_raw.length>0) {
+					// get children nodes, and test that they don't have a help icon.
+					let subnodes = await node.getNodes();
+					let has_event = false;
+					for (let i of subnodes) {
+						if (i.icons.includes('help')) {
+							has_event = true;
+						}
+					}
+					if (has_event==false) {
+						tmp.type = 'object';
+					}
+				} else {
+					tmp.type = 'string';
+				}
+				// process attributes (and overwrite types if needed)
+				// parse attributes
+				let attr = {};
+				node.attributes.map(function(x) {
+					attr = {...attr,...x};
+				});
+				Object.keys(attr).map(function(keym) {
+					let keytest = keym.toLowerCase().trim();
+					let value = attr[keym];
+					//console.log(`${tmp.field} attr key:${keytest}, value:${value}`);
+					if ('type,tipo,:type,:tipo'.split(',').includes(keytest)) {
+						tmp.type = value.toLowerCase().trim();
+					} else if ('valor,value,:valor,:value'.split(',').includes(keytest)) {
+						let t_value = value.replaceAll('$variables','this.')
+											.replaceAll('$vars.','this.')
+											.replaceAll('$params.','this.')
+											.replaceAll('$env.','process.env.')
+											.replaceAll('$store.','this.$store.state.');
+						if (t_value.toLowerCase().trim()=='{now}') t_value='new Date()';
+						if (t_value.contains('assets:')) {
+							t_value = context.getAsset(t_value,'js');
+						}
+						params.value = t_value;
+					} else {
+						if (keytest.contains(':')) {
+							params[keym.trim()] = value.trim();
+						}
+					}
+				});
+				// assign default value for type, if not defined
+				//if ('value' in params===false) {
+					if ('string,text,texto,script'.split(',').includes(tmp.type)) {
+						if ('value' in params===false) {
+							params.value = '';
+						} else {
+							params.value = params.value.toString();
+						}
+					} else if ('int,numeric,number,numero'.split(',').includes(tmp.type)) {
+						if ('value' in params===false) {
+							params.value = 0;
+						} else {
+							params.value = parseInt(params.value);
+						}
+					} else if ('float,real,decimal'.split(',').includes(tmp.type)) {
+						if ('value' in params===false) {
+							params.value = 0.0;
+						} else {
+							params.value = parseFloat(params.value);
+						}
+					} else if ('boolean,boleano,booleano'.split(',').includes(tmp.type)) {
+						if ('value' in params===false) {
+							if (tmp.field=='true') {
+								// ex value of an array (true/false)
+								params.value = true;
+							} else if (tmp.field=='false') {
+								params.value = false;
+							} else {
+								params.value = false;
+							}
+						} else {
+							if (params.value=='true') {
+								// ex value of an array (true/false)
+								params.value = true;
+							} else if (params.value=='false') {
+								params.value = false;
+							}
+						}
+					} else if ('array'.split(',').includes(tmp.type)) {
+						tmp.type = 'array';
+						if ('value' in params===false) {
+							params.value = [];
+						} else {
+							params.value = JSON.parse(params.value);
+						}
+
+					} else if ('struct,object'.split(',').includes(tmp.type)) {
+						tmp.type = 'object';
+						if ('value' in params===false) {
+							params.value = {};							
+						} else {
+							params.value = JSON.parse(params.value);
+						}
+					}
+				//}
+				// check and prepare global state
+				if (typeof state.current_page!=='undefined') {
+					if (state.current_page in context.x_state.pages === false) context.x_state.pages[state.current_page]={};
+					if ('variables' in context.x_state.pages[state.current_page] === false) context.x_state.pages[state.current_page].variables={};
+					if ('var_types' in context.x_state.pages[state.current_page] === false) context.x_state.pages[state.current_page].var_types={};
+				}
+				// assign var info to page state
+				if (tmp.level==1) {
+					// this is a single variable (no dad); eq. variables[field] = value/children
+					context.x_state.pages[state.current_page].var_types[tmp.field]=tmp.type;
+					context.x_state.pages[state.current_page].variables[tmp.field]=params.value;
+					resp.state.vars_path=[tmp.field]; resp.state.vars_types=[tmp.type];
+					resp.state.vars_last_level=tmp.level;
+				} else {
+					// variables[prev_node_text][current_field] = value
+					if (resp.state.vars_last_level==tmp.level) {
+						// this node is a brother of the last processed one
+						resp.state.vars_path.pop(); // remove last field from var path
+						resp.state.vars_types.pop(); // remove last field type from vars_types
+					}
+					resp.state.vars_path.push(tmp.field); // push new var to paths
+					//console.log(`trying to set: ${resp.state.vars_path.join('.')} on context.x_state.pages['${state.current_page}'].variables as ${tmp.type}`);
+					if (resp.state.vars_types[resp.state.vars_types.length-1]=='object') {
+						// dad was an object
+						//console.log('dad was an object',resp.state.vars_types[resp.state.vars_types.length-1]);
+						setToValue(context.x_state.pages[state.current_page].variables,params.value,resp.state.vars_path.join('.'));
+					} else if (resp.state.vars_types[resp.state.vars_types.length-1]=='array') {
+						//console.log('dad was an array',resp.state.vars_types[resp.state.vars_types.length-1]);
+						// dad is an array.. 
+						let copy_dad = [...resp.state.vars_path];
+						copy_dad.pop();
+						//console.log('my dad path is '+copy_dad.join('.'));
+						let daddy = getVal(context.x_state.pages[state.current_page].variables,copy_dad.join('.'));
+						//console.log('daddy says:',daddy);
+						if (tmp.field!=params.value) {
+							// push as object (array of objects)
+							let tmpi = {};
+							tmpi[tmp.field]=params.value;
+							daddy.push(tmpi);
+						} else {
+							// push just the value (single value)
+							daddy.push(params.value);
+						}
+						// re-set daddy with new value
+						setToValue(context.x_state.pages[state.current_page].variables,daddy,copy_dad.join('.'));
+					}
+					resp.state.vars_types.push(tmp.type); // push new var type to vars_types
+					context.x_state.pages[state.current_page].var_types[resp.state.vars_path.join('.')]=tmp.type;
+					resp.state.vars_last_level=tmp.level;
+					/*
+					// get parent nodes
+					let parents = await context.dsl_parser.getParentNodesIDs({ id:node.id, array:true });
+					let dads = [tmp.field];
+					for (let parent_id of parents) {
+						let node = await context.dsl_parser.getNode({ id:parent_id, recurse:false });
+						if (node.text=='variables' && node.icons.includes('xmag')) {
+							break;
+						}
+						dads.push(node.text.split(':')[0].trim());
+					}
+					let var_name = dads.reverse().join('.');
+					context.x_state.pages[state.current_page].var_types[var_name]=tmp.type;
+					setToValue(context.x_state.pages[state.current_page].variables,params.value,var_name);
+					*/
+				}
+				// pass level to next var field if it exists 
+				// @TODO @DONE I believe this command speed can be improved using the commands state instead of getting Parents
+				//console.log('field_var tmp =>',JSON.stringify(tmp));
+				//resp.state.tmp_var = tmp;
+				return resp;
+			}
+		},
+
 		// OTHER node types
 		'def_imagen': {
 			x_icons:'idea',
@@ -692,4 +914,17 @@ function setObjectKeys(obj,value) {
 		}
 	}
 	return resp;
+}
+
+function setToValue(obj, value, path) {
+    var i;
+    path = path.split('.');
+    for (i = 0; i < path.length - 1; i++)
+        obj = obj[path[i]];
+
+    obj[path[i]] = value;
+}
+
+function getVal(project, myPath){
+    return myPath.split('.').reduce ( (res, prop) => res[prop], project );
 }
