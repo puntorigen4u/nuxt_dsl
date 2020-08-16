@@ -154,19 +154,19 @@ export default async function(context) {
 					let key = keym.toLowerCase();
 					if ([':type','type','tipo',':tipo'].includes(key)) {
 						// store type value
-						if (['sesion','session'].includes(attr[key])) {
+						if (['sesion','session'].includes(node.attributes[key])) {
 							tmp.type = 'session';
 							context.x_state.npm['nuxt-vuex-localstorage'] = '*'; // add npm to app package
-						} else if (['local','persistent','persistente','localstorage','storage','db','bd'].includes(attr[key])) {
+						} else if (['local','persistent','persistente','localstorage','storage','db','bd'].includes(node.attributes[key])) {
 							tmp.type = 'local';
 							context.x_state.npm['nuxt-vuex-localstorage'] = '*';
 						}
 
 					} else if (['version',':version'].includes(key)) {
-						tmp.version = attr[key];
+						tmp.version = node.attributes[key];
 
 					} else if (['expire',':expire','expira',':expira'].includes(key)) {
-						tmp.expire = attr[key];
+						tmp.expire = node.attributes[key];
 					}
 					//
 				});
@@ -251,7 +251,7 @@ export default async function(context) {
 					attr = {...attr,...x};
 				});*/
 				Object.keys(node.attributes).map(function(key) {
-					let value = attr[key];
+					let value = node.attributes[key];
 					// preprocess value
 					value = value.replaceAll('$variables.','')
 								 .replaceAll('$vars.','')
@@ -284,7 +284,7 @@ export default async function(context) {
 						};
 					
 					} else {
-						if (key.charAt(0)!=':' && value!=attr[key]) {
+						if (key.charAt(0)!=':' && value!=node.attributes[key]) {
 							params[':'+key] = value;
 						} else {
 							params[key] = value;
@@ -323,7 +323,7 @@ export default async function(context) {
 					attr = {...attr,...x};
 				});*/
 				Object.keys(node.attributes).map(function(key) {
-					let value = attr[key];
+					let value = node.attributes[key];
 					// preprocess value
 					value = value.replaceAll('$variables.','')
 								 .replaceAll('$vars.','')
@@ -363,7 +363,7 @@ export default async function(context) {
 					attr = {...attr,...x};
 				});*/
 				Object.keys(node.attributes).map(function(key) {
-					let value = attr[key];
+					let value = node.attributes[key];
 					let keytest = key.toLowerCase().trim();
 					let tvalue = value.toString().replaceAll('$variables','')
 									.replaceAll('$vars.','')
@@ -468,7 +468,7 @@ export default async function(context) {
 					attr = {...attr,...x};
 				});*/
 				Object.keys(node.attributes).map(function(key) {
-					let value = attr[key];
+					let value = node.attributes[key];
 					// preprocess value
 					value = value.replaceAll('$variables.','')
 								 .replaceAll('$vars.','')
@@ -480,7 +480,7 @@ export default async function(context) {
 						for (let i of value.split(',')) {
 							params[i] = 'vue:prop';
 						}
-					} else if (key.charAt(0)!=':' && value!=attr[key]) {
+					} else if (key.charAt(0)!=':' && value!=node.attributes[key]) {
 						params[':'+key] = value;
 					} else if (key!='v-model') {
 						if (context.x_state.central_config.idiomas.indexOf(',')!=-1) {
@@ -565,7 +565,7 @@ export default async function(context) {
 					});*/
 					Object.keys(node.attributes).map(function(key) {
 						let keytest = key.toLowerCase().trim();
-						let value = attr[key];
+						let value = node.attributes[key];
 						if (keytest=='class') {
 							params.class.push(value);
 						} else if (keytest==':span') {
@@ -737,7 +737,7 @@ export default async function(context) {
 				});*/
 				Object.keys(node.attributes).map(function(keym) {
 					let keytest = keym.toLowerCase().trim();
-					let value = attr[keym];
+					let value = node.attributes[keym];
 					//console.log(`${tmp.field} attr key:${keytest}, value:${value}`);
 					if ('type,tipo,:type,:tipo'.split(',').includes(keytest)) {
 						tmp.type = value.toLowerCase().trim();
