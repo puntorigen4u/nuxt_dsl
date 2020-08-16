@@ -205,13 +205,20 @@ export default class vue_dsl extends concepto {
 
 	//Called for defining the title of class/page by testing node.
 	async onDefineTitle(node) {
-		let resp = node.text, i;
+		let resp = node.text;
+		Object.keys(node.attributes).map(function(i){
+			if (i=='title' || i=='titulo') {
+				resp = node.attributes[i];
+				return false;
+			}
+		}.bind(this));
+		/*
 		for (i in node.attributes) {
 			if (['title','titulo'].includes(node.attributes[i])) {
 				resp = node.attributes[i];
 				break;
 			}
-		}
+		}*/
 		return resp;
 	}
 
@@ -363,11 +370,12 @@ export default class vue_dsl extends concepto {
 		});
 		// parse nodes into tables with fields
 		if (modelos.length>0) {
-			modelos[0].attributes.map(x=>{ resp.attributes={...resp.attributes,...x} }); //modelos attributes
+			//modelos[0].attributes.map(x=>{ resp.attributes={...resp.attributes,...x} }); //modelos attributes
+			resp.attributes={...modelos[0].attributes};
 			resp.doc=modelos[0].text_note;
 			resp.length=modelos[0].nodes.length;
 			for (let table of modelos[0].nodes) {
-				let fields = {}; table.attributes.map(x=>{ fields={...fields,...x} }); //table attributes
+				let fields = {...table.attributes}; //table.attributes.map(x=>{ fields={...fields,...x} }); //table attributes
 				resp.tables[table.text]={ fields:{} }; //create table
 				tmp.sql_fields=[];
 				for (let field in fields) {
@@ -441,10 +449,10 @@ export default class vue_dsl extends concepto {
 					resp[key] = { i18n:true, i18n_keys:[] };
 					for (let i18n_node of child.nodes) {
 						// expand node attributes
-						let attrs = {};
-						i18n_node.attributes.map(function(x) {
+						let attrs = {...i18n_node.attributes};
+						/*i18n_node.attributes.map(function(x) {
 							attrs = {...attrs,...x};
-						});
+						});*/
 						if (attrs.idioma && i18n_node.image!='') {
 							let lang = attrs.idioma.toLowerCase();
 							resp[key].i18n_keys.push(lang);
@@ -515,9 +523,10 @@ export default class vue_dsl extends concepto {
 			apptitle: central[0].text
 		};
 		// overwrite default resp with info from central node
-		central[0].attributes.map(function(x) {
+		resp = {...resp,...central[0].attributes};
+		/*central[0].attributes.map(function(x) {
 			resp = {...resp,...x};
-		});
+		});*/
 		if (resp.dominio) {
 			resp.service_name = resp.dominio.replace(/\./g,'').toLowerCase();
 		} else {
@@ -571,13 +580,13 @@ export default class vue_dsl extends concepto {
 					}			
 				} else {
 					// apply keys as config keys (standard config node by content types)
-					if (key.attributes.length>0) {
+					if (Object.keys(key.attributes).length>0) {
 						// prepare config key
 						let config_key = key.text.toLowerCase().replace(/ /g,'');
-						let values = {};
-						key.attributes.map(function(x) {
+						let values = {...key.attributes};
+						/*key.attributes.map(function(x) {
 							values = {...values,...x};
-						});						
+						});*/						
 						resp[config_key] = values;
 						// mark secret status true if contains 'password' icon
 						if (key.icons.includes('password')) resp[config_key][':secret'] = true;

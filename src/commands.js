@@ -146,11 +146,11 @@ export default async function(context) {
 				if (context.x_state.stores && node.text in context.x_state.stores===false) context.x_state.stores[node.text]={};
 				//@TODO evaluate if we should change the format for node.attributes within dsl_parser, instead of doing this each time.
 				// parse attributes
-				let attr = {};
+				/*let attr = {};
 				node.attributes.map(function(x) {
 					attr = {...attr,...x};
-				});
-				Object.keys(attr).map(function(keym) {
+				});*/
+				Object.keys(node.attributes).map(function(keym) {
 					let key = keym.toLowerCase();
 					if ([':type','type','tipo',':tipo'].includes(key)) {
 						// store type value
@@ -245,11 +245,12 @@ export default async function(context) {
 				if (node.icons.includes('gohome')) context.x_state.pages[resp.state.current_page].path='/';
 				// attributes overwrite anything
 				// parse attributes
-				let attr = {}, params = {};
+				let params = {};
+				/*let attr = {};
 				node.attributes.map(function(x) {
 					attr = {...attr,...x};
-				});
-				Object.keys(attr).map(function(key) {
+				});*/
+				Object.keys(node.attributes).map(function(key) {
 					let value = attr[key];
 					// preprocess value
 					value = value.replaceAll('$variables.','')
@@ -315,11 +316,13 @@ export default async function(context) {
 			func: async function(node,state) {
 				let resp = context.reply_template({ state });
 				// parse attributes
-				let attr = {}, params = {};
+				let params = {};
+				/*
+				let attr = {};
 				node.attributes.map(function(x) {
 					attr = {...attr,...x};
-				});
-				Object.keys(attr).map(function(key) {
+				});*/
+				Object.keys(node.attributes).map(function(key) {
 					let value = attr[key];
 					// preprocess value
 					value = value.replaceAll('$variables.','')
@@ -355,11 +358,11 @@ export default async function(context) {
 				let params = { refx:node.id };
 				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
 				// process attributes
-				let attr = {};
+				/*let attr = {};
 				node.attributes.map(function(x) {
 					attr = {...attr,...x};
-				});
-				Object.keys(attr).map(function(key) {
+				});*/
+				Object.keys(node.attributes).map(function(key) {
 					let value = attr[key];
 					let keytest = key.toLowerCase().trim();
 					let tvalue = value.toString().replaceAll('$variables','')
@@ -460,11 +463,11 @@ export default async function(context) {
 				let resp = context.reply_template({ state });
 				let params = { refx:node.id };
 				// parse attributes
-				let attr = {};
+				/*let attr = {};
 				node.attributes.map(function(x) {
 					attr = {...attr,...x};
-				});
-				Object.keys(attr).map(function(key) {
+				});*/
+				Object.keys(node.attributes).map(function(key) {
 					let value = attr[key];
 					// preprocess value
 					value = value.replaceAll('$variables.','')
@@ -556,11 +559,11 @@ export default async function(context) {
 					if (node.font.size>=10) params.class.push('caption');
 					if (node.font.italic==true) params.class.push('font-italic');
 					// - process attributes
-					let attr = {};
+					/*let attr = {};
 					node.attributes.map(function(x) {
 						attr = {...attr,...x};
-					});
-					Object.keys(attr).map(function(key) {
+					});*/
+					Object.keys(node.attributes).map(function(key) {
 						let keytest = key.toLowerCase().trim();
 						let value = attr[key];
 						if (keytest=='class') {
@@ -728,11 +731,11 @@ export default async function(context) {
 				}
 				// process attributes (and overwrite types if needed)
 				// parse attributes
-				let attr = {};
+				/*let attr = {};
 				node.attributes.map(function(x) {
 					attr = {...attr,...x};
-				});
-				Object.keys(attr).map(function(keym) {
+				});*/
+				Object.keys(node.attributes).map(function(keym) {
 					let keytest = keym.toLowerCase().trim();
 					let value = attr[keym];
 					//console.log(`${tmp.field} attr key:${keytest}, value:${value}`);
