@@ -66,30 +66,35 @@ export default async function(context) {
 		'def_modelos': {...null_template,...{ x_icons:'desktop_new', x_level:'2', x_text_contains:'modelos' } },
 		'def_assets': {...null_template,...{ x_icons:'desktop_new', x_level:'2', x_text_contains:'assets' } },
 
+
+		// ********************
+		//  Express Methods
+		// ********************
+
 		'def_server': {
 			x_icons: 'desktop_new',
 			x_level: '2',
 			x_text_contains: 'server|servidor|api',
 			hint: 'Representa a un backend integrado con funciones de express.',
-			func: async function(node,commands_state) {
+			func: async function(node,state) {
 				let resp = context.reply_template();
 				context.x_state.npm = {...context.x_state.npm, ...{ 'body_parser':'*', 'cookie-parser':'*' } };
 				context.x_state.central_config.static = false;
 				return resp;
 			}
 		},
-		'def_path': {
+		'def_server_path': {
 			x_icons: 'list',
 			x_level: '3,4',
 			x_or_isparent: 'def_server',
 			x_not_icons: 'button_cancel,desktop_new,help',
 			hint: 'Carpeta para ubicacion de funcion de servidor',
-			func: async function(node,commands_state) {
-				let resp = context.reply_template({ state:commands_state });
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
 				if (node.level==2) {
 					//state.current_folder = node.text;
 					resp.state.current_folder = node.text;
-				} else if (node.level==3 && await context.isExactParentID(node.id,'def_path')) {
+				} else if (node.level==3 && await context.isExactParentID(node.id,'def_server_path')) {
 					let parent_node = await context.dsl_parser.getParentNode({ id:node.id });
 					//state.current_folder = `${parent_node.text}/${node.id}`;
 					resp.state.current_folder = `${parent_node.text}/${node.id}`;
@@ -99,13 +104,13 @@ export default async function(context) {
 				return resp;
 			}
 		},
-		'def_server_func': {
+		'def_server_func': { //@TODO finish incomplete
 			x_empty: 'icons',
 			x_level: '3,4,5',
 			x_or_isparent: 'def_server',
 			hint: 'Corresponde a la declaracion de una funcion de servidor',
-			func: async function(node,commands_state) {
-				let resp = context.reply_template({ state:commands_state });
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
 				context.x_state.central_config.static = false; //server func cannot run in a static site
 				resp.state.current_func = node.text; 
 				if (node.level!=2) {
@@ -121,7 +126,9 @@ export default async function(context) {
 			}
 		},
 
-		// STORE definitions
+		// *************************
+		//  VueX STORES definitions
+		// *************************
 		'def_store': { 
 			x_icons:'desktop_new', 
 			x_level:'2', 
@@ -137,19 +144,13 @@ export default async function(context) {
 			x_level: '3',
 			x_all_hasparent: 'def_store',
 			hint: 'Representa a una definicion de store de VueX',
-			func: async function(node, commands_state) {
-				let resp = context.reply_template({ state:commands_state });
+			func: async function(node, state) {
+				let resp = context.reply_template({ state });
 				let tmp = { type:'normal', version:'', expire:'' };
 				// create store in app state if not already there
 				resp.state.current_store = node.text;
 				if (!context.x_state.stores) context.x_state.stores={};
 				if (context.x_state.stores && node.text in context.x_state.stores===false) context.x_state.stores[node.text]={};
-				//@TODO evaluate if we should change the format for node.attributes within dsl_parser, instead of doing this each time.
-				// parse attributes
-				/*let attr = {};
-				node.attributes.map(function(x) {
-					attr = {...attr,...x};
-				});*/
 				Object.keys(node.attributes).map(function(keym) {
 					let key = keym.toLowerCase();
 					if ([':type','type','tipo',':tipo'].includes(key)) {
@@ -193,7 +194,9 @@ export default async function(context) {
 		//def_store_call
 		//def_store_modificar
 
-		//def_proxies
+		// **************************
+		//  VueX PROXIES definitions
+		// **************************
 		'def_proxies': { 
 			x_icons:'desktop_new', 
 			x_level:2, 
@@ -207,6 +210,10 @@ export default async function(context) {
 		//def_proxy_def
 		//def_enviarpantalla
 		//def_layout_view
+
+		// *****************************
+		//  Vue Pages and View Elements
+		// *****************************
 
 		//def_html y otros
 
@@ -244,12 +251,7 @@ export default async function(context) {
 				// is this a 'home' page ?
 				if (node.icons.includes('gohome')) context.x_state.pages[resp.state.current_page].path='/';
 				// attributes overwrite anything
-				// parse attributes
 				let params = {};
-				/*let attr = {};
-				node.attributes.map(function(x) {
-					attr = {...attr,...x};
-				});*/
 				Object.keys(node.attributes).map(function(key) {
 					let value = node.attributes[key];
 					// preprocess value
@@ -317,11 +319,6 @@ export default async function(context) {
 				let resp = context.reply_template({ state });
 				// parse attributes
 				let params = {};
-				/*
-				let attr = {};
-				node.attributes.map(function(x) {
-					attr = {...attr,...x};
-				});*/
 				Object.keys(node.attributes).map(function(key) {
 					let value = node.attributes[key];
 					// preprocess value
@@ -347,7 +344,44 @@ export default async function(context) {
 			}
 		},
 
-		//def_contenedor
+		'def_contenedor': {
+			x_icons: 'idea',
+			x_text_contains: 'contenedor',
+			x_level: '>2',
+			hint: 'Vue Container',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = { refx:node.id };
+				// process attributes
+				Object.keys(node.attributes).map(function(key) {
+					let value = node.attributes[key];
+					let keytest = key.toLowerCase().trim();
+					let tvalue = value.toString().replaceAll('$variables','')
+									.replaceAll('$vars.','')
+									.replaceAll('$params.','')
+									.replaceAll('$env.','process.env.')
+									.replaceAll('$store.','$store.state.').trim();
+					if (keytest=='props') {
+						for (let i of tvalue.split(',')) {
+							params[i] = 'vue:prop';
+						}
+					} else {
+						if (keytest.charAt(0)!=':' && value!='' && value!=tvalue) {
+							params[':'+key.trim()] = tvalue;
+						} else {
+							params[key.trim()] = tvalue;
+						}
+					}
+				}.bind(this));
+				// write response
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->\n`;
+				resp.open += context.tagParams('v-container',params,false) + '\n';
+				resp.close = '</v-container>\n';
+				// return
+				return resp;
+			}
+		},
+
 		'def_flex': {
 			x_icons: 'idea',
 			x_text_contains: 'flex',
@@ -358,10 +392,6 @@ export default async function(context) {
 				let params = { refx:node.id };
 				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
 				// process attributes
-				/*let attr = {};
-				node.attributes.map(function(x) {
-					attr = {...attr,...x};
-				});*/
 				Object.keys(node.attributes).map(function(key) {
 					let value = node.attributes[key];
 					let keytest = key.toLowerCase().trim();
@@ -440,6 +470,84 @@ export default async function(context) {
 				return resp;
 			}
 		},
+		//..views..
+		//def_progress
+		//def_datatable
+		//def_datatable_col
+		//def_datatable_fila
+		//def_datatable_headers
+		//def_mapa
+		//def_youtube_playlist
+		//def_youtube
+		//def_card
+		//def_card_actions
+		//def_card_title
+		//def_card_text
+		//def_card_media
+		//def_dialog
+
+		//def_form
+		//def_textfield
+		//def_avatar
+		//def_boton
+		//def_chip
+		//def_google_autocomplete
+
+		//def_toolbar
+		//def_layout_custom
+		//def_divider
+		//def_slot
+		//def_div
+		//def_agrupar
+		//def_bloque
+		//def_hover
+		//def_tooltip
+		//def_componente_view (instancia)
+		//def_menu
+		//def_barralateral
+		//def_barrainferior
+
+		//def_contenido
+		//def_contenido_layout
+		
+		//def_sparkline
+		//def_highcharts
+		//def_trend
+
+		//def_listado
+		//def_listado_grupo
+		//def_listado_dummy
+		//def_listado_fila
+		//def_listado_fila_accion
+		//def_listado_fila_contenido
+		//def_listado_fila_titulo
+		//def_listado_fila_subtitulo
+		//def_listado_fila_avatar
+		//def_icono
+		//def_animar
+		//def_imagen
+		//def_qrcode
+		//def_toolbar_title
+		//def_layout
+		//def_componente
+		//def_llamar_evento (def_componente_emitir , script)
+		//def_analytics_evento
+		//def_medianet_ad
+		//def_paginador
+
+		//def_page_seo
+		//def_page_estilos
+		//def_page_estilos_class
+		//def_script
+		//def_event_server
+		//def_event_mounted
+		//def_event_method
+		//def_event_element
+
+		//def_condicion_view
+		//def_otra_condicion_view
+		//def_condicion (def_script_condicion)
+		//def_otra_condicion (def_script_otra_condicion)
 
 		'def_center': {
 			x_icons: 'idea',
@@ -463,10 +571,6 @@ export default async function(context) {
 				let resp = context.reply_template({ state });
 				let params = { refx:node.id };
 				// parse attributes
-				/*let attr = {};
-				node.attributes.map(function(x) {
-					attr = {...attr,...x};
-				});*/
 				Object.keys(node.attributes).map(function(key) {
 					let value = node.attributes[key];
 					// preprocess value
@@ -559,10 +663,6 @@ export default async function(context) {
 					if (node.font.size>=10) params.class.push('caption');
 					if (node.font.italic==true) params.class.push('font-italic');
 					// - process attributes
-					/*let attr = {};
-					node.attributes.map(function(x) {
-						attr = {...attr,...x};
-					});*/
 					Object.keys(node.attributes).map(function(key) {
 						let keytest = key.toLowerCase().trim();
 						let value = node.attributes[key];
@@ -677,6 +777,10 @@ export default async function(context) {
 			}
 		},
 
+		// *************
+		// 	 VARIABLES
+		// *************
+
 		'def_variables': {
 			x_icons: 'xmag',
 			x_level: 3,
@@ -730,11 +834,6 @@ export default async function(context) {
 					tmp.type = 'string';
 				}
 				// process attributes (and overwrite types if needed)
-				// parse attributes
-				/*let attr = {};
-				node.attributes.map(function(x) {
-					attr = {...attr,...x};
-				});*/
 				Object.keys(node.attributes).map(function(keym) {
 					let keytest = keym.toLowerCase().trim();
 					let value = node.attributes[keym];
@@ -886,8 +985,161 @@ export default async function(context) {
 			}
 		},
 
+		'def_variables_watch': {
+			x_icons: 'help',
+			x_level: '>4',
+			x_text_contains: 'change',
+			x_all_hasparent: 'def_variables',
+			hint: 'Monitorea los cambios realizados a la variable padre',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = { name:node.text.trim(), type:'watched', oldvar:'old', newvar:'new', deep:false };
+				// process attributes
+				Object.keys(node.attributes).map(function(keym) {
+					let keytest = keym.toLowerCase().trim();
+					let value = node.attributes[keym];
+					if (':old,old'.split(',').includes(keytest)) {
+						params.oldvar = value;
+					} else if (':new,new'.split(',').includes(keytest)) {
+						params.newvar = value;
+					} else if (':deep,deep'.split(',').includes(keytest)) {
+						params.deep = value;
+					}
+				});
+				params.flat = resp.state.vars_path.join('.'); // inherit parent var from def_variables_field last state
+				// write tag
+				resp.open = context.tagParams('vue_watched_var',params,false);
+				if (node.text_note!='') resp.open += `//${node.text_note}\n`;
+				resp.close = '</vue_watched_var>';
+				return resp;
+			}
+		},
+
+		'def_variables_func': {
+			x_icons: 'help',
+			x_level: 4,
+			x_not_text_contains: ':server,condicion si,otra condicion',
+			x_all_hasparent: 'def_variables',
+			hint: 'Variable tipo funcion',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let params = { name:node.text.trim(), type:'computed' };
+				let tmp = { type:'async' };
+				// process attributes
+				Object.keys(node.attributes).map(function(key) {
+					let keytest = key.toLowerCase().trim().replaceAll(':','');
+					let value = node.attributes[key].trim();
+					if ('default'==keytest) {
+						params.valor = value;
+					} else if ('valor,value'.split(',').includes(keytest)) {
+						params.valor = value;
+					} else if ('lazy'==keytest) {
+						params.lazy = (value=='true')?true:false;
+					} else if ('observar,onchange,cambie,cambien,modifiquen,cuando,monitorear,watch'.split(',').includes(keytest)) {
+						params.watch = value;
+					} else if ('async'==keytest) {
+						tmp.type = (value=='true')?'async':'sync';
+					}
+				});
+				// built response
+				if (tmp.type=='async') {
+					// add async plugin to app
+					context.x_state.plugins['vue-async-computed'] = {
+						global: true, npm: {
+							'vue-async-computed':'*'
+						}
+					};
+					resp.open = context.tagParams('vue_async_computed',params,false);
+					if (node.text_note!='') resp.open += `//${node.text_note}\n`;
+					resp.close = '</vue_async_computed>\n';
+				} else {
+					resp.open = context.tagParams('vue_computed',params,false);
+					if (node.text_note!='') resp.open += `//${node.text_note}\n`;
+					resp.close = '</vue_computed>\n';
+				}
+				// return
+				return resp;
+			}
+		},
+
+		// *************************
+		//  Scriptable definitions
+		// *************************
+
+		//..scripts..
+		'def_responder': {
+			x_icons: 'desktop_new',
+			x_text_contains: 'responder',
+			x_not_text_contains: 'traducir,struct,extender',
+			x_all_hasparent: 'def_variables',
+			hint: 'Emite una respuesta para la variable de tipo funcion',
+			func:async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `//${node.text_note}\n`;
+				let text = context.dsl_parser.findVariables({ text:node.text, symbol:`"`, symbol_closing:`"` });
+				// tests return types
+				if (text.contains('**')) {
+					let new_vars = context.dsl_parser.replaceVarsSymbol({ text, from:{ open:`**`,close:`**` }, to:{ open:'${',close:'}' } });
+					/*if (new_vars.charAt(0)=='+') { // if first char is +
+						new_vars = new_vars.slice(1); // remove first char
+					} else if (new_vars.slice(-1)=='+') { // if lastchar is +
+						new_vars = new_vars.slice(0,-1); // remove last char
+					}*/
+					resp.open += `return \`${new_vars}\`;\n`;
+				} else if (text.contains('$')) {
+					text = text .replaceAll('$params','this.')
+								.replaceAll('$variables','this.');
+					resp.open += `return ${text};\n`;
+				} else if (text.contains('assets:')) {
+					text = context.getAsset(text,'js');
+					resp.open += `return ${text};\n`;
+				} else if (text=='') {
+					resp.open += `return '';\n`;
+				} else if (text.charAt(0)=='(' && text.slice(-1)==')') {
+					text = text.slice(1).slice(0,-1);
+					resp.open += `return ${text};\n`;
+				} else {
+					if (context.x_state.central_config.idiomas && context.x_state.central_config.idiomas.contains(',')) {
+						// @TODO add support for i18m
+					} else {
+						resp.open += `return '${text}';\n`;
+					}
+				}
+				return resp;
+			}
+		},
+
+		//def_responder (@todo i18n)
+		//def_insertar_modelo
+		//def_consultar_modelo
+		//def_modificar_modelo
+		//def_eliminar_modelo
+		//def_consultar_web
+		//def_consultar_web_upload
+		//def_consultar_web_download
+		//def_aftertime
+		//def_struct
+		//def_extender
+		//def_npm_instalar
+		//def_agregar_campos
+		//def_preguntar
+		//def_array_transformar
+		//def_procesar_imagen
+		//def_imagen_exif
+		//def_var_clonar
+		//def_modificar
+		//def_probar
+		//def_event_try (def_probar_try)
+		//def_literal_js
+		//def_guardar_nota
+		//def_console
+		//def_xcada_registro
+		//def_crear_id_unico
+		
+
+
 		// OTHER node types
-		'def_imagen': {
+		/*'def_imagen': {
 			x_icons:'idea',
 			x_not_icons:'button_cancel,desktop_new,help',
 			x_not_empty:'attributes[:src]',
@@ -896,7 +1148,7 @@ export default async function(context) {
 			func:async function(node,state) {
 				return context.reply_template({ otro:'Pablo', state });
 			}
-		},
+		},*/
 
 		//
 	}

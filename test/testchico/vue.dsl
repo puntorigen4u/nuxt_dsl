@@ -140,16 +140,17 @@
 </node>
 <node CREATED="1594004881822" ID="ID_1586770012" MODIFIED="1597442914731" TEXT="variables">
 <icon BUILTIN="xmag"/>
-<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1597442918623" TEXT="fondo">
+<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1597584780229" TEXT="fondo">
 <icon BUILTIN="help"/>
-<icon BUILTIN="button_cancel"/>
-<node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1594004520461" TEXT="struct, respuesta">
+<node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1597584784631" TEXT="struct, respuesta">
 <icon BUILTIN="desktop_new"/>
+<icon BUILTIN="button_cancel"/>
 <attribute_layout NAME_WIDTH="133" VALUE_WIDTH="113"/>
 <attribute NAME="backgroundColor" VALUE="#00D95A"/>
 </node>
-<node CREATED="1553565000664" ID="ID_678355206" MODIFIED="1564666600606" TEXT="responder &quot;**respuesta**&quot;">
+<node CREATED="1553565000664" ID="ID_678355206" MODIFIED="1597639670325" TEXT="responder &quot;**respuesta**&quot;">
 <icon BUILTIN="desktop_new"/>
+<icon BUILTIN="bell"/>
 </node>
 </node>
 <node CREATED="1597527838124" ID="ID_1871442710" MODIFIED="1597537895943" TEXT="info">
