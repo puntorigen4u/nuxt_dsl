@@ -142,9 +142,8 @@
 <icon BUILTIN="xmag"/>
 <node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1597584780229" TEXT="fondo">
 <icon BUILTIN="help"/>
-<node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1597584784631" TEXT="struct, respuesta">
+<node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1597686805394" TEXT="struct, respuesta">
 <icon BUILTIN="desktop_new"/>
-<icon BUILTIN="button_cancel"/>
 <attribute_layout NAME_WIDTH="133" VALUE_WIDTH="113"/>
 <attribute NAME="backgroundColor" VALUE="#00D95A"/>
 </node>

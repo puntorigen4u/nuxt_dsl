@@ -20,6 +20,15 @@ export default async function(context) {
 								return context.reply_template({ hasChildren:false, state });
 							}
 						};
+	const getTranslatedTextVar = function(text) {
+		let vars = context.dsl_parser.findVariables({ text, symbol:`**`, symbol_closing:`**` });
+		let new_vars = context.dsl_parser.replaceVarsSymbol({ text, from:{ open:`**`,close:`**` }, to:{ open:'${',close:'}' } });
+		if ('${'+vars+'}'==new_vars) {
+			return vars;
+		} else {
+			return `\`${new_vars}\``;
+		}
+	}
 	/*
 	//special node names you can define:
 	'not_found': {
@@ -203,13 +212,29 @@ export default async function(context) {
 			x_text_contains:'prox',
 			hint: 'Representa una coleccion de proxies de Vue',
 			func: async function(node, state) {
-				let resp = context.reply_template({ state, hasChildren:true });
+				let resp = context.reply_template({ state });
 				return resp;
 			}
 		},
-		//def_proxy_def
-		//def_enviarpantalla
-		//def_layout_view
+		'def_proxy_def': {
+			x_level: 3,
+			x_empty: 'icons',
+			x_or_isparent: 'def_proxies',
+			hint: 'Representa una definicion de un proxy (middleware) en Vue',
+			func: async function(node, state) {
+				let resp = context.reply_template({ state });
+				resp.state.current_proxy = node.text.trim();
+				context.x_state.proxies[resp.state.current_proxy] = { 
+					imports: {
+						underscore:'_'
+					},
+					code: ''
+				};
+				resp.open = context.tagParams('proxy_code',{ name:resp.state.current_proxy },false) + '\n';
+				resp.close = '</proxy_code>';
+				return resp;
+			}
+		},
 
 		// *****************************
 		//  Vue Pages and View Elements
@@ -218,7 +243,7 @@ export default async function(context) {
 		//def_html y otros
 
 		'def_page': {
-			x_level: '2',
+			x_level: 2,
 			x_not_icons: 'button_cancel,desktop_new,list,help',
 			x_not_text_contains: 'componente:,layout:',
 			hint: 'Archivo vue',
@@ -248,6 +273,8 @@ export default async function(context) {
 						path: '/'+resp.state.current_page
 					};
 				}
+				if (resp.state.from_def_layout) context.x_state.pages[resp.state.current_page].tipo='layout';
+				if (resp.state.from_def_componente) context.x_state.pages[resp.state.current_page].tipo='componente';
 				// is this a 'home' page ?
 				if (node.icons.includes('gohome')) context.x_state.pages[resp.state.current_page].path='/';
 				// attributes overwrite anything
@@ -301,12 +328,45 @@ export default async function(context) {
 				}
 				// set code
 				resp.open += `<template>\n`;
-				if (context.x_state.pages[resp.state.current_page]['layout'] == '') {
-					resp.open += '\t'+context.tagParams('v-app',params,false)+'\n';
-					resp.close += '\t</v-app>\n';
+				if ('from_def_componente' in resp.state===false) {
+					if (context.x_state.pages[resp.state.current_page]['layout'] == '') {
+						resp.open += '\t'+context.tagParams('v-app',params,false)+'\n';
+						resp.close += '\t</v-app>\n';
+					}
 				}
 				resp.close += `</template>\n`;
 				// return
+				return resp;
+			}
+		},
+
+		'def_layout': {
+			x_level: 2,
+			x_not_icons: 'button_cancel,desktop_new,list,help,idea',
+			x_text_contains: 'layout:',
+			x_empty: 'icons',
+			hint: 'Archivo vue tipo layout',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				// call def_page for functionality informing we are calling from def_layout using state.
+				resp = await context.x_commands['def_page'].func(node,{...state,...{ from_def_layout:true }});
+				delete resp.state.from_def_layout;
+				return resp;
+			}
+		},
+
+		'def_componente': {
+			x_level: 2,
+			x_not_icons: 'button_cancel,desktop_new,list,help,idea',
+			x_text_contains: 'componente:',
+			x_empty: 'icons',
+			hint: 'Archivo vue tipo componente',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				// call def_page for functionality informing we are calling from def_componente using state.
+				resp = await context.x_commands['def_page'].func(node,{...state,...{ from_def_componente:true }});
+				delete resp.state.from_def_componente;
+				console.log('def_componente context x_state says:',resp.state);
 				return resp;
 			}
 		},
@@ -471,6 +531,11 @@ export default async function(context) {
 			}
 		},
 		//..views..
+		//*def_page
+		//def_page_seo
+		//def_page_estilos
+		//def_page_estilos_class
+
 		//def_progress
 		//def_datatable
 		//def_datatable_col
@@ -493,7 +558,14 @@ export default async function(context) {
 		//def_chip
 		//def_google_autocomplete
 
+		//*def_layout
+		//def_layout_view
+		//*def_componente
+		//def_componente_view (instancia)
+		//def_llamar_evento (def_componente_emitir , script)
+
 		//def_toolbar
+		//def_toolbar_title
 		//def_layout_custom
 		//def_divider
 		//def_slot
@@ -502,7 +574,7 @@ export default async function(context) {
 		//def_bloque
 		//def_hover
 		//def_tooltip
-		//def_componente_view (instancia)
+		
 		//def_menu
 		//def_barralateral
 		//def_barrainferior
@@ -527,17 +599,10 @@ export default async function(context) {
 		//def_animar
 		//def_imagen
 		//def_qrcode
-		//def_toolbar_title
-		//def_layout
-		//def_componente
-		//def_llamar_evento (def_componente_emitir , script)
 		//def_analytics_evento
 		//def_medianet_ad
 		//def_paginador
 
-		//def_page_seo
-		//def_page_estilos
-		//def_page_estilos_class
 		//def_script
 		//def_event_server
 		//def_event_mounted
@@ -858,60 +923,58 @@ export default async function(context) {
 					}
 				});
 				// assign default value for type, if not defined
-				//if ('value' in params===false) {
-					if ('string,text,texto,script'.split(',').includes(tmp.type)) {
-						if ('value' in params===false) {
-							params.value = '';
+				if ('string,text,texto,script'.split(',').includes(tmp.type)) {
+					if ('value' in params===false) {
+						params.value = '';
+					} else {
+						params.value = params.value.toString();
+					}
+				} else if ('int,numeric,number,numero'.split(',').includes(tmp.type)) {
+					if ('value' in params===false) {
+						params.value = 0;
+					} else {
+						params.value = parseInt(params.value);
+					}
+				} else if ('float,real,decimal'.split(',').includes(tmp.type)) {
+					if ('value' in params===false) {
+						params.value = 0.0;
+					} else {
+						params.value = parseFloat(params.value);
+					}
+				} else if ('boolean,boleano,booleano'.split(',').includes(tmp.type)) {
+					if ('value' in params===false) {
+						if (tmp.field=='true') {
+							// ex value of an array (true/false)
+							params.value = true;
+						} else if (tmp.field=='false') {
+							params.value = false;
 						} else {
-							params.value = params.value.toString();
+							params.value = false;
 						}
-					} else if ('int,numeric,number,numero'.split(',').includes(tmp.type)) {
-						if ('value' in params===false) {
-							params.value = 0;
-						} else {
-							params.value = parseInt(params.value);
-						}
-					} else if ('float,real,decimal'.split(',').includes(tmp.type)) {
-						if ('value' in params===false) {
-							params.value = 0.0;
-						} else {
-							params.value = parseFloat(params.value);
-						}
-					} else if ('boolean,boleano,booleano'.split(',').includes(tmp.type)) {
-						if ('value' in params===false) {
-							if (tmp.field=='true') {
-								// ex value of an array (true/false)
-								params.value = true;
-							} else if (tmp.field=='false') {
-								params.value = false;
-							} else {
-								params.value = false;
-							}
-						} else {
-							if (params.value=='true') {
-								// ex value of an array (true/false)
-								params.value = true;
-							} else if (params.value=='false') {
-								params.value = false;
-							}
-						}
-					} else if ('array'.split(',').includes(tmp.type)) {
-						tmp.type = 'array';
-						if ('value' in params===false) {
-							params.value = [];
-						} else {
-							params.value = JSON.parse(params.value);
-						}
-
-					} else if ('struct,object'.split(',').includes(tmp.type)) {
-						tmp.type = 'object';
-						if ('value' in params===false) {
-							params.value = {};							
-						} else {
-							params.value = JSON.parse(params.value);
+					} else {
+						if (params.value=='true') {
+							// ex value of an array (true/false)
+							params.value = true;
+						} else if (params.value=='false') {
+							params.value = false;
 						}
 					}
-				//}
+				} else if ('array'.split(',').includes(tmp.type)) {
+					tmp.type = 'array';
+					if ('value' in params===false) {
+						params.value = [];
+					} else {
+						params.value = JSON.parse(params.value);
+					}
+
+				} else if ('struct,object'.split(',').includes(tmp.type)) {
+					tmp.type = 'object';
+					if ('value' in params===false) {
+						params.value = {};							
+					} else {
+						params.value = JSON.parse(params.value);
+					}
+				}
 				// check and prepare global state
 				if (typeof state.current_page!=='undefined') {
 					if (state.current_page in context.x_state.pages === false) context.x_state.pages[state.current_page]={};
@@ -961,26 +1024,7 @@ export default async function(context) {
 					resp.state.vars_types.push(tmp.type); // push new var type to vars_types
 					context.x_state.pages[state.current_page].var_types[resp.state.vars_path.join('.')]=tmp.type;
 					resp.state.vars_last_level=tmp.level;
-					/*
-					// get parent nodes
-					let parents = await context.dsl_parser.getParentNodesIDs({ id:node.id, array:true });
-					let dads = [tmp.field];
-					for (let parent_id of parents) {
-						let node = await context.dsl_parser.getNode({ id:parent_id, recurse:false });
-						if (node.text=='variables' && node.icons.includes('xmag')) {
-							break;
-						}
-						dads.push(node.text.split(':')[0].trim());
-					}
-					let var_name = dads.reverse().join('.');
-					context.x_state.pages[state.current_page].var_types[var_name]=tmp.type;
-					setToValue(context.x_state.pages[state.current_page].variables,params.value,var_name);
-					*/
 				}
-				// pass level to next var field if it exists 
-				// @TODO @DONE I believe this command speed can be improved using the commands state instead of getting Parents
-				//console.log('field_var tmp =>',JSON.stringify(tmp));
-				//resp.state.tmp_var = tmp;
 				return resp;
 			}
 		},
@@ -1072,20 +1116,16 @@ export default async function(context) {
 			x_text_contains: 'responder',
 			x_not_text_contains: 'traducir,struct,extender',
 			x_all_hasparent: 'def_variables',
+			x_level: '>3',
 			hint: 'Emite una respuesta para la variable de tipo funcion',
 			func:async function(node,state) {
 				let resp = context.reply_template({ state });
 				if (node.text_note!='') resp.open = `//${node.text_note}\n`;
 				let text = context.dsl_parser.findVariables({ text:node.text, symbol:`"`, symbol_closing:`"` });
 				// tests return types
-				if (text.contains('**')) {
-					let new_vars = context.dsl_parser.replaceVarsSymbol({ text, from:{ open:`**`,close:`**` }, to:{ open:'${',close:'}' } });
-					/*if (new_vars.charAt(0)=='+') { // if first char is +
-						new_vars = new_vars.slice(1); // remove first char
-					} else if (new_vars.slice(-1)=='+') { // if lastchar is +
-						new_vars = new_vars.slice(0,-1); // remove last char
-					}*/
-					resp.open += `return \`${new_vars}\`;\n`;
+				if (text.contains('**') && node.icons.includes('bell')) {
+					let new_vars = getTranslatedTextVar(text);
+					resp.open += `return ${new_vars};\n`;
 				} else if (text.contains('$')) {
 					text = text .replaceAll('$params','this.')
 								.replaceAll('$variables','this.');
@@ -1109,7 +1149,66 @@ export default async function(context) {
 			}
 		},
 
-		//def_responder (@todo i18n)
+		'def_struct': {
+			x_icons: 'desktop_new',
+			x_text_contains: 'struct',
+			x_not_text_contains: 'traducir',
+			x_level: '>3',
+			hint: 'Crea una variable de tipo Objeto, con los campos y valores definidos en sus atributos.',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let tmp = {};
+				if (node.text.contains(',')) {
+					// parse output var
+					tmp.var = node.text.split(',').pop(); //last comma element
+					if (context.hasParentID(node.id,'def_event_server')) {
+						tmp.var = tmp.var.replaceAll('$variables.','resp.')
+										 .replaceAll('$vars.','resp.')
+										 .replaceAll('$params.','resp.');
+						tmp.var = (tmp.var=='resp.')?'resp':tmp.var;
+						tmp.parent_server = true;
+					} else {
+						tmp.var = tmp.var.replaceAll('$variables.','this.')
+										 .replaceAll('store.','this.$store.state.');
+						tmp.var = (tmp.var=='this.')?'this':tmp.var;
+					}
+					// process attributes
+					let attrs = {...node.attributes};
+					Object.keys(node.attributes).map(function(key) {
+						let keytest = key.toLowerCase().trim();
+						let value = node.attributes[key].trim();
+						if (node.icons.includes('bell')) {
+							value = getTranslatedTextVar(value);
+						} else if (value.contains('assets:')) {
+							value = context.getAsset(value,'jsfunc');
+						} else {
+							// normalize vue type vars
+							if (tmp.parent_server) {
+								value = value.replaceAll('$variables.','resp.')
+											 .replaceAll('$vars.','resp.')
+											 .replaceAll('$params.','resp.');
+							} else {
+								value = value 	.replaceAll('$variables.','this.')
+												.replaceAll('$vars.','this.')
+												.replaceAll('$params.','this.')
+												.replaceAll('$store.','this.$store.state.');
+							}
+						}
+						// modify values to copy
+						attrs[key] = value;
+					});
+					// write output
+					if (node.text_note!='') resp.open = `// ${node.text_note}\n`;
+					resp.open += `var ${tmp.var.trim()} = ${JSON.stringify(attrs)};\n`;
+
+				} else {
+					resp.valid=false;
+				}
+				return resp;
+			}
+		},
+
+		//*def_responder (@todo i18n)
 		//def_insertar_modelo
 		//def_consultar_modelo
 		//def_modificar_modelo
@@ -1118,7 +1217,7 @@ export default async function(context) {
 		//def_consultar_web_upload
 		//def_consultar_web_download
 		//def_aftertime
-		//def_struct
+		//*def_struct
 		//def_extender
 		//def_npm_instalar
 		//def_agregar_campos
@@ -1135,6 +1234,8 @@ export default async function(context) {
 		//def_console
 		//def_xcada_registro
 		//def_crear_id_unico
+		//def_enviarpantalla
+
 		
 
 
