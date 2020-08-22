@@ -1,6 +1,6 @@
 {
   "name": "vue_dsl",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -37,17 +37,18 @@
     "is-port-reachable": "^3.0.0",
     "lorem-ipsum": "^2.0.3",
     "open_console": "github:puntorigen/console",
-    "recursive-copy": "^2.0.10"
+    "recursive-copy": "^2.0.10",
+    "safe-eval": "^0.4.1"
   },
   "devDependencies": {
     "@ampproject/rollup-plugin-closure-compiler": "^0.26.0",
-    "@babel/core": "^7.11.1",
+    "@babel/core": "^7.11.4",
     "@babel/preset-env": "^7.11.0",
     "@rollup/plugin-babel": "^5.2.0",
     "@rollup/plugin-node-resolve": "^8.4.0",
     "cross-env": "^7.0.2",
     "jsdoc-to-markdown": "^6.0.1",
-    "rollup": "^2.26.3"
+    "rollup": "^2.26.5"
   },
   "scarfSettings": {
     "enabled": false

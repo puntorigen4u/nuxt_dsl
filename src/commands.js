@@ -28,7 +28,48 @@ export default async function(context) {
 		} else {
 			return `\`${new_vars}\``;
 		}
-	}
+	};
+	// process our own attributes_aliases to normalize node attributes
+	const aliases2params = function(x_id,node) {
+		let params = {}, attr_map={};
+		// read x_id attributes aliases
+		if ('attributes_aliases' in context.x_commands[x_id]) {
+			let aliases = context.x_commands[x_id].attributes_aliases;
+			Object.keys(aliases).map(function(key) {
+				aliases[key].split(',').map(alternative_key=>{attr_map[alternative_key]=key});
+			});
+		}
+		// process mapped attributes
+		Object.keys(node.attributes).map(function(key) {
+			let value = node.attributes[key];
+			let key_use = key.trim().replace(':','');
+			let keytest = key_use.toLowerCase();
+			let tvalue = value.toString().replaceAll('$variables','')
+							.replaceAll('$vars.','')
+							.replaceAll('$params.','')
+							.replaceAll('$config.','process.env.')
+							.replaceAll('$store.','$store.state.').trim();
+			//
+			if (keytest=='props') {
+				value.split(',').map(x=>{params[x]=null});
+			} else if (keytest in attr_map && value!=tvalue) {
+				// value contains a variable
+				params[`:${attr_map[keytest]}`] = tvalue;
+			} else if (keytest in attr_map) {
+				// literal value
+				params[attr_map[keytest]] = tvalue;							
+			} else {
+				// this is an attribute key that is not mapped
+				if (value!=tvalue) {
+					params[`:${key_use}`] = tvalue;
+				} else {
+					params[key_use] = tvalue;
+				}
+			}
+		});
+		//
+		return params;
+	};
 	/*
 	//special node names you can define:
 	'not_found': {
@@ -241,6 +282,10 @@ export default async function(context) {
 		// *****************************
 
 		//def_html y otros
+		//*def_page
+		//*def_page_seo
+		//*def_page_estilos
+		//*def_page_estilos_class
 
 		'def_page': {
 			x_level: 2,
@@ -339,6 +384,105 @@ export default async function(context) {
 				return resp;
 			}
 		},
+		'def_page_seo': {
+			x_level: 3,
+			x_icons: 'desktop_new',
+			x_text_contains: 'seo',
+			hint: 'Definicion local de SEO',
+			func: async function(node, state) {
+				// @TODO check this node runs correctly (currently without testing map aug-20-20)
+				let resp = context.reply_template({ state });
+				// process children nodes
+				let subnodes = await node.getNodes();
+				subnodes.map(async function(item) {
+					let test = item.text.toLowerCase().trim();
+					let key_nodes = await item.getNodes();
+					// test by subnode names.
+					if (test=='keywords') {
+						// get an array of childrens node text
+						let keys=[];
+						key_nodes.map(x=>{keys.push(x.text)});
+						// set into current_page state
+						context.x_state.pages[state.current_page].seo[test]=keys;
+						context.x_state.pages[state.current_page].meta.push(
+							{ 
+								hid:context.hash(key_nodes),
+								name:'keywords',
+								content:keys.join(',')
+							}
+						);
+
+					} else if (test=='language' && key_nodes.length>0) {
+						//@TODO check this meta statement output format, because its not clear how it's supposed to work aug-20-20
+						context.x_state.pages[state.current_page].seo[test]=key_nodes[0].text;
+						context.x_state.pages[state.current_page].meta.push({ 
+							hid:context.hash(key_nodes),
+							lang:key_nodes[0].text.toLowerCase().trim(),
+							content:key_nodes[0].text
+						});
+
+					} else if (key_nodes.length>0) {
+						context.x_state.pages[state.current_page].seo[test]=key_nodes[0].text;
+						if (test.contains(':')) {
+							context.x_state.pages[state.current_page].meta.push({ 
+								property:test,
+								vmid:test,
+								content:key_nodes[0].text
+							});
+						} else {
+							context.x_state.pages[state.current_page].meta.push({ 
+								hid:context.hash(key_nodes),
+								name:item.text.trim(),
+								content:key_nodes[0].text
+							});
+						}
+
+					}
+				}.bind(this));
+				// return
+				return resp;
+			}
+		},
+		'def_page_estilos': {
+			x_level: '3,4',
+			x_icons: 'desktop_new',
+			x_text_contains: 'estilos',
+			x_or_hasparent: 'def_page,def_componente,def_layout',
+			hint: 'Definicion de estilos/clases locales',
+			func: async function(node, state) {
+				let resp = context.reply_template({ state });
+				resp.open = context.tagParams('page_estilos',{},false);
+				resp.close = '</page_estilos>';
+				return resp;
+			}
+		},
+		'def_page_estilos_class': {
+			x_level: 4,
+			x_empty: 'icons',
+			x_all_hasparent: 'def_page_estilos',
+			hint: 'Definicion de clase CSS en template VUE',
+			func: async function(node, state) {
+				let resp = context.reply_template({ state });
+				let left_char = node.text.trim().charAt(0);
+				if (['#','.','|'].includes(left_char)===false) {
+					resp.open = `.${node.text.trim()} {\n`;
+				} else if (left_char=='|') {
+					resp.open = `${node.text.trim().substring(1)} {\n`; //removed | from start.
+				} else {
+					resp.open = `${node.text.trim()} {\n`;
+				}
+				// output attributes
+				// @TODO improved this; I believe this could behave more like def_variables_field instead, and so support nested styles.
+				// currently this works as it was in the CFC
+				Object.keys(node.attributes).map(function(key) {
+					let value = node.attributes[key];
+					resp.open += `\t${key}: ${value};\n`;
+				});
+				resp.open += '}\n';
+				return resp;
+			}
+		},
+
 
 		'def_layout': {
 			x_level: 2,
@@ -354,6 +498,77 @@ export default async function(context) {
 				return resp;
 			}
 		},
+		'def_layout_view': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'layout:',
+			hint: 'Contenedor flexible, layout:flex o layout:wrap',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let tmp = { tipo:'flex', width:6 };
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note.trim()} -->`;
+				if (node.text.contains(':wrap')) tmp.tipo = 'wrap';
+				let params = aliases2params('def_layout_view',node);
+				tmp.params = {...params};
+				// special cases
+				if (params.width) {
+					tmp.width = params.width;
+					if (params.width.contains('%')) {
+						tmp.width = Math.round((parseInt(params.width.replaceAll('%',''))*12)/100);
+					}
+					delete params.width;
+				}
+				if (params[':width']) delete params[':width'];
+				// write output
+				if (tmp.params.margen && tmp.params.margen=='true') {
+					delete params.margen;
+					if (tmp.params.center && tmp.params.center=='true') {
+						resp.open += `<v-container fill-height>\n`;
+						resp.open += `<v-layout row wrap align-center>\n`;
+					} else {
+						if (tmp.tipo=='flex') {
+							resp.open += `<v-container>\n`; 
+							params.row=null;
+							resp.open += context.tagParams('v-layout',params,false)+'\n';
+						} else if (tmp.tipo=='wrap') {
+							resp.open += `<v-container fill-height fluid grid-list-xl>\n`;
+							params.wrap=null;
+							resp.open += context.tagParams('v-layout',params,false)+'\n';
+						}
+					}
+					// part flex
+					if (tmp.tipo=='flex' && tmp.params.center && tmp.params.center=='true') {
+						params['xs12'] = null; params['sm'+tmp.width] = null;
+						params['offset-sm'+Math.round(tmp.width/2)] = null;
+						resp.open += context.tagParams('v-flex',params,false) + '\n';
+						resp.close += `</v-flex>`;
+					}
+					// close layout
+					resp.close += '</v-layout>\n';
+					resp.close += '</v-container>\n';
+				} else {
+					// without margen
+					if (tmp.params.center && tmp.params.center=='true') {
+						params.row=null; delete params.center;
+						resp.open += context.tagParams('v-layout',params,false)+'\n';
+					} else {
+						resp.open += '<v-layout wrap>\n';
+					}
+					// part flex
+					if (tmp.tipo=='flex' && tmp.params.center && tmp.params.center=='true') {
+						delete params.center;
+						params['xs12'] = null; params['sm'+tmp.width] = null;
+						params['offset-sm'+Math.round(tmp.width/2)] = null;
+						resp.open += context.tagParams('v-flex',params,false) + '\n';
+						resp.close += `</v-flex>`;
+					}
+					// close layout
+					resp.close += '</v-layout>';
+				}
+				// return
+				return resp;
+			}
+		},
 
 		'def_componente': {
 			x_level: 2,
@@ -366,7 +581,69 @@ export default async function(context) {
 				// call def_page for functionality informing we are calling from def_componente using state.
 				resp = await context.x_commands['def_page'].func(node,{...state,...{ from_def_componente:true }});
 				delete resp.state.from_def_componente;
-				console.log('def_componente context x_state says:',resp.state);
+				return resp;
+			}
+		},
+		'def_componente_view': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'componente:',
+			hint: 'Instancia de componente',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				// prepare vars
+				let file_name = node.text.trim().split(':').pop();
+				let tag_name = `c-${file_name}`;
+				let var_name = file_name.replaceAll('-','');
+				// add import to page
+				context.x_state.pages[state.current_page].imports[`~/components/${file_name}.vue`] = var_name;
+				context.x_state.pages[state.current_page].components[tag_name] = var_name;
+				// process attributes and write output
+				let params = aliases2params('def_componente_view',node);
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note.trim()} -->\n`;
+				resp.open += context.tagParams(tag_name,params,false)+'\n';
+				resp.close = `</${tag_name}>\n`;
+				return resp;
+			}
+		},
+		'def_componente_emitir': {
+			//@oldname: def_llamar_evento
+			x_level: '>2',
+			x_icons: 'desktop_new',
+			x_text_contains: 'llamar evento|emitir evento',
+			//@idea x_text_contains: `llamar evento "{evento}"|emitir evento "{evento}"`,
+			x_all_hasparent: 'def_componente',
+			hint: 'Emite un evento desde el componente a sus instancias',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let event_name = context.dsl_parser.findVariables({ text:node.text, symbol:'"', symbol_closing:'"' }).trim();
+				// pass attributes as data to parent of component
+				let params = [];
+				Object.keys(node.attributes).map(function(key) {
+					let value = node.attributes[key];
+					// preprocess value
+					if (value.contains('**') && node.icons.includes('bell')) {
+						value = getTranslatedTextVar(value);
+					} else if (value=='true' || value=='false') {
+						value = (value=='true')?true:value;
+						value = (value=='false')?false:value;
+					} else if (value.contains('$')) {
+						value = value.replaceAll('$variables.','this.')
+									 .replaceAll('$vars.','this.')
+									 .replaceAll('$params.','this.')
+									 .replaceAll('$config.','process.env')
+									 .replaceAll('$store.','this.$store.state.');
+					} else if (value.contains('this.')==false) {
+						//@TODO add i18n support here
+						if (value.contains(`'`)==false) {
+							value = `'${value}'`;
+						}
+					}
+					params.push(`${key}: ${value}`);
+				}); 
+				// write output and return
+				if (node.text_note!='') resp.open = `// ${node.text_note.trim()}\n`;
+				resp.open += `this.$emit('${event_name}',{${params.join(',')}});\n`;
 				return resp;
 			}
 		},
@@ -390,7 +667,7 @@ export default async function(context) {
 					// query attributes
 					if (key.toLowerCase()=='props') {
 						for (let i of value.split(',')) {
-							params[i] = 'vue:prop';
+							params[i] = null;
 						}
 					} else {
 						params[key] = value;
@@ -423,7 +700,7 @@ export default async function(context) {
 									.replaceAll('$store.','$store.state.').trim();
 					if (keytest=='props') {
 						for (let i of tvalue.split(',')) {
-							params[i] = 'vue:prop';
+							params[i] = null;
 						}
 					} else {
 						if (keytest.charAt(0)!=':' && value!='' && value!=tvalue) {
@@ -470,38 +747,38 @@ export default async function(context) {
 						params.class = tvalue;
 					} else if (keytest=='props') {
 						for (let i of tvalue.split(',')) {
-							params[i] = 'vue:prop';
+							params[i] = null;
 						}
 					} else if ('padding,margen'.split(',').includes(keytest)) {
-						params['pa-'+tvalue] = 'vue:prop';
+						params['pa-'+tvalue] = null;
 					} else if (keytest=='ancho') {
-						params = {...params,...setObjectKeys(`xs-${numsize},sm-${numsize},md-${numsize},lg-${numsize}`,'vue:prop')};
+						params = {...params,...setObjectKeys(`xs-${numsize},sm-${numsize},md-${numsize},lg-${numsize}`,null)};
 					} else if (keytest=='offset') {
-						params = {...params,...setObjectKeys(`offset-xs-${numsize},offset-sm-${numsize},offset-md-${numsize},offset-lg-${numsize}`,'vue:prop')};
+						params = {...params,...setObjectKeys(`offset-xs-${numsize},offset-sm-${numsize},offset-md-${numsize},offset-lg-${numsize}`,null)};
 					} else if ('muy chico,movil,small,mobile'.split(',').includes(keytest)) {
-						params[`xs${numsize}`] = 'vue:prop';
+						params[`xs${numsize}`] = null;
 					} else if ('chico,tablet,small,tableta'.split(',').includes(keytest)) {
-						params[`sm${numsize}`] = 'vue:prop';
+						params[`sm${numsize}`] = null;
 					} else if ('medio,medium,average'.split(',').includes(keytest)) {
-						params[`md${numsize}`] = 'vue:prop';
+						params[`md${numsize}`] = null;
 					} else if ('grande,pc,desktop,escritorio'.split(',').includes(keytest)) {
-						params[`lg${numsize}`] = 'vue:prop';
+						params[`lg${numsize}`] = null;
 					} else if ('xfila:grande,xfila:pc,xfila:desktop,pc,escritorio,xfila:escritorio'.split(',').includes(keytest)) {
-						params[`lg${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`lg${Math.round(12/tvalue)}`] = null;
 					} else if ('xfila:medio,xfila:tablet,tablet,xfila'.split(',').includes(keytest)) {
-						params[`md${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`md${Math.round(12/tvalue)}`] = null;
 					} else if ('xfila:chico,xfila:movil,xfila:mobile'.split(',').includes(keytest)) {
-						params[`sm${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`sm${Math.round(12/tvalue)}`] = null;
 					} else if ('xfila:muy chico,xfila:movil chico,xfila:small mobile'.split(',').includes(keytest)) {
-						params[`xs${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`xs${Math.round(12/tvalue)}`] = null;
 					} else if ('muy chico:offset,movil:offset,small:offset,mobile:offset'.split(',').includes(keytest)) {
-						params[`offset-xs${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`offset-xs${Math.round(12/tvalue)}`] = null;
 					} else if ('chico:offset,tablet:offset,small:offset,tableta:offset'.split(',').includes(keytest)) {
-						params[`offset-sm${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`offset-sm${Math.round(12/tvalue)}`] = null;
 					} else if ('medio:offset,medium:offset,average:offset'.split(',').includes(keytest)) {
-						params[`offset-md${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`offset-md${Math.round(12/tvalue)}`] = null;
 					} else if ('grande:offset,pc:offset,desktop:offset,escritorio:offset,grande:left'.split(',').includes(keytest)) {
-						params[`offset-lg${Math.round(12/tvalue)}`] = 'vue:prop';
+						params[`offset-lg${Math.round(12/tvalue)}`] = null;
 					} else {
 						if (keytest.charAt(0)!=':' && value!='' && value!=tvalue) {
 							params[':'+key.trim()] = tvalue;
@@ -522,6 +799,7 @@ export default async function(context) {
 		'def_spacer': {
 			x_icons: 'idea',
 			x_text_contains: 'spacer',
+			x_level: '>2',
 			hint: 'Spacer es un espaciador flexible',
 			func: async function(node,state) {
 				let resp = context.reply_template({ state });
@@ -530,26 +808,55 @@ export default async function(context) {
 				return resp;
 			}
 		},
-		//..views..
-		//*def_page
-		//def_page_seo
-		//def_page_estilos
-		//def_page_estilos_class
 
-		//def_progress
-		//def_datatable
-		//def_datatable_col
-		//def_datatable_fila
-		//def_datatable_headers
-		//def_mapa
-		//def_youtube_playlist
-		//def_youtube
+		'def_progress': {
+			x_icons: 'idea',
+			x_text_contains: 'progres',
+			x_level: '>2',
+			attributes_aliases: {
+				'background-color': 'background-color,background',
+				'background-opacity': 'background-opacity,opacity',
+				'buffer-value': 'max,max-value',
+				'value': 'value,valor',
+				'indeterminate': 'loop,infinito',
+				'width': 'width,ancho',
+				'size': 'size,porte',
+				'rotate': 'rotate,rotar'
+			},
+			hint: 'Item de progreso',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				let tmp = { tipo:'circular' };
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				// process our own attributes_aliases to normalize node attributes
+				let params = aliases2params('def_progress',node);
+				Object.keys(params).map(function(key) {
+					// take into account special cases
+					if (key.toLowerCase()=='tipo' && 'lineal,linea,linear'.split(',').includes(params[key])) {
+						tmp.tipo = 'linear';
+						delete params[key];
+					} else if (key.toLowerCase()=='indeterminate') {
+						params[`:${key}`]=params[key];
+						delete params[key];
+					}
+				});
+				// write tag
+				resp.open += context.tagParams(`v-progress-${tmp.tipo}`,params,false) + '\n';
+				resp.close = `</v-progress-${tmp.tipo}>\n`;
+				// return
+				return resp;
+			}
+		},
+
+		//..views..
+		//*def_progress
+		//def_dialog
 		//def_card
 		//def_card_actions
 		//def_card_title
 		//def_card_text
 		//def_card_media
-		//def_dialog
+		
 
 		//def_form
 		//def_textfield
@@ -558,11 +865,17 @@ export default async function(context) {
 		//def_chip
 		//def_google_autocomplete
 
+		//def_datatable
+		//def_datatable_col
+		//def_datatable_fila
+		//def_datatable_headers
+		//def_paginador
+
 		//*def_layout
-		//def_layout_view
+		//*def_layout_view
 		//*def_componente
-		//def_componente_view (instancia)
-		//def_llamar_evento (def_componente_emitir , script)
+		//*def_componente_view (instancia)
+		//*def_componente_emitir (ex: def_llamar_evento, script)
 
 		//def_toolbar
 		//def_toolbar_title
@@ -601,7 +914,9 @@ export default async function(context) {
 		//def_qrcode
 		//def_analytics_evento
 		//def_medianet_ad
-		//def_paginador
+		//def_mapa
+		//def_youtube_playlist
+		//def_youtube
 
 		//def_script
 		//def_event_server
@@ -647,7 +962,7 @@ export default async function(context) {
 					// query attributes
 					if (key.toLowerCase()=='props') {
 						for (let i of value.split(',')) {
-							params[i] = 'vue:prop';
+							params[i] = null;
 						}
 					} else if (key.charAt(0)!=':' && value!=node.attributes[key]) {
 						params[':'+key] = value;
@@ -689,7 +1004,7 @@ export default async function(context) {
 				let text = node.text.replaceAll('$variables','')
 									.replaceAll('$vars.','')
 									.replaceAll('$params.','')
-									.replaceAll('$env.','process.env.')
+									.replaceAll('$config.','process.env.')
 									.replaceAll('$store.','$store.state.');
 				if (text=='') text = '&nbsp;';
 				// some extra validation
@@ -878,7 +1193,7 @@ export default async function(context) {
 				if ((tmp.field.contains('[') && tmp.field.contains(']')) ||
 					(tmp.field.contains('{') && tmp.field.contains('}'))) {
 					// this is a script node
-					tmp.type = 'string'; tmp.field = `script${node.id}`;
+					tmp.type = 'script'; tmp.field = `script${node.id}`;
 
 				} else if (tmp.field.contains(':')) {
 					tmp.type = tmp.field.split(':').pop().toLowerCase().trim(); //listlast
@@ -909,7 +1224,7 @@ export default async function(context) {
 						let t_value = value.replaceAll('$variables','this.')
 											.replaceAll('$vars.','this.')
 											.replaceAll('$params.','this.')
-											.replaceAll('$env.','process.env.')
+											.replaceAll('$config.','process.env.')
 											.replaceAll('$store.','this.$store.state.');
 						if (t_value.toLowerCase().trim()=='{now}') t_value='new Date()';
 						if (t_value.contains('assets:')) {
@@ -923,12 +1238,27 @@ export default async function(context) {
 					}
 				});
 				// assign default value for type, if not defined
-				if ('string,text,texto,script'.split(',').includes(tmp.type)) {
+				if ('string,text,texto'.split(',').includes(tmp.type)) {
 					if ('value' in params===false) {
 						params.value = '';
 					} else {
 						params.value = params.value.toString();
 					}
+				} else if ('script'==tmp.type) {
+					params.value = node.text.trim() .replaceAll('&#xa;','')
+													.replaceAll('&apos;','"')
+													.replaceAll('&#xf1;','ñ');
+					if (params.value.charAt(0)!='[') {
+						params.value = '['+params.value+']';
+					}
+					let convertjs = require('safe-eval');
+					try {
+						params.value = convertjs(params.value);
+					} catch(cjerr) {
+						params.value = [{ error_in_script_var:cjerr }];
+					}
+					//params.value = JSON.parse('['+params.value+']');
+
 				} else if ('int,numeric,number,numero'.split(',').includes(tmp.type)) {
 					if ('value' in params===false) {
 						params.value = 0;
@@ -1009,7 +1339,10 @@ export default async function(context) {
 						//console.log('my dad path is '+copy_dad.join('.'));
 						let daddy = getVal(context.x_state.pages[state.current_page].variables,copy_dad.join('.'));
 						//console.log('daddy says:',daddy);
-						if (tmp.field!=params.value) {
+						if (tmp.type=='script') {
+							// if we are a script node, just push our values, and not ourselfs.
+							params.value.map(i=>{ daddy.push(i); });
+						} else if (tmp.field!=params.value) {
 							// push as object (array of objects)
 							let tmpi = {};
 							tmpi[tmp.field]=params.value;

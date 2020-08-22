@@ -320,7 +320,7 @@ export default class vue_dsl extends concepto {
 	//Transforms the processed nodes into files.
 	async onCreateFiles(processedNodes) {
 		this.x_console.out({ message:'onCreateFiles', data:processedNodes });
-		this.x_console.out({ message:'pages state', data:this.x_state.pages });
+		//this.x_console.out({ message:'pages state', data:this.x_state.pages });
 	}
 
 	// ************************
@@ -659,33 +659,32 @@ export default class vue_dsl extends concepto {
 		return resp;
 	}
 
-	//vue tag constructor helper
-	tagParams(tag='',params={}, selfclose=false) {
-		let t_params={...params}, resp='';
-		if ('aos' in params) {
-			let aos_p = params['aos'].split(',');
+	//vue attributes tag version
+	struct2params(struct=this.throwIfMissing('id')) {
+		let resp=[], tmp={...struct};
+		// pre-process
+		if ('aos' in tmp) {
+			let aos_p = struct['aos'].split(',');
 			if (aos_p.length==3) {
-				t_params['data-aos']=aos_p[0]; 
-				t_params['data-aos-duration']=aos_p[1];
-				t_params['data-aos-delay']=aos_p[2];
+				tmp['data-aos']=aos_p[0];
+				tmp['data-aos-duration']=aos_p[1];
+				tmp['data-aos-delay']=aos_p[2];
 			} else {
-				t_params['data-aos']=aos_p[0];
-				t_params['data-aos-duration']=aos_p[1];
+				tmp['data-aos']=aos_p[0];
+				tmp['data-aos-duration']=aos_p[1];
 			}
-			delete t_params['aos'];
+			delete tmp['aos'];
 		}
-		let x_params = this.struct2params(t_params);
-		if (x_params!='') {
-			resp=`<${tag} ${x_params}`;
-			if (selfclose==true) resp+='/';
-			resp+='>';
-		} else {
-			resp=`<${tag}`;
-			if (selfclose==true) resp+='/';
-			resp+='>';
+		// process
+		for (let [key, value] of Object.entries(tmp)) {
+			if (value===null) {
+				resp.push(key);
+			} else if (typeof value !== 'object' && typeof value !== 'function' && typeof value !== 'undefined') {
+				resp.push(`${key}='${value}'`);
+			}
 		}
-		return resp;
-	};
+		return resp.join(' ');
+	}
 
 	// hash helper method
 	hash(thing) {
