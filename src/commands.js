@@ -31,7 +31,7 @@ export default async function(context) {
 	};
 	// process our own attributes_aliases to normalize node attributes
 	const aliases2params = function(x_id,node) {
-		let params = {}, attr_map={};
+		let params = { refx:node.id }, attr_map={};
 		// read x_id attributes aliases
 		if ('attributes_aliases' in context.x_commands[x_id]) {
 			let aliases = context.x_commands[x_id].attributes_aliases;
@@ -44,7 +44,7 @@ export default async function(context) {
 			let value = node.attributes[key];
 			let key_use = key.trim().replace(':','');
 			let keytest = key_use.toLowerCase();
-			let tvalue = value.toString().replaceAll('$variables','')
+			let tvalue = value.toString().replaceAll('$variables.','')
 							.replaceAll('$vars.','')
 							.replaceAll('$params.','')
 							.replaceAll('$config.','process.env.')
@@ -93,19 +93,20 @@ export default async function(context) {
 		x_or_hasparent: '',
 		x_or_isparent: '',
 		x_not_hasparent: '', //@TODO create this meta_attribute in Concepto
+		hint: 'Testing node',
 		autocomplete: {
-			'key_text': 'otro', //activate autocomplete if the node text equals to this
-			'key_icon': 'idea', //activate autocomplete if the node has this icon
-			'hint': 'Testing node',
-			'attributes': {
+			text: 'otro', //activate autocomplete if the node text equals to this
+			icon: 'idea', //activate autocomplete if the node has this icon
+			
+			attributes: {
 				'from': {
-					'type': 'int',
-					'description': 'If defined, sets the start offset for the node. (example)'
+					type: 'int',
+					description: 'If defined, sets the start offset for the node. (example)'
 				}
 			}
 		},
 		func: async function(node,state) {
-			let resp = me.reply_template({ state });
+			let resp = context.reply_template({ state });
 			return resp;
 		}
 	}
@@ -483,6 +484,12 @@ export default async function(context) {
 			}
 		},
 
+		//*def_layout
+		//*def_layout_view
+		//*def_layout_contenido (ex. def_contenido_layout)
+		//*def_componente
+		//*def_componente_view (instancia)
+		//*def_componente_emitir (ex: def_llamar_evento, script)
 
 		'def_layout': {
 			x_level: 2,
@@ -569,6 +576,21 @@ export default async function(context) {
 				return resp;
 			}
 		},
+		'def_layout_contenido': {
+			x_level: 3,
+			x_icons: 'idea',
+			x_text_contains: 'contenido',
+			x_all_hasparent: 'def_layout',
+			hint: 'Placeholder para contenidos de paginas en pantallas tipo layouts',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state }); let params = {};
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				if (context.x_state.central_config['keep-alive']) params['keep-alive']=null;
+				// write tag
+				resp.open += context.tagParams('nuxt',params,true) + `\n`;
+				return resp;
+			}
+		},
 
 		'def_componente': {
 			x_level: 2,
@@ -647,6 +669,401 @@ export default async function(context) {
 				return resp;
 			}
 		},
+
+		// CARDs
+
+		'def_card': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'card',
+			x_not_text_contains: ':text,:texto,:title,:action,:image,:media',
+			attributes_aliases: {
+				'width' 	: 'width,ancho',
+				'height'	: 'height,alto'
+			},
+			hint: 'Card de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_card',node);
+				// write tag
+				resp.open += context.tagParams('v-card',params,false) + '\n';
+				resp.close += `</v-card>\n`;
+				return resp;
+			}
+		},
+		'def_card_title': {
+			x_level: '>3',
+			x_icons: 'idea',
+			x_text_contains: 'card:title',
+			x_all_hasparent: 'def_card',
+			hint: 'Titulo de card de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_card_title',node);
+				resp.open += context.tagParams('v-card-title',params,false) + '\n';
+				resp.close += `</v-card-title>\n`;
+				return resp;
+			}
+		},
+		'def_card_text': {
+			x_level: '>3',
+			x_icons: 'idea',
+			x_text_contains: 'card:text',
+			x_all_hasparent: 'def_card',
+			hint: 'Contenido de card de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_card_text',node);
+				resp.open += context.tagParams('v-card-text',params,false) + '\n';
+				resp.close += `</v-card-text>\n`;
+				return resp;
+			}
+		},
+		'def_card_actions': {
+			x_level: '>3',
+			x_icons: 'idea',
+			x_text_contains: 'card:action',
+			x_all_hasparent: 'def_card',
+			hint: 'Acciones de card de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_card_actions',node);
+				resp.open += context.tagParams('v-card-actions',params,false) + '\n';
+				resp.close += `</v-card-actions>\n`;
+				return resp;
+			}
+		},
+		'def_card_media': {
+			x_level: '>3',
+			x_icons: 'idea',
+			x_text_contains: 'card:media',
+			x_all_hasparent: 'def_card',
+			hint: 'Contenido multimedia para card de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_card_media',node);
+				resp.open += context.tagParams('v-card-media',params,false) + '\n';
+				resp.close += `</v-card-media>\n`;
+				return resp;
+			}
+		},
+
+		//*def_card
+		//*def_card_title
+		//*def_card_text
+		//*def_card_actions
+		//*def_card_media
+		
+		// FORMs
+		'def_form': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'form',
+			attributes_aliases: {
+				'v-model' 	: 'valid,value'
+			},
+			hint: 'Formulario de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_form',node);
+				resp.open += context.tagParams('v-form',params,false) + '\n';
+				resp.close += `</v-form>\n`;
+				return resp;
+			}
+		},
+		'def_form_field': {
+			x_level: '>2',
+			x_icons: 'pencil',
+			x_not_icons: 'calendar,clock,attach,freemind_butterfly',
+			x_not_text_contains: 'google:',
+			attributes_aliases: {
+				'placeholder' 	: 'hint,ayuda',
+				'mark' 			: 'mask,mascara,formato',
+				'prepend-icon' 	: 'pre:icon',
+				'append-icon' 	: 'post:icon',
+				'type' 			: 'type,tipo',
+				'value' 		: 'value,valor',
+				'counter' 		: 'counter,maxlen,maxlength,max'
+			},
+			hint: 'Campo de entrada (text,textarea,checkbox,radio,combo,select,switch,toogle,autocomplete) para usar en formulario vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state }); let tmp = {};
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_form_field',node);
+				tmp = {...{ type:'text'},...params};
+				params['refx']=node.id;
+				// add v-model as node.text
+				if (node.text.contains('$')) {
+					let vmodel = node.text.trim().split(',').pop();
+					vmodel = vmodel 	.replaceAll('$variables.','')
+									 	.replaceAll('$vars.','')
+										.replaceAll('$params.','')
+										.replaceAll('$store','$store.state.');
+					params['v-model'] = vmodel;
+				} else {
+					params['v-model'] = node.text.trim();
+				}
+				// render by type
+				delete params.type;
+				if (tmp.type == 'text') {
+					resp.open += context.tagParams('v-text-field',params,false) + '\n';
+					resp.close += `</v-text-field>\n`;	
+				} else if (tmp.type == 'combo') {
+					resp.open += context.tagParams('v-combobox',params,false) + '\n';
+					resp.close += `</v-combobox>\n`;
+				} else if (tmp.type == 'toogle') {
+					resp.open += context.tagParams('v-btn-toogle',params,false) + '\n';
+					resp.close += `</v-btn-toogle>\n`;
+				} else if ('textarea,checkbox,radio,switch'.split(',').includes(tmp.type)) {
+					resp.open += context.tagParams(`v-${tmp.type}`,params,false) + '\n';
+					resp.close += `</v-${tmp.type}>\n`;
+				} else if ('autocomplete,autocompletar,auto,select'.split(',').includes(tmp.type)) {
+					// item-text
+					if ('item-text' in params && params['item-text'].contains('{{')) {
+						// suppport for values like '{{ name }} - ({{ tracks.total }})'
+						let new_val = params['item-text'];
+						let vars = context.dsl_parser.findVariables({ text:params['item-text'], symbol:'{{', symbol_closing:'}}', array:true });
+						// replace {{ x }} with {{ item.x }}
+						vars.map(old=>{ new_val.replaceAll(old,`item.${old.trim()}`); });
+						// if starts with "{{ ", remove
+						if (new_val.slice(0,3)=='{{ ') new_val = new_val.slice(3);
+						// if ends with " }}", remove
+						if (new_val.slice(-3)==' }}') {
+							new_val = new_val.slice(0,-3);
+						} else {
+							// add quote at the end
+							new_val += `'`;
+						}
+						// replace " }}" with "+'" and replace "{{ " with "'+"
+						new_val = new_val.replaceAll(' }}',`+'`).replaceAll('{{ ',`'+`);
+						// ready
+						params[':item-text'] = `(item)=>${new_val}`;
+						delete params['item-text'];
+
+					} else if ('item-text' in params && params['item-text'].contains(' ')) {
+						let new_val = [];
+						params['item-text'].split(' ').map(nv=>{ new_val.push(`item.${nv}`); });
+						params[':item-text'] = '(item)=>' + new_val.join(`+' '+`);
+						delete params['item-text'];
+					}
+					// item-value
+					if ('item-value' in params && params['item-value'].contains(' ')) {
+						let new_val = [];
+						params['item-value'].split(' ').map(nv=>{ new_val.push(`item.${nv}`); });
+						params[':item-value'] = '(item)=>' + new_val.join(`+' '+`);
+						delete params['item-value'];
+					}
+					//
+					if ('autocomplete,autocompletar,auto'.split(',').includes(tmp.type)) {
+						resp.open += context.tagParams('v-autocomplete',params,false) + '\n';
+						resp.close += `</v-autocomplete>\n`;
+					} else if (tmp.type=='select') {
+						if ('item-value' in params===false && 
+							'return-object' in params===false && ':return-object' in params===false) {
+							params[':return-object']=true;
+						}
+						resp.open += context.tagParams('v-select',params,false) + '\n';
+						resp.close += '</v-select>\n';
+					}
+				}
+				// return
+				return resp;
+			}
+		},
+		'def_form_field_image': {
+			x_level: '>2',
+			x_icons: 'pencil,attach',
+			x_not_icons: 'calendar,clock,freemind_butterfly',
+			x_not_text_contains: 'google:',
+			hint: 'Campo de entrada de imagen (subir imagen) para usar en formulario vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_form_field',node);
+				params['refx']=node.id;
+				// add node.text (var) as image prefill
+				if (node.text.trim()!='-') {
+					if (node.text.contains('$')) {
+						let vmodel = node.text.trim().split(',').pop();
+						vmodel = vmodel 	.replaceAll('$variables.','')
+										 	.replaceAll('$vars.','')
+											.replaceAll('$params.','')
+											.replaceAll('$store','$store.state.');
+						params[':prefill'] = vmodel;
+					} else {
+						params['prefill'] = node.text.trim();
+					}
+				}
+				// image defaults
+				params[':removable']=false;
+				params[':hideChangeButton']=true;
+				// add plugin
+				context.x_state.plugins['vue-picture-input'] = {
+					global: true,
+					npm: { 'vue-picture-input':'*' },
+					tag: 'picture-input'
+				};
+				if (params.type) delete params.type;
+				// write output
+				resp.open += context.tagParams('picture-input',params,false) + '\n';
+				resp.close = `</picture-input>\n`;
+				return resp;
+			}
+		},
+		'def_form_field_galery': {
+			x_level: '>2',
+			x_icons: 'pencil,freemind_butterfly',
+			x_not_icons: 'calendar,clock,attach',
+			x_not_text_contains: 'google:',
+			hint: 'Campo de entrada de galeria de imagenes (elegir una o varias imagenes) para usar en formulario vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_form_field_galery',node);
+				params['refx']=node.id;
+				// add node.text (var) as image prefill
+				if (node.text.trim()!='') {
+					let vmodel = node.text.trim();
+					if (node.text.contains('$')) {
+						vmodel = vmodel.split(',').pop();
+						vmodel = vmodel 	.replaceAll('$variables.','')
+										 	.replaceAll('$vars.','')
+											.replaceAll('$params.','')
+											.replaceAll('$store','$store.state.');
+					}
+					params['@onselectimage']=`(item)=>${vmodel}=[item]`;
+					params['@onselectmultipleimage']=`(item)=>${vmodel}=item`;
+					params[':selectedImages']=vmodel;
+				}
+				// add plugin
+				context.x_state.plugins['vue-picture-input'] = {
+					global: true,
+					npm: { 'vue-select-image':'*' },
+					tag: 'vue-select-image',
+					requires: ['vue-select-image/dist/vue-select-image.css']
+				};
+				if (params.type) delete params.type;
+				// write output
+				resp.open += context.tagParams('vue-select-image',params,false) + '\n';
+				resp.close = `</vue-select-image>\n`;
+				return resp;
+			}
+		},
+		'def_form_field_date': {
+			x_level: '>2',
+			x_icons: 'pencil,calendar',
+			x_not_icons: 'clock,attach,freemind_butterfly',
+			x_not_text_contains: 'google:',
+			hint: 'Campo de entrada con selector de fecha (sin hora) para usar en formulario vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_form_field_date',node);
+				if (node.text.trim()!='') {
+					let vmodel = node.text.trim();
+					if (node.text.contains('$')) {
+						vmodel = vmodel.split(',').pop();
+						vmodel = vmodel 	.replaceAll('$variables.','')
+										 	.replaceAll('$vars.','')
+											.replaceAll('$params.','')
+											.replaceAll('$store','$store.state.');
+					}
+					params['v-model']=vmodel;
+				}
+				// add plugin
+				context.x_state.npm['luxon']='*'; // for i18n support
+				context.x_state.plugins['vue-datetime'] = {
+					global: true,
+					npm: { 'vue-datetime':'*' }
+				};
+				params.type = 'date';
+				// write output
+				resp.open += context.tagParams('datetime',params,false) + '\n';
+				resp.close = `</datetime>\n`;
+				return resp;
+			}
+		},
+		'def_form_field_datetime': {
+			x_level: '>2',
+			x_icons: 'pencil,calendar,clock',
+			x_not_icons: 'attach,freemind_butterfly',
+			x_not_text_contains: 'google:',
+			hint: 'Campo de entrada con selector de fecha y hora para usar en formulario vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_form_field_datetime',node);
+				if (node.text.trim()!='') {
+					let vmodel = node.text.trim();
+					if (node.text.contains('$')) {
+						vmodel = vmodel.split(',').pop();
+						vmodel = vmodel 	.replaceAll('$variables.','')
+										 	.replaceAll('$vars.','')
+											.replaceAll('$params.','')
+											.replaceAll('$store','$store.state.');
+					}
+					params['v-model']=vmodel;
+				}
+				// add plugin
+				context.x_state.plugins['vuetify-datetime-picker'] = {
+					global: true,
+					npm: { 'vuetify-datetime-picker':'2.0.3' },
+					styles: [
+						{
+							file: 'dtpicker.styl',
+							lang: 'styl',
+							content: `@require '~vuetify-datetime-picker/src/stylus/main.styl'`
+						}
+					]
+				};
+				if (params.type) delete params.type;
+				// write output
+				resp.open += context.tagParams('v-datetime-picker',params,false) + '\n';
+				resp.close = `</v-datetime-picker>\n`;
+				return resp;
+			}
+		},
+		'def_form_google_autocomplete': {
+			x_level: '>2',
+			x_icons: 'pencil',
+			x_text_contains: 'google:autocomplet',
+			attributes_aliases: {
+				'apiKey' 		: 'key,llave',
+				'language' 		: 'lang,language,lenguaje',
+				'id'			: 'id',
+				'placeholder'	: 'hint,ayuda'
+			},
+			hint: 'Campo autocompletar para direcciones en formulario vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state }); let config = { language:'es' };
+				let params = aliases2params('def_form_google_autocomplete',node);
+				if (params.apiKey) { config.apiKey=params.apiKey; delete params.apiKey; }
+				if (params.language) { config.language=params.language; delete params.language; }
+				context.x_state.plugins['vuetify-google-autocomplete'] = {
+					global:true,
+					npm: { 'vuetify-google-autocomplete':'*' },
+					config: JSON.stringify(config)
+				};
+				// return output
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				resp.open += context.tagParams('vuetify-google-autocomplete',params,false) + '\n';
+				resp.close = `</vuetify-google-autocomplete>\n`;
+				return resp;
+			}
+		},
+		//*def_form
+		//*def_form_field (ex. def_textfield)
+		//*def_form_field_image
+		//*def_form_field_galery
+		//*def_form_field_date
+		//*def_form_field_datetime
+		//*def_form_google_autocomplete (ex. def_google_autocomplete) - IN @PROGRESS
 
 		'def_margen': {
 			x_icons: 'idea',
@@ -848,86 +1265,26 @@ export default async function(context) {
 			}
 		},
 
-		//..views..
-		//*def_progress
-		//def_dialog
-		//def_card
-		//def_card_actions
-		//def_card_title
-		//def_card_text
-		//def_card_media
-		
-
-		//def_form
-		//def_textfield
-		//def_avatar
-		//def_boton
-		//def_chip
-		//def_google_autocomplete
-
-		//def_datatable
-		//def_datatable_col
-		//def_datatable_fila
-		//def_datatable_headers
-		//def_paginador
-
-		//*def_layout
-		//*def_layout_view
-		//*def_componente
-		//*def_componente_view (instancia)
-		//*def_componente_emitir (ex: def_llamar_evento, script)
-
-		//def_toolbar
-		//def_toolbar_title
-		//def_layout_custom
-		//def_divider
-		//def_slot
-		//def_div
-		//def_agrupar
-		//def_bloque
-		//def_hover
-		//def_tooltip
-		
-		//def_menu
-		//def_barralateral
-		//def_barrainferior
-
-		//def_contenido
-		//def_contenido_layout
-		
-		//def_sparkline
-		//def_highcharts
-		//def_trend
-
-		//def_listado
-		//def_listado_grupo
-		//def_listado_dummy
-		//def_listado_fila
-		//def_listado_fila_accion
-		//def_listado_fila_contenido
-		//def_listado_fila_titulo
-		//def_listado_fila_subtitulo
-		//def_listado_fila_avatar
-		//def_icono
-		//def_animar
-		//def_imagen
-		//def_qrcode
-		//def_analytics_evento
-		//def_medianet_ad
-		//def_mapa
-		//def_youtube_playlist
-		//def_youtube
-
-		//def_script
-		//def_event_server
-		//def_event_mounted
-		//def_event_method
-		//def_event_element
-
-		//def_condicion_view
-		//def_otra_condicion_view
-		//def_condicion (def_script_condicion)
-		//def_otra_condicion (def_script_otra_condicion)
+		'def_dialog': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'dialog',
+			x_not_text_contains: 'boton:',
+			attributes_aliases: {
+				'width' 	: 'width,ancho',
+				'max-width'	: 'max-width,ancho-max,max-ancho'
+			},
+			hint: 'Dialogo de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_dialog',node);
+				// write tag
+				resp.open += context.tagParams('v-dialog',params,false) + '\n';
+				resp.close += `</v-dialog>\n`;
+				return resp;
+			}
+		},
 
 		'def_center': {
 			x_icons: 'idea',
@@ -969,7 +1326,7 @@ export default async function(context) {
 					} else if (key!='v-model') {
 						if (context.x_state.central_config.idiomas.indexOf(',')!=-1) {
 							// value needs i18n keys
-							let def_lang = context.x_state.centrar.idiomas.split(',')[0];
+							let def_lang = context.x_state.central_config.idiomas.split(',')[0];
 							if (!context.x_state.strings_i18n[def_lang]) {
 								context.x_state.strings_i18n[def_lang]={};
 							}
@@ -1010,16 +1367,12 @@ export default async function(context) {
 				// some extra validation
 				if (await context.hasParentID(node.id,'def_toolbar')==true && await context.hasParentID(node.id,'def_slot')==false) {
 					resp.valid=false;
-					resp.invalidated_me='def_toolbar';
 				} else if (await context.hasParentID(node.id,'def_variables')==true) {
 					resp.valid=false;
-					resp.invalidated_me='def_variables';
 				} else if (await context.hasParentID(node.id,'def_page_estilos')==true) {
 					resp.valid=false;
-					resp.invalidated_me='def_page_estilos';
 				} else if (await context.hasParentID(node.id,'def_page_estilos')==true) {
 					resp.valid=false;
-					resp.invalidated_me='def_datatable_headers';
 				} else {
 					if (node.text_note!='') resp.open += `<!-- ${node.text_note} -->\n`;
 					//
@@ -1156,6 +1509,296 @@ export default async function(context) {
 				return resp;
 			}
 		},
+
+		//..views..
+		//*def_center
+		//*def_html
+		//*def_textonly
+		//*def_margen
+		//*def_contenedor
+		//*def_flex
+		//*def_spacer
+		//*def_progress
+		//*def_dialog
+
+		'def_avatar': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'avatar',
+			x_not_text_contains: 'fila',
+			hint: 'Imagen con mascara redondeada',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_avatar',node);
+				let img_params = {};
+				// move :src to img src
+				if (params.src) { img_params.src = params.src; delete params.src; }
+				if (params[':src']) { img_params[':src'] = params[':src']; delete params[':src']; }
+				// write tag
+				resp.open += context.tagParams('v-avatar',params,false) + '\n';
+				resp.open += context.tagParams('v-img',img_params,true) + '\n';
+				resp.close += `</v-avatar>\n`;
+				return resp;
+			}
+		},
+		'def_boton': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'boton:',
+			hint: 'Boton de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_boton',node);
+				// special cases
+				// targets a scroll position ?
+				if (params.scrollto) {
+					context.x_state.plugins['vue-scrollto'] = {
+						global:true,
+						npm: { 'vue-scrollto':'*' }
+					};
+					if (params.scrollto.contains(',')) {
+						let element = params.scrollto.split(',')[0];
+						let offset = params.scrollto.split(',').pop().trim();
+						params['v-scroll-to'] = `{ element:'${element}', offset:${offset}, cancelable:false }`;
+					} else {
+						params['v-scroll-to'] = `{ element:'${params.scrollto}', cancelable:false }`;
+					}
+					delete params.scrollto;
+				}
+				// re-map props latest version vuetify props to one used here
+				if (params.text && params.text==null) { params.flat=null; delete params.text; }
+				if (params.rounded && params.rounded==null) { params.round=null; delete params.rounded; }
+				// pre-process text
+				let text = node.text.trim().replaceAll('boton:','');
+				if (context.x_state.central_config.idiomas.indexOf(',')!=-1) {
+					// text uses i18n keys
+					let def_lang = context.x_state.central_config.idiomas.split(',')[0];
+					if (!context.x_state.strings_i18n[def_lang]) {
+						context.x_state.strings_i18n[def_lang]={};
+					}
+					let crc32 = 't_'+context.hash(text);
+					context.x_state.strings_i18n[def_lang][crc32] = text;
+					text = `{{ $t('${crc32}') }}`;
+				} else if (text.contains('$') && text.contains('{{') && text.contains('}}')) {
+					text = text.replaceAll('$params.','')
+								.replaceAll('$variables.','')
+								.replaceAll('$vars.','')
+								.replaceAll('$store.','$store.state.');
+				}
+				// write tag
+				resp.open += context.tagParams('v-btn',params,false) + text + '\n';
+				resp.close += `</v-btn>\n`;
+				return resp;
+			}
+		},
+		'def_chip': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'chip:',
+			hint: 'Chip de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_chip',node);
+				// pre-process text
+				let text = node.text.trim().replaceAll('chip:','');
+				if (context.x_state.central_config.idiomas.indexOf(',')!=-1) {
+					// text uses i18n keys
+					let def_lang = context.x_state.central_config.idiomas.split(',')[0];
+					if (!context.x_state.strings_i18n[def_lang]) {
+						context.x_state.strings_i18n[def_lang]={};
+					}
+					let crc32 = 't_'+context.hash(text);
+					context.x_state.strings_i18n[def_lang][crc32] = text;
+					text = `{{ $t('${crc32}') }}`;
+				} else if (text.contains('$') && text.contains('{{') && text.contains('}}')) {
+					text = text.replaceAll('$params.','')
+								.replaceAll('$variables.','')
+								.replaceAll('$vars.','')
+								.replaceAll('$store.','$store.state.');
+				}
+				// write tag
+				resp.open += context.tagParams('v-chip',params,false) + `${text}\n`;
+				resp.close += `</v-chip>\n`;
+				return resp;
+			}
+		},
+
+		//*def_avatar
+		//*def_boton
+		//*def_chip
+
+		'def_menu': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'menu',
+			x_not_text_contains: ':',
+			hint: 'Barra de contenido escondible para menu de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_menu',node);
+				// special cases
+				if (params.visible) {
+					params['v-model']=params.visible;
+					delete params.visible;
+				}
+				// write tag
+				resp.open += context.tagParams('v-menu',params,false) + `\n`;
+				resp.close += `</v-menu>\n`;
+				return resp;
+			}
+		},
+		'def_barralateral': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'lateral',
+			x_not_text_contains: ':',
+			hint: 'Barra lateral (normalmente para un menu) escondible de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_barralateral',node);
+				// special cases
+				if (params.visible) {
+					params['v-model']=params.visible;
+					delete params.visible;
+				}
+				// write tag
+				resp.open += context.tagParams('v-navigation-drawer',params,false) + `\n`;
+				resp.close += `</v-navigation-drawer>\n`;
+				return resp;
+			}
+		},
+		'def_barrainferior': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_contains: 'inferior',
+			x_not_text_contains: ':',
+			hint: 'Barra inferior escondible de vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_barrainferior',node);
+				// special cases
+				if (params.visible) {
+					params['v-model']=params.visible;
+					delete params.visible;
+				}
+				// write tag
+				resp.open += context.tagParams('v-bottom-sheet',params,false) + `\n`;
+				resp.close += `</v-bottom-sheet>\n`;
+				return resp;
+			}
+		},
+
+		//*def_menu
+		//*def_barralateral
+		//*def_barrainferior
+
+		'def_contenido': {
+			x_level: 3,
+			x_icons: 'idea',
+			x_text_exact: 'contenido',
+			x_or_hasparent: 'def_page,def_componente',
+			hint: 'Contenido de pagina o componente vuetify',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state });
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				// write tag
+				resp.open += context.tagParams('main',{},false) + `\n`;
+				resp.open += context.tagParams('v-content',{},false) + `\n`;
+				resp.close += `</v-content>\n`;
+				resp.close += `</main>\n`;
+				return resp;
+			}
+		},
+		'def_toolbar': {
+			x_level: '>2',
+			x_icons: 'idea',
+			x_text_exact: 'toolbar',
+			attributes_aliases: {
+				'icon' 	: 'icon,icono'
+			},
+			hint: 'Barra superior o toolbar vuetify que permite auto-alinear un titulo, botones, etc.',
+			func: async function(node,state) {
+				let resp = context.reply_template({ state }); let tmp = {};
+				if (node.text_note!='') resp.open = `<!-- ${node.text_note} -->`;
+				let params = aliases2params('def_toolbar',node);
+				// special cases
+				if (params[':icon']) {
+					tmp.icon = `{{ ${params[':icon']} }}`;
+					delete params[':icon'];
+				} else if (params.icon) {
+					tmp.icon = params.icon.toLowerCase().trim();
+					delete params.icon;
+				}
+				// write tag
+				resp.open += context.tagParams('v-toolbar',params,false) + `\n`;
+				if (tmp.icon && tmp.icon!='') {
+					resp.open += `<v-toolbar-side-icon><v-icon>${tmp.icon}</v-icon></v-toolbar-side-icon>\n`;
+				} else if (tmp.icon && tmp.icon=='') {
+					resp.open += `<v-toolbar-side-icon></<v-toolbar-side-icon>\n`;
+				}
+				resp.close = `</v-toolbar>\n`;
+				return resp;
+			}
+		},
+
+		//*def_contenido
+		//*def_toolbar
+		//def_toolbar_title
+		//def_layout_custom
+		//def_divider
+		//def_slot
+		//def_div
+		//def_agrupar
+		//def_bloque
+		//def_hover
+		//def_tooltip
+		
+		//def_datatable
+		//def_datatable_col
+		//def_datatable_fila
+		//def_datatable_headers
+		//def_paginador	
+		
+		//def_sparkline
+		//def_highcharts
+		//def_trend
+
+		//def_listado
+		//def_listado_grupo
+		//def_listado_dummy
+		//def_listado_fila
+		//def_listado_fila_accion
+		//def_listado_fila_contenido
+		//def_listado_fila_titulo
+		//def_listado_fila_subtitulo
+		//def_listado_fila_avatar
+		//def_icono
+		//def_animar
+		//def_imagen
+		//def_qrcode
+		//def_analytics_evento
+		//def_medianet_ad
+		//def_mapa
+		//def_youtube_playlist
+		//def_youtube
+
+		//def_script
+		//def_event_server
+		//def_event_mounted
+		//def_event_method
+		//def_event_element
+
+		//def_condicion_view
+		//def_otra_condicion_view
+		//def_condicion (def_script_condicion)
+		//def_otra_condicion (def_script_otra_condicion)
+
 
 		// *************
 		// 	 VARIABLES
