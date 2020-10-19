@@ -26,6 +26,7 @@ export default class vue_dsl extends concepto {
 	async onInit() {
 		// define and assign commands
 		await this.addCommands(internal_commands);
+		this.x_console.outT({ message:`${Object.keys(this.x_commands).length} local x_commands loaded!`, color:`green` });
 		//this.debug('x_commands',this.x_commands);
 		this.x_crypto_key=require('crypto').randomBytes(32); // for hash helper method
 		// init vue
@@ -76,6 +77,11 @@ export default class vue_dsl extends concepto {
 		this.x_state.nuxt_is_running = await this._isLocalServerRunning();
 		this.debug('is Server Running: '+this.x_state.nuxt_is_running);
 		// init terminal diagnostics (not needed here)
+		if (this.x_state.central_config.nuxt=='latest' && this.atLeastNode('10')==false) {
+			//this.debug('error: You need at least Node v10+ to use latest Nuxt/Vuetify version!');
+			throw new Error('You need to have at least Node v10+ to use latest Nuxt/Vuetify version!');
+		}
+		this.x_state.es6 = (this.x_state.central_config.nuxt=='latest')?true:false;
 		// copy sub-directories if defined in node 'config.copiar' key
 		if (this.x_state.config_node.copiar) {
 			let path = require('path'), basepath = path.dirname(path.resolve(this.x_flags.dsl));
@@ -119,6 +125,19 @@ export default class vue_dsl extends concepto {
 		// GOOGLE:ANALYTICS
 		if (this.x_state.config_node['google:analytics']) {
 			this.x_state.npm['@nuxtjs/google-gtag']='*';
+		}
+		// ADD v-mask if latest Nuxt/Vuetify, because vuetify v2+ no longer includes masks support
+		if (this.x_state.central_config.nuxt=='latest') {
+			this.x_state.plugins['v-mask'] = {
+				global:true,
+				npm: { 'v-mask':'*' },
+				customcode: 
+`import Vue from 'vue';
+import VueMask from 'v-mask';
+Vue.directive('mask', VueMask.VueMaskDirective);
+Vue.use(VueMask);`,
+				dev_npm: {}
+			};
 		}
 		// DEFAULT NPM MODULES & PLUGINS if dsl is not 'componente' type
 		if (!this.x_state.central_config.componente) {
@@ -508,7 +527,7 @@ export default class vue_dsl extends concepto {
 			'keep-warm': true,
 			port: 3000,
 			git: true,
-			nuxt: '2.11.0',
+			nuxt: 'latest',
 			idiomas: 'es',
 			':cache': this.x_config.cache,
 			':mode': 'spa',
@@ -703,4 +722,10 @@ export default class vue_dsl extends concepto {
 		return resp;
 	}
 
+	// atLeastNode
+	atLeastNode(r) {
+		const n = process.versions.node.split('.').map(x => parseInt(x, 10));
+		r = r.split('.').map(x => parseInt(x, 10));
+		return n[0] > r[0] || (n[0] === r[0] && (n[1] > r[1] || (n[1] === r[1] && n[2] >= r[2])));
+	}
 }
