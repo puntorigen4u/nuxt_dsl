@@ -32,7 +32,7 @@ export default class vue_dsl extends concepto {
 		// init vue
 		// set x_state defaults
 		this.x_state = { plugins:{}, npm:{}, dev_npm:{}, envs:{}, 
-			funciones:{},
+			functions:{},
 			proxies:{},
 			pages:{},
 			current_func:'',
@@ -339,7 +339,7 @@ Vue.use(VueMask);`,
 	//Transforms the processed nodes into files.
 	async onCreateFiles(processedNodes) {
 		this.x_console.out({ message:'onCreateFiles', data:processedNodes });
-		//this.x_console.out({ message:'pages state', data:this.x_state.pages });
+		this.x_console.out({ message:'x_state', data:this.x_state });
 	}
 
 	// ************************

@@ -190,22 +190,23 @@ export default async function(context) {
         'def_server_path': {
             x_icons: 'list',
             x_level: '3,4',
-            x_or_isparent: 'def_server',
+            x_or_hasparent: 'def_server',
             x_not_icons: 'button_cancel,desktop_new,help',
             hint: 'Carpeta para ubicacion de funcion de servidor',
             func: async function(node, state) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.level == 2) {
+                //console.log('def_server_path DEBUG',node);
+                if (node.level == 3) {
                     //state.current_folder = node.text;
                     resp.state.current_folder = node.text;
-                } else if (node.level == 3 && await context.isExactParentID(node.id, 'def_server_path')) {
+                } else if (node.level == 4 && await context.isExactParentID(node.id, 'def_server_path')) {
                     let parent_node = await context.dsl_parser.getParentNode({
                         id: node.id
                     });
                     //state.current_folder = `${parent_node.text}/${node.id}`;
-                    resp.state.current_folder = `${parent_node.text}/${node.id}`;
+                    resp.state.current_folder = `${parent_node.text}/${node.text}`;
                 } else {
                     resp.valid = false;
                 }
@@ -215,7 +216,7 @@ export default async function(context) {
         'def_server_func': { //@TODO finish incomplete
             x_empty: 'icons',
             x_level: '3,4,5',
-            x_or_isparent: 'def_server',
+            x_or_hasparent: 'def_server',
             hint: 'Corresponde a la declaracion de una funcion de servidor',
             func: async function(node, state) {
                 let resp = context.reply_template({
@@ -224,12 +225,44 @@ export default async function(context) {
                 context.x_state.central_config.static = false; //server func cannot run in a static site
                 resp.state.current_func = node.text;
                 if (node.level != 2) {
-                    let new_name = [];
-                    let parents = await context.getParentNodes(node.id);
-                    // @TODO finish this method when we can test the parents ORDER (line: 321 vue.CFC)
-                    //console.log('@TODO! def_server_func: needs testings',parents);
+                    let new_name = resp.state.current_folder?resp.state.current_folder.split('/'):[];
+                    resp.state.current_func = [...new_name,node.text].join('_');
+                    //console.log('@TODO! def_server_func: new_name',new_name);
                 }
-                resp.open = '<func_code>';
+                // set function defaults
+                if (!context.x_state.functions[resp.state.current_func]) {
+                    context.x_state.functions[resp.state.current_func] = {
+                        tipo: 'web',
+                        acceso: '*',
+                        params: '',
+                        param_doc: {},
+                        doc: node.text_note,
+                        method: 'get',
+                        return: '',
+                        path: '/' + (resp.state.current_folder?resp.state.current_folder+'/':'') + node.text,
+                        imports: {}
+                    };
+                }
+                // process attributes
+                Object.keys(node.attributes).map(function(keym) {
+                    let key = keym.toLowerCase();
+                    if ([':type', 'type', 'tipo', ':tipo',':method','method'].includes(key)) {
+                        context.x_state.functions[resp.state.current_func].method = node.attributes[key];
+                    } else {
+                        if (key.contains(':')) {
+                            context.x_state.functions[resp.state.current_func].param_doc[key.split(':')[0]] = { type:key.split(':')[1], desc:node.attributes[key] };
+                        } else {
+                            context.x_state.functions[resp.state.current_func][key.toLowerCase().trim()] = node.attributes[key];
+                        }
+                    }
+                    //
+                });
+                // write tag code
+                resp.open = context.tagParams('func_code', {
+                    name: resp.state.current_func,
+                    method: context.x_state.functions[resp.state.current_func].method,
+                    path: context.x_state.functions[resp.state.current_func].path
+                }, false) + '\n';
                 resp.close = '</func_code>';
                 //
                 return resp;
