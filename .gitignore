@@ -21,6 +21,5 @@ flow-typed/npm/*
 #lib
 
 # dsl file tests
-test/vue.dsl
-
+test/*
 

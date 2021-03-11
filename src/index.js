@@ -1,5 +1,7 @@
-const concepto = require('concepto');
-//import concepto from '../../concepto/src/index'
+//const concepto = require('concepto');
+import { timingSafeEqual } from 'crypto';
+import { runInThisContext } from 'vm';
+import concepto from '../../concepto/src/index'
 /**
 * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
 * @name 	vue_dsl
@@ -39,7 +41,9 @@ export default class vue_dsl extends concepto {
 			current_folder:'',
 			current_proxy:'',
 			strings_i18n: {},
+			stores: {},
 			stores_types: { versions:{}, expires:{} },
+			nuxt_config: { head_script:{}, build_modules:{}, modules:{} },
 		};
 		this.x_state.config_node = await this._readConfig();
 		//this.debug('config_node',this.x_state.config_node);
@@ -84,11 +88,11 @@ export default class vue_dsl extends concepto {
 		this.x_state.es6 = (this.x_state.central_config.nuxt=='latest')?true:false;
 		// copy sub-directories if defined in node 'config.copiar' key
 		if (this.x_state.config_node.copiar) {
-			let path = require('path'), basepath = path.dirname(path.resolve(this.x_flags.dsl));
+			let path = require('path');
 			let copy = require('recursive-copy');
 			this.x_console.outT({ message:`copying config:copiar directories to 'static' target folder`, color:`yellow` });
 			await Object.keys(this.x_state.config_node.copiar).map(async function(key) {
-				let abs = path.join(basepath,key);
+				let abs = path.join(this.x_state.dirs.base,key);
 				try {
 					await copy(abs,this.x_state.dirs.static);
 				} catch(err_copy) {
@@ -106,8 +110,8 @@ export default class vue_dsl extends concepto {
 			// add @nuxtjs/pwa module to app
 			this.x_state.npm['@nuxtjs/pwa']='*';
 			// copy icon to static dir
-			let path = require('path'), basepath = path.dirname(path.resolve(this.x_flags.dsl));
-			let source = path.join(basepath,this.x_state.config_node['nuxt:icon']);
+			let path = require('path');
+			let source = path.join(this.x_state.dirs.base,this.x_state.config_node['nuxt:icon']);
 			let target = this.x_state.dirs.static+'icon.png';
 			this.debug({ message:`NUXT ICON dump (copy icon)`, color:`yellow`, data:source });
 			let fs = require('fs').promises;
@@ -304,8 +308,7 @@ Vue.use(VueMask);`,
 				// if DSL defines temporal AWS credentials for this app .. 
 				// create backup of aws credentials, if existing previously
 				if (aws_ini!='') {
-					let basepath = path.dirname(path.resolve(this.x_flags.dsl));
-					let aws_bak = path.join(basepath,'aws_backup.ini');
+					let aws_bak = path.join(this.x_state.dirs.base,'aws_backup.ini');
 					this.x_console.outT({ message:`config:aws:creating .aws/credentials backup`, color:'yellow' });
 					await fs.writeFile(aws_bak,aws_ini,'utf-8');
 				}
@@ -336,10 +339,486 @@ Vue.use(VueMask);`,
 	async onErrors(errors) {
 	}
 
+	//configNode helper
+	async generalConfigSetup() {
+		//this.x_state.dirs.base
+		this.debug('Setting general configuration steps');
+		this.debug('Defining nuxt.config.js : initializing');
+		// default modules
+		this.debug('Defining nuxt.config.js : default modules');
+		this.x_state.nuxt_config.modules['@nuxtjs/axios']={};
+		//google analytics
+		if (this.x_state.config_node['google:analytics']) {
+			this.debug('Defining nuxt.config.js : Google Analytics');
+			this.x_state.nuxt_config.build_modules['@nuxtjs/google-gtag'] = {
+				'id'					: 	this.x_state.config_node['google:analytics'].id,
+				'debug'					: 	true,
+				'disableAutoPageTrack' 	:	true
+			};
+			if (this.x_state.config_node['google:analytics'].local) this.x_state.nuxt_config.build_modules['@nuxtjs/google-gtag'].debug = this.x_state.config_node['google:analytics'].local;
+			if (this.x_state.config_node['google:analytics'].auto && this.x_state.config_node['google:analytics'].auto==true) {
+				delete this.x_state.nuxt_config.build_modules['@nuxtjs/google-gtag']['disableAutoPageTrack'];
+			} 
+		}
+		//medianet
+		if (this.x_state.config_node['ads:medianet'] && this.x_state.config_node['ads:medianet']['cid']) {
+			this.debug('Defining nuxt.config.js : MediaNet');
+			this.x_state.nuxt_config.head_script['z_ads_medianet_a'] = {
+				'innerHTML' 	: 	'window._mNHandle = window._mNHandle || {}; window._mNHandle.queue = window._mNHandle.queue || []; medianet_versionId = "3121199";',
+				'type' 			: 	'text/javascript'
+			};
+			this.x_state.nuxt_config.head_script['z_ads_medianet_b'] = {
+				'src' 			: 	`https://contextual.media.net/dmedianet.js?cid=${this.x_state.config_node['ads:medianet'][cid]}`,
+				'async' 		: 	true
+			};
+			this.x_state.plugins['vue-script2'] = {
+				global: true,
+				npm: { 'vue-script2':'*' }
+			};
+		}
+		//google Adsense
+		if (this.x_state.config_node['google:adsense']) {
+			this.debug('Defining nuxt.config.js : Google Adsense');
+			if (this.x_state.config_node['google:adsense'].auto && this.x_state.config_node['google:adsense'].client) {
+				this.x_state.nuxt_config.head_script['google_adsense'] = {
+					'src' 				: 	'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
+					'data-ad-client'	: 	this.x_state.config_node['google:adsense'].client,
+					'async' 			: 	true
+				};
+				this.x_state.plugins['adsense'] = {
+					global: true,
+					npm: {
+						'vue-google-adsense': '*',
+						'vue-script2': '*'
+					},
+					mode: 'client',
+					customcode: `
+					import Vue from "vue";
+					import Ads from "vue-google-adsense";
+
+					Vue.use(require('vue-script2'));
+					Vue.use(Ads.AutoAdsense, { adClient: '${this.x_state.config_node['google:adsense']['client']}'});`
+				};
+			} else {
+				this.x_state.plugins['adsense'] = {
+					global: true,
+					npm: {
+						'vue-google-adsense': '*',
+						'vue-script2': '*'
+					},
+					mode: 'client',
+					customcode: `
+					import Vue from "vue";
+					import Ads from "vue-google-adsense";
+
+					Vue.use(require('vue-script2'));
+					Vue.use(Ads.Adsense);
+					Vue.use(Ads.InArticleAdsense);
+					Vue.use(Ads.InFeedAdsense);`
+				};
+			}
+		}
+		//nuxt:icon
+		if (this.x_state.config_node['nuxt:icon']) {
+			this.debug('Defining nuxt.config.js : module nuxtjs/pwa (nuxt:icon)');
+			this.x_state.nuxt_config.modules['@nuxtjs/pwa'] = {};
+		}
+		//idiomas i18n
+		if (this.x_state.central_config['idiomas'].indexOf(',')!=-1) {
+			this.debug('Defining nuxt.config.js : module nuxt/i18n (idiomas)');
+			this.x_state.npm['nuxt-i18n'] = '*'; this.x_state.npm['fs'] = '*';
+			this.x_state.nuxt_config.modules['nuxt-i18n'] = {
+				'defaultLocale': this.x_state.central_config['idiomas'].split(',')[0],
+				'vueI18n': { 'fallbackLocale': this.x_state.central_config['idiomas'].split(',')[0] },
+				'detectBrowserLanguage': {
+					'useCookie': true,
+					'alwaysRedirect': true
+				},
+				locales: [],
+				lazy: true,
+				langDir: 'lang/'
+			};
+			let self = this;
+			this.x_state.central_config['idiomas'].split(',').map(function(lang) {
+				if (lang=='es') {
+					self.x_state.nuxt_config.modules['nuxt-i18n'].locales.push({
+						code:'es', iso: 'es-ES', file: `${lang}.js`
+					});
+				} else if (lang=='en') {
+					self.x_state.nuxt_config.modules['nuxt-i18n'].locales.push({
+						code:'en', iso: 'en-US', file: `${lang}.js`
+					});
+				} else {
+					self.x_state.nuxt_config.modules['nuxt-i18n'].locales.push({
+						code:lang, file: `${lang}.js`
+					});
+				}
+			}.bind(self));
+		}
+		//local storage
+		if (this.x_state.stores_types['local'] && Object.keys(this.x_state.stores_types['local']) != '') {
+			this.debug('Defining nuxt.config.js : module nuxt-vuex-localstorage (store:local)');
+			this.x_state.nuxt_config.modules['nuxt-vuex-localstorage'] = { 
+				mode			: 	'debug', 
+				'localStorage'	:	Object.keys(this.x_state.stores_types['local'])
+			};
+		}
+		//session storage
+		if (this.x_state.stores_types['session'] && Object.keys(this.x_state.stores_types['session']) != '') {
+			this.debug('Defining nuxt.config.js : module nuxt-vuex-localstorage (store:session)');
+			let prev = {};
+			// if vuex-localstorage was defined before, recover keys and just replace with news, without deleting previous
+			if (this.x_state.nuxt_config.modules['nuxt-vuex-localstorage']) prev = this.x_state.nuxt_config.modules['nuxt-vuex-localstorage'];
+			this.x_state.nuxt_config.modules['nuxt-vuex-localstorage'] = { ...prev, ...{ 
+				mode				: 	'debug', 
+				'sessionStorage'	:	Object.keys(this.x_state.stores_types['session']) 
+			}};
+		}
+		//proxies
+		let has_proxies = false, proxies = {};
+		let self = this;
+		Object.keys(this.x_state.central_config).map(function(key) {
+			if (key.indexOf('proxy:')!=-1) {
+				let just_key = key.split(':')[1];
+				proxies[just_key] = self.x_state.central_config[key];
+				has_proxies = true;
+			}
+		}.bind(self));
+		if (has_proxies) {
+			this.debug('Defining nuxt.config.js : module nuxtjs/proxy (central:proxy)');
+			this.x_state.npm['@nuxtjs/proxy'] = '*';
+			this.x_state.nuxt_config.modules['@nuxtjs/proxy'] = { 'proxy':proxies };
+		}
+		//end
+	}
+
+	//.gitignore helper
+	async createGitIgnore() {
+		this.debug('writing .gitignore files');
+		let fs = require('fs').promises, path = require('path');
+		if (this.x_state.central_config.componente) {
+			this.debug({ message:'writing dsl /.gitignore file' });
+			let git = 
+`# Mac System files
+.DS_Store
+.DS_Store?
+_MACOSX/
+Thumbs.db
+# VUE files
+# Concepto files
+dsl_cache/
+dsl_cache.ini
+vue.dsl
+tmp.ini
+${this.x_state.dirs.compile_folder}/node_modules/`;
+			await fs.writeFile(`${this.x_state.dirs.base}.gitignore`,git,'utf-8'); //.gitignore
+			this.x_console.out({ message:'writing component .gitignore file' });
+			git = 
+`# Mac System files
+.DS_Store
+.DS_Store?
+_MACOSX/
+Thumbs.db
+# NPM files
+package-lock.json
+node_modules/
+# AWS EB files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml`;
+			await fs.writeFile(`${this.x_state.dirs.app}/.gitignore`,git,'utf-8'); //app/.gitignore
+		} else {
+			this.x_console.out({ message:'writing /.gitignore file' });
+			let git = 
+`# Mac System files
+.DS_Store
+.DS_Store?
+_MACOSX/
+Thumbs.db
+# VUE files
+.nuxt/
+# Concepto files
+dsl_cache/
+dsl_cache.ini
+tmp.ini
+vue.dsl
+stats.txt
+stats.json
+store/
+${this.x_state.dirs.compile_folder}/node_modules/
+${this.x_state.dirs.compile_folder}/secrets/`;
+			await fs.writeFile(`${this.x_state.dirs.base}.gitignore`,git,'utf-8'); //.gitignore
+		}
+	}
+
+	//process .omit file 
+	async processOmitFile(thefile) {
+		//internal_stores.omit
+		let self = this;
+		if (thefile.file=='internal_stores.omit') {
+			this.debug('processing internal_stores.omit');
+			let cheerio = require('cheerio');
+			let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+			let nodes = $(`store_mutation`);
+			nodes.map(function(i,elem) {
+				let cur = $(elem);
+				let store = cur.attr('store')?cur.attr('store'):'';
+				let mutation = cur.attr('mutation')?cur.attr('mutation'):'';
+				let params = cur.attr('params')?cur.attr('params'):'';
+				let code = cur.text();
+				if (self.x_state.stores[store] && !self.x_state.stores[store][':mutations']) {
+					self.x_state.stores[store][':mutations'] = {};
+				}
+				self.x_state.stores[store][':mutations'][mutation] = { code, params };
+			}.bind(self,$));
+		}
+		//internal_middleware.omit
+		if (thefile.file=='internal_middleware.omit') {
+			this.debug('processing internal_middleware.omit');
+			let cheerio = require('cheerio');
+			let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+			let nodes = $(`proxy_code`);
+			nodes.map(function(i,elem) {
+				let cur = $(elem);
+				let name = cur.attr('name')?cur.attr('name'):'';
+				self.x_state.proxies[name].code = cur.text().trim();
+			},self,$);
+		}
+		//server.omit
+		if (thefile.file=='server.omit') {
+			this.debug('processing server.omit');
+			let cheerio = require('cheerio');
+			let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+			let nodes = $(`func_code`);
+			nodes.map(function(i,elem) {
+				let cur = $(elem);
+				let name = cur.attr('name')?cur.attr('name'):'';
+				self.x_state.functions[name].code = cur.text().trim();
+			}.bind(self,$));
+		}
+	}
+
+	async getBasicVue(thefile) {
+		// write .VUE file
+		let vue = { template:thefile.code, script:'', style:'', first:false };
+		let page = this.x_state.pages[thefile.title];
+		if (page) {
+			// declare middlewares (proxies)
+			if (page.proxies.indexOf(',')!=-1) {
+				this.debug('- declare middlewares');
+				vue.script += `\tmiddleware: [${page.proxies}]`;
+				vue.first = true;
+			} else if (page.proxies.trim()!='') {
+				this.debug('- declare middlewares');
+				vue.script += `\tmiddleware: '${page.proxies}'`;
+				vue.first = true;
+			}
+			// layout attr
+			if (page.layout!='') {
+				this.debug('- declare layout');
+				if (vue.first) vue.script += ',\n'; vue.first = true;
+				vue.script += `\tlayout: '${page.layout.trim()}'`;
+			}
+			// declare components
+			if (page.components!='') {
+				this.debug('- declare components');
+				if (vue.first) vue.script += ',\n'; vue.first = true;
+				vue.script += `\tcomponents: {`;
+				let comps = [];
+				Object.keys(page.components).map(function(key) {
+					comps.push(`\t\t${key}: ${page.components[key]}`);
+				}.bind(page,comps));
+				vue.script += `${comps.join(',')}\n\t}`;
+			}
+			// declare directives
+			if (page.directives!='') {
+				this.debug('- declare directives');
+				if (vue.first) vue.script += ',\n'; vue.first = true;
+				vue.script += `\tdirectives: {`;
+				let directs = [];
+				Object.keys(page.directives).map(function(key) {
+					if (key==page.directives[key]) {
+						directs.push(`\t\t${key}`);
+					} else {
+						directs.push(`\t\t${key}: ${page.directives[key]}`);
+					}
+				}.bind(page,directs));
+				vue.script += `${directs.join(',')}\n\t}`;
+			}
+			// declare props (if page tipo componente)
+			if (page.tipo=='componente' && page.params!='') {
+				this.debug('- declare componente:props');
+				if (vue.first) vue.script += ',\n'; vue.first = true;
+				let props = [];
+				if (Object.keys(page.defaults)!='') {
+					page.params.split(',').map(function(param) {
+						let def_val = '';
+						if (page.defaults[key]) def_val = page.defaults[key];
+						if (def_val==true || def_val=='true' || def_val=='false' || def_val==false) {
+							props.push(`${key}: { default: ${def_val}}`);
+						} else if (!isNaN(+(def_val))) { //if def_val is number or string with number
+							props.push(`${key}: { default: ${def_val}}`);
+						} else if (def_val.indexOf('[')!=-1 && def_val.indexOf(']')!=-1) {
+							props.push(`${key}: { type: Array, default: () => ${def_val}}`);
+						} else if (def_val.indexOf('{')!=-1 && def_val.indexOf('}')!=-1) {
+							props.push(`${key}: { type: Object, default: () => ${def_val}}`);
+						} else if (def_val.indexOf("'")!=-1) {
+							props.push(`${key}: { default: ${def_val}}`);
+						} else {
+							props.push(`${key}: { default: '${def_val}' }`);
+						}
+					}.bind(page,props));
+				} else {
+					page.params.split(',').map(function(param) {
+						props.push(`'${key}'`);
+					}.bind(props));
+				}
+				vue.script += `\tprops: {${props.join(',')}}`;
+			}
+			// declare meta data
+			if (page.xtitle || page.meta.length>0) {
+				this.debug('- declare head() meta data');
+				if (vue.first) vue.script += ',\n'; vue.first = true;
+				vue.script += `\thead() {\n`;
+				vue.script += `\t\treturn {\n`;
+				// define title
+				if (page.xtitle) {
+					if (this.x_state.central_config.idiomas.indexOf(',')!=-1) {
+						// i18n title
+						let crc32 = `t_${this.hash(page.xtitle)}`;
+						let def_lang = this.x_state.central_config.idiomas.indexOf(',')[0].trim().toLowerCase();
+						if (!this.x_state.strings_i18n[def_lang]) {
+							this.x_state.strings_i18n[def_lang] = {};
+						}
+						this.x_state.strings_i18n[def_lang][crc32] = page.xtitle;
+						vue.script += `\t\t\ttitleTemplate: this.$t('${crc32}')\n`;
+					} else {
+						// normal title
+						vue.script += `\t\t\ttitleTemplate: '${page.xtitle}'\n`;
+					}
+				}
+				// define meta SEO
+				if (page.meta.length>0) {
+					if (page.xtitle) vue.script += `,`;
+					vue.script += `\t\t\tmeta: ${JSON.stringify(page.meta)}\n`;
+				}
+				vue.script += `\t\t};\n`;
+				vue.script += `\t}`;
+			}
+			// declare variables (data)
+			if (Object.keys(page.variables)!='') {
+				this.debug('- declare data() variables');
+				if (vue.first) vue.script += ',\n'; vue.first = true;
+				let util = require('util');
+				vue.script += `\tdata() {\n`;
+				vue.script += `\t\treturn ${util.inspect(page.variables,{ depth:Infinity })}\n`;
+				vue.script += `\t}\n`;
+			}
+		}
+		return vue;
+	}
+
+	async processInternalTags(vue) {
+		let cheerio = require('cheerio');
+		let $ = cheerio.load(vue.template, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+		
+		this.debug('post-processing server_asyncdata tag');
+		let nodes = $(`server_asyncdata`).toArray();
+		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
+		nodes.map(function(elem) {
+			let cur = $(elem);
+			let name = cur.attr('return')?cur.attr('return'):'';
+			vue.script += `\tasync asyncData({ req, res, params }) {\n`;
+			vue.script += `\t\tif (!process.server) { const req={}, res={}; }\n`;
+			vue.script += `\t\t${cur.text()}`;
+			vue.script += `\t\treturn ${name};\n`;
+			vue.script += `\t}\n`;
+			cur.remove();
+			//vue.template = vue.template.replace(cur.html(),'');
+		}); //.bind($,vue)
+		vue.template = $.html();
+		vue.script += computed.join(',');
+		if (nodes.length>0) vue.script += `\t}\n`;
+		/*
+		// process ?mounted event
+		this.debug('post-processing vue_mounted tag');
+		nodes = $(`vue_mounted`);
+		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
+		if (nodes.length>0) vue.script += `\tasync mounted() {\n`;
+		nodes.map(function(i,elem) {
+			let cur = $(elem);
+			let code = cur.text();
+			vue.script += `\t\t${code}`;
+			vue.template = vue.template.replace(cur.parent().html(),''); //@TODO check its getting the whole html of the cur tag
+		}.bind($,vue));
+		if (nodes.length>0) vue.script += `\t}\n`;
+		*/
+		// process ?var (vue_computed)
+		/* */
+		this.debug('post-processing vue_computed tag');
+
+		let nodes = $('vue\_computed[name]').toArray();
+		//this.debug('nodes',nodes);
+		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
+		if (nodes.length>0) vue.script += `\tcomputed: {\n`;
+		let computed = [], self = this;
+		nodes.map(function(elem) {
+			let cur = $(elem);
+			let name = cur.attr('name');
+			let code = cur.html();
+			let tmp = '';
+			tmp += `\t\t${name}() {\n`;
+			tmp += '\t\t\t'+code;
+			tmp += `\t\t}`;
+			computed.push(tmp);
+			cur.remove();
+		}); //.bind(vue,computed,self)
+		vue.template = $.html();
+		vue.script += computed.join(',');
+		if (nodes.length>0) vue.script += `\t}\n`;
+		/* */
+		return vue;
+	}
+
 	//Transforms the processed nodes into files.
 	async onCreateFiles(processedNodes) {
-		this.x_console.out({ message:'onCreateFiles', data:processedNodes });
-		this.x_console.out({ message:'x_state', data:this.x_state });
+		//this.x_console.out({ message:'onCreateFiles', data:processedNodes });
+		//this.x_console.out({ message:'x_state', data:this.x_state });
+		await this.generalConfigSetup();
+		await this.createGitIgnore();
+		this.debug('processing nodes');
+		await processedNodes.map(async function(thefile) {
+			let contenido = thefile.code + '\n';
+			if (thefile.file.split('.').slice(-1)=='omit') {
+				await this.processOmitFile(thefile);
+				//process special non 'files'
+			} else {
+				this.debug('processing node '+thefile.title);
+				let vue = await this.getBasicVue(thefile);
+				let page = this.x_state.pages[thefile.title];
+				// @TODO check the vue.template replacements (8-mar-21)
+				// declare server:asyncData
+				this.debug('post-processing internal custom tags');
+				vue = await this.processInternalTags(vue);
+				// closure ...
+				// **** **** start script wrap **** **** **** **** 
+				let script_start = '';
+				script_start = `<script>\n{concepto:import:mixins}`;
+				// header for imports
+				if (page) {
+					Object.keys(page.imports).map(function(key) {
+						script_start += `import ${page.imports[key]} from '${key}'\n`;
+					}.bind(page,vue));
+				}
+				// export default
+				script_start += `export default {\n`;
+				vue.script = script_start + vue.script;
+				vue.script += `}`; // close export default
+				// **** **** end script wrap **** **** 
+				this.x_console.out({ message:'vue test', data:vue });
+			} 
+			//this.x_console.out({ message:'pages debug', data:this.x_state.pages });
+		}.bind(this));
 	}
 
 	// ************************

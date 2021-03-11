@@ -140,14 +140,28 @@
 </node>
 <node CREATED="1594004881822" ID="ID_1586770012" MODIFIED="1597442914731" TEXT="variables">
 <icon BUILTIN="xmag"/>
-<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1597584780229" TEXT="fondo">
+<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1615306450337" TEXT="fondo">
 <icon BUILTIN="help"/>
+<attribute NAME=":async" VALUE="false"/>
 <node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1597686805394" TEXT="struct, respuesta">
 <icon BUILTIN="desktop_new"/>
 <attribute_layout NAME_WIDTH="133" VALUE_WIDTH="113"/>
 <attribute NAME="backgroundColor" VALUE="#00D95A"/>
 </node>
 <node CREATED="1553565000664" ID="ID_678355206" MODIFIED="1597639670325" TEXT="responder &quot;**respuesta**&quot;">
+<icon BUILTIN="desktop_new"/>
+<icon BUILTIN="bell"/>
+</node>
+</node>
+<node CREATED="1594004321947" ID="ID_927366476" MODIFIED="1615329410246" TEXT="fondo2">
+<icon BUILTIN="help"/>
+<attribute NAME=":async" VALUE="false"/>
+<node CREATED="1564666068151" ID="ID_1648830924" MODIFIED="1597686805394" TEXT="struct, respuesta">
+<icon BUILTIN="desktop_new"/>
+<attribute_layout NAME_WIDTH="133" VALUE_WIDTH="113"/>
+<attribute NAME="backgroundColor" VALUE="#00D95A"/>
+</node>
+<node CREATED="1553565000664" ID="ID_327872258" MODIFIED="1597639670325" TEXT="responder &quot;**respuesta**&quot;">
 <icon BUILTIN="desktop_new"/>
 <icon BUILTIN="bell"/>
 </node>
