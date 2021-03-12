@@ -737,7 +737,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			//vue.template = vue.template.replace(cur.html(),'');
 		}); //.bind($,vue)
 		vue.template = $.html();
-		vue.script += computed.join(',');
+		//vue.script += computed.join(',');
 		if (nodes.length>0) vue.script += `\t}\n`;
 		/*
 		// process ?mounted event
@@ -757,7 +757,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		/* */
 		this.debug('post-processing vue_computed tag');
 
-		let nodes = $('vue\_computed[name]').toArray();
+		nodes = $('vue\_computed[name]').toArray();
 		//this.debug('nodes',nodes);
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
 		if (nodes.length>0) vue.script += `\tcomputed: {\n`;
