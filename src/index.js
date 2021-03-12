@@ -1,7 +1,7 @@
-//const concepto = require('concepto');
+const concepto = require('concepto');
 import { timingSafeEqual } from 'crypto';
 import { runInThisContext } from 'vm';
-import concepto from '../../concepto/src/index'
+//import concepto from '../../concepto/src/index'
 /**
 * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
 * @name 	vue_dsl
