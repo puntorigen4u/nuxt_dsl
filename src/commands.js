@@ -429,6 +429,7 @@ export default async function(context) {
                         return: '',
                         styles: {},
                         script: {},
+                        mixins: {},
                         path: '/' + resp.state.current_page
                     };
                 }

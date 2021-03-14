@@ -717,12 +717,12 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		return vue;
 	}
 
-	async processInternalTags(vue) {
+	async processInternalTags(vue,page) {
 		let cheerio = require('cheerio');
 		let $ = cheerio.load(vue.template, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
 		
-		this.debug('post-processing server_asyncdata tag');
 		let nodes = $(`server_asyncdata`).toArray();
+		if (nodes.length>0) this.debug('post-processing server_asyncdata tag');
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
 		nodes.map(function(elem) {
 			let cur = $(elem);
@@ -737,8 +737,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		vue.template = $.html();
 		if (nodes.length>0) vue.script += `}\n`;
 		// process ?mounted event
-		this.debug('post-processing vue_mounted tag');
 		nodes = $(`vue_mounted`).toArray();
+		if (nodes.length>0) this.debug('post-processing vue_mounted tag');
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
 		if (nodes.length>0) vue.script += `async mounted() {\n`;
 		nodes.map(function(i,elem) {
@@ -749,9 +749,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		vue.template = $.html();
 		if (nodes.length>0) vue.script += `}\n`;
 		// process ?var (vue_computed)
-		this.debug('post-processing vue_computed tag');
 		nodes = $('vue_computed').toArray();
 		//this.debug('nodes',nodes);
+		if (nodes.length>0) this.debug('post-processing vue_computed tag');
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
 		if (nodes.length>0) vue.script += `computed: {\n`;
 		let computed = [];
@@ -761,13 +761,14 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			let code = cur.html();
 			computed.push(`${name}() {${code}}`);
 			cur.remove();
+			//return elem;
 		});
 		vue.template = $.html();
 		vue.script += computed.join(',');
 		if (nodes.length>0) vue.script += `}\n`;
 		// process ?var (asyncComputed)
-		this.debug('post-processing vue_async_computed tag');
 		nodes = $('vue_async_computed').toArray();
+		if (nodes.length>0) this.debug('post-processing vue_async_computed tag');
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
 		if (nodes.length>0) vue.script += `asyncComputed: {\n`;
 		let async_computed = [];
@@ -820,8 +821,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		vue.script += async_computed.join(',');
 		if (nodes.length>0) vue.script += `}\n`;
 		// process var ?change -> vue_watched_var
-		this.debug('post-processing vue_async_computed tag');
 		nodes = $('vue_watched_var').toArray();
+		if (nodes.length>0) this.debug('post-processing vue_async_computed tag');
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
 		if (nodes.length>0) vue.script += `watch: {\n`;
 		let watched = [];
@@ -852,8 +853,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		vue.script += watched.join(',');
 		if (nodes.length>0) vue.script += `}\n`;
 		// process vue_if tags -- @TODO double-check when vue_if command exists (13-mar-21)
-		this.debug('post-processing vue_if tag');
 		nodes = $('vue_if').toArray();
+		if (nodes.length>0) this.debug('post-processing vue_if tag');
 		nodes.map(function(elem) {
 			let cur = $(elem);
 			let if_type = cur.attr('tipo');
@@ -874,8 +875,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		});
 		vue.template = $.html();
 		// process vue_for tags -- @TODO double-check when vue_for command exists (13-mar-21)
-		this.debug('post-processing vue_for tag');
 		nodes = $('vue_for').toArray();
+		if (nodes.length>0) this.debug('post-processing vue_for tag');
 		nodes.map(function(elem) {
 			let cur = $(elem);
 			let iterator = 	cur.attr('iterator')
@@ -892,7 +893,6 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			} else {
 				iterator = `(${cur.attr('item')}, ${cur.attr('use_index')})`;
 			}
-			//
 			if (cur.attr('target')!='template') {
 				//search refx ID tag
 				let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
@@ -911,7 +911,215 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			}
 		});
 		vue.template = $.html();
+		// process vue_for tags -- @TODO double-check when vue_for command exists (13-mar-21)
+		let common_methods = $('vue_event_method').toArray();
+		let on_events = $('vue_event_element').toArray();
+		if (common_methods.length>0 || on_events.length>0) { 
+			this.debug('post-processing methods (common, timer, and v-on element events methods)');
+			if (vue.first) vue.script += ',\n'; vue.first = true;
+			let methods = [], self=this;
+			// event_methods
+			common_methods.map(function(elem) {
+				let cur = $(elem);
+				let code = cur.text();
+				let tmp = '';
+				if (cur.attr('timer_time')) {
+					self.x_state.npm['vue-interval'] = '*';
+					page.mixins['vueinterval'] = 'vue-interval/dist/VueInterval.common';
+					let timer_prefix = '';
+					if (cur.attr('timer_time') && cur.attr('timer_time')!='') {
+						//always in ms; tranform into 1e2 notation
+						let ceros = cur.attr('timer_time').length-1;
+						let first = cur.attr('timer_time')[0];
+						timer_prefix = `INTERVAL__${first}e${ceros}$`;
+					}
+					if (cur.attr('m_params')) {
+						if (cur.attr('type')=='async') {
+							tmp += `${timer_prefix}${cur.attr('name')}: async function(${cur.attr('m_params')}) {`;
+						} else {
+							tmp += `${timer_prefix}${cur.attr('name')}: function(${cur.attr('m_params')}) {`;
+						}
+					} else {
+						if (cur.attr('type')=='async') {
+							tmp += `${timer_prefix}${cur.attr('name')}: async function() {`;
+						} else {
+							tmp += `${timer_prefix}${cur.attr('name')}: function() {`;
+						}
+					}
+				} else {
+					if (cur.attr('m_params')) {
+						if (cur.attr('type')=='async') {
+							tmp += `${cur.attr('name')}: async function(${cur.attr('m_params')}) {`;
+						} else {
+							tmp += `${cur.attr('name')}: function(${cur.attr('m_params')}) {`;
+						}
+					} else {
+						if (cur.attr('type')=='async') {
+							tmp += `${cur.attr('name')}: async function() {`;
+						} else {
+							tmp += `${cur.attr('name')}: function() {`;
+						}
+					}
+				}
+				methods.push(`${tmp}\n${code}\n}`);
+				cur.remove();
+			});
+			// events_methods
+			on_events.map(function(elem) {
+				let evt = $(elem);
+				//search father node of event
+				let origin = $($(`*[refx="${evt.attr('parent_id')}"]`).toArray()[0]);
+				let event = evt.attr('event');
+				// declare call in origin node
+				if (evt.attr('link')) {
+					// event linked to another node; usually another existing method func
+					let link = evt.attr('link');
+					// plugin related events
+					if (event=='click-outside') { 		origin.attr('v-click-outside',link);
+					} else if (event=='visibility') { 	origin.attr('v-observe-visibility',link);
+					} else if (event==':rules') { 		origin.attr(':rules',`[${link}]`);
+					} else if (event=='resize') { 		origin.attr('v-resize',link);
+					} else {
+						// custom defined methods
+						if (evt.attr('v_params')) {
+							// v-on with params
+							if (evt.attr('link_id')) { 	origin.attr(`v-on:${event}`,`${link}_${evt.attr('link_id')}(${evt.attr('v_params')})`);
+							} else {					origin.attr(`v-on:${event}`,`${link}(${evt.attr('v_params')})`);
+							}
+						} else {
+							// without params
+							if (evt.attr('link_id')) { 	origin.attr(`v-on:${event}`,`${link}_${evt.attr('link_id')}`);
+							} else {					origin.attr(`v-on:${event}`,link);
+							}
+						}
+						//
+					}
+					/* @TODO check if this is needed/used: was on original CFC code, but it seems it just overwrites previous things
+					if (evt.attr('link_id')) { 	
+						origin.attr(`v-on:${event}`,`${link}_${evt.attr('link_id')}($event)`);
+					}
+					*/
+				} else {
+					// create method function and script
+					let tmp = '';
+					let method_name = event.replaceAll(':','_').replaceAll('.','_').replaceAll('-','_');
+					let method_code = evt.text();
+					if (event=='click-outside') { 		
+						origin.attr(`v-click-outside`,method_name);
+						tmp = `${method_name}: async function() {
+							${method_code}
+						}`;
+					} else if (event=='visibility') { 	
+						origin.attr(`v-observe-visibility`,method_name);
+						tmp = `${method_name}: async function(estado, elemento) {
+							${method_code}
+						}`;
+					} else if (event==':rules') { 		
+						origin.attr(`:rules`,`[${method_name}]`);
+						tmp = `${method_name}: function() {
+							${method_code}
+						}`;
+					} else if (event=='resize') { 		
+						origin.attr(`v-resize`,method_name);
+						tmp = `${method_name}: async function() {
+							${method_code}
+						}`;
+					} else {
+						if (evt.attr('v_params') && evt.attr('v_params')!='') {
+							origin.attr(`v-on:${event}`,`${method_name}(${evt.attr('v_params')})`);
+						} else {
+							origin.attr(`v-on:${event}`,`${method_name}($event)`);
+						}
+						if (evt.attr('n_params')) {
+							tmp = `${method_name}: async function(${evt.attr('n_params')}) {
+								${method_code}
+							}`;
+						} else {
+							tmp = `${method_name}: async function(evento) {
+								${method_code}
+							}`;
+						}
+					}
+					// push tmp to methods
+					methods.push(tmp);
+				}
+				// remove original event tag node
+				evt.remove();
+			});
+			// apply methods and changes
+			vue.script += `methods: {
+							${methods.join(',')}
+						   }`;
+			vue.template = $.html(); // apply changes to template
+		}
 		/* */
+		return vue;
+	}
+
+	processStyles(vue,page) {
+		let cheerio = require('cheerio');
+		let $ = cheerio.load(vue.template, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+		let styles = $(`page_estilos`).toArray();	
+		if (styles.length>0) {
+			this.debug('post-processing styles');
+			let node = $(styles[0]);
+			if (node.attr('scoped') && node.attr('scoped')=='true') {
+				vue.style += `
+				<style scoped>
+				${node.text()}
+				</style>`;
+			} else {
+				vue.style += `
+				<style>
+				${node.text()}
+				</style>`;
+			}
+			node.remove();
+		}
+		vue.template = $.html();
+		// add page styles (defined in js) to style tag code
+		if (Object.keys(page.styles).length>0) {
+			let jss = require('jss').default;
+			let global_plug = require('jss-plugin-global').default;
+			jss.use(global_plug());
+			let sheet = jss.createStyleSheet({ 
+				'@global': page.styles
+			});
+			if (!vue.style) vue.style='';
+			vue.style += `<style>\n${sheet.toString()}</style>`;
+			//this.debug('JSS sheet',sheet.toString());
+		}
+		return vue;
+	}
+
+	processMixins(vue,page) {
+		// call after processInternalTags
+		if (page.mixins && Object.keys(page.mixins).length>0) {
+			this.debug('post-processing mixins');
+			if (vue.first) vue.script += ',\n'; vue.first = true;
+			vue.script += `mixins: [${Object.keys(page.mixins).join(',')}]`;
+			let mixins = [];
+			for (let key in page.mixins) {
+				mixins.push(`import ${key} from '${page.mixins[key]}'`);
+			}
+			vue.script = vue.script.replaceAll('{concepto:import:mixins}',mixins.join(';'));
+		} else {
+			vue.script = vue.script.replaceAll('{concepto:import:mixins}','');
+		}
+		return vue;
+	}
+
+	removeRefx(vue) {
+		let cheerio = require('cheerio');
+		let $ = cheerio.load(vue.template, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+		let refx = $(`*[refx]`).toArray();	
+		if (refx.length>0) {
+			this.debug('removing refx attributes (internal)');
+			refx.map(function(x) {
+				$(x).attr('refx',null);
+			});
+			vue.template = $.html();
+		}
 		return vue;
 	}
 
@@ -922,7 +1130,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		await this.generalConfigSetup();
 		await this.createGitIgnore();
 		this.debug('processing nodes');
-		await processedNodes.map(async function(thefile) {
+		for (let thefile_num in processedNodes) {
+		//await processedNodes.map(async function(thefile) {
+			let thefile = processedNodes[thefile_num];
 			let contenido = thefile.code + '\n';
 			if (thefile.file.split('.').slice(-1)=='omit') {
 				await this.processOmitFile(thefile);
@@ -934,32 +1144,42 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 				// @TODO check the vue.template replacements (8-mar-21)
 				// declare server:asyncData
 				this.debug('post-processing internal custom tags');
-				vue = await this.processInternalTags(vue);
+				vue = await this.processInternalTags(vue,page);
 				// closure ...
 				// **** **** start script wrap **** **** **** **** 
-				let script_start = '';
-				script_start = `<script>\n{concepto:import:mixins}`;
+				let script_imports = '';
 				// header for imports
 				if (page) {
-					Object.keys(page.imports).map(function(key) {
-						script_start += `import ${page.imports[key]} from '${key}'\n`;
-					});
+					for (let key in page.imports) {
+						script_imports += `import ${page.imports[key]} from '${key}'\n`;
+					}//);
 				}
 				// export default
-				script_start += `export default {\n`;
-				vue.script = script_start + vue.script;
-				vue.script += `}`; // close export default
+				vue.script = `{concepto:import:mixins}
+				${script_imports}
+				export default {
+					${vue.script};
+				}`
+				// process Mixins
+				vue = this.processMixins(vue,page);
+				// process Styles
+				vue = this.processStyles(vue,page);
+				// removes refx attributes
+				vue = this.removeRefx(vue);
 				// **** **** end script wrap **** **** 
 				// beautify the script and template
-				let beautify_js = require('js-beautify').js;
-				let beautify_vue = require('vue-beautify');
-				vue.script = beautify_js(vue.script, { space_in_empty_paren:false });
+				let beautify = require('js-beautify');
+				let beautify_js = beautify.js;
+				let beautify_vue = beautify.html;
+				let beautify_css = beautify.css;
+				vue.script = '<script>\n' + beautify_js(vue.script, { space_in_empty_paren:false }) + '\n</script>';
 				vue.template = beautify_vue(vue.template, { indent_scripts: 'keep' });
+				if (vue.style) vue.style = beautify_css(vue.style, { indent_scripts: 'keep' }).replaceAll('<style>','<style>\n');
 				//
-				this.x_console.out({ message:'vue test', data:vue });
+				this.x_console.out({ message:'vue '+thefile.title, data:{ vue, page_style:page.styles} });
 			} 
 			//this.x_console.out({ message:'pages debug', data:this.x_state.pages });
-		}.bind(this));
+		}//);
 	}
 
 	// ************************
