@@ -2408,8 +2408,7 @@ export default async function(context) {
                     name: node.text.trim(),
                     type: 'watched',
                     oldvar: 'old',
-                    newvar: 'new',
-                    deep: false
+                    newvar: 'new'
                 };
                 // process attributes
                 Object.keys(node.attributes).map(function(keym) {
@@ -2514,8 +2513,8 @@ export default async function(context) {
                     let new_vars = getTranslatedTextVar(text);
                     resp.open += `return ${new_vars};\n`;
                 } else if (text.contains('$')) {
-                    text = text.replaceAll('$params', 'this.')
-                        .replaceAll('$variables', 'this.');
+                    text = text.replaceAll('$params.', 'this.')
+                        .replaceAll('$variables.', 'this.');
                     resp.open += `return ${text};\n`;
                 } else if (text.contains('assets:')) {
                     text = context.getAsset(text, 'js');

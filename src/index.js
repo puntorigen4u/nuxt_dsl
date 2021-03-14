@@ -553,6 +553,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 
 	//process .omit file 
 	async processOmitFile(thefile) {
+		//@TODO 13-mar-21 check if .toArray() is needed here (ref processInternalTags method)
 		//internal_stores.omit
 		let self = this;
 		if (thefile.file=='internal_stores.omit') {
@@ -606,43 +607,43 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			// declare middlewares (proxies)
 			if (page.proxies.indexOf(',')!=-1) {
 				this.debug('- declare middlewares');
-				vue.script += `\tmiddleware: [${page.proxies}]`;
+				vue.script += `middleware: [${page.proxies}]`;
 				vue.first = true;
 			} else if (page.proxies.trim()!='') {
 				this.debug('- declare middlewares');
-				vue.script += `\tmiddleware: '${page.proxies}'`;
+				vue.script += `middleware: '${page.proxies}'`;
 				vue.first = true;
 			}
 			// layout attr
 			if (page.layout!='') {
 				this.debug('- declare layout');
 				if (vue.first) vue.script += ',\n'; vue.first = true;
-				vue.script += `\tlayout: '${page.layout.trim()}'`;
+				vue.script += `layout: '${page.layout.trim()}'`;
 			}
 			// declare components
 			if (page.components!='') {
 				this.debug('- declare components');
 				if (vue.first) vue.script += ',\n'; vue.first = true;
-				vue.script += `\tcomponents: {`;
+				vue.script += `components: {`;
 				let comps = [];
 				Object.keys(page.components).map(function(key) {
-					comps.push(`\t\t${key}: ${page.components[key]}`);
-				}.bind(page,comps));
+					comps.push(` '${key}': ${page.components[key]}`);
+				}); //.bind(page,comps));
 				vue.script += `${comps.join(',')}\n\t}`;
 			}
 			// declare directives
 			if (page.directives!='') {
 				this.debug('- declare directives');
 				if (vue.first) vue.script += ',\n'; vue.first = true;
-				vue.script += `\tdirectives: {`;
+				vue.script += `directives: {`;
 				let directs = [];
 				Object.keys(page.directives).map(function(key) {
 					if (key==page.directives[key]) {
-						directs.push(`\t\t${key}`);
+						directs.push(key);
 					} else {
-						directs.push(`\t\t${key}: ${page.directives[key]}`);
+						directs.push(`'${key}': ${page.directives[key]}`);
 					}
-				}.bind(page,directs));
+				}); //.bind(page,directs));
 				vue.script += `${directs.join(',')}\n\t}`;
 			}
 			// declare props (if page tipo componente)
@@ -667,11 +668,11 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 						} else {
 							props.push(`${key}: { default: '${def_val}' }`);
 						}
-					}.bind(page,props));
+					});
 				} else {
 					page.params.split(',').map(function(param) {
 						props.push(`'${key}'`);
-					}.bind(props));
+					});
 				}
 				vue.script += `\tprops: {${props.join(',')}}`;
 			}
@@ -679,8 +680,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			if (page.xtitle || page.meta.length>0) {
 				this.debug('- declare head() meta data');
 				if (vue.first) vue.script += ',\n'; vue.first = true;
-				vue.script += `\thead() {\n`;
-				vue.script += `\t\treturn {\n`;
+				vue.script += ` head() {\n return {\n`;
 				// define title
 				if (page.xtitle) {
 					if (this.x_state.central_config.idiomas.indexOf(',')!=-1) {
@@ -691,28 +691,27 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 							this.x_state.strings_i18n[def_lang] = {};
 						}
 						this.x_state.strings_i18n[def_lang][crc32] = page.xtitle;
-						vue.script += `\t\t\ttitleTemplate: this.$t('${crc32}')\n`;
+						vue.script += `titleTemplate: this.$t('${crc32}')\n`;
 					} else {
 						// normal title
-						vue.script += `\t\t\ttitleTemplate: '${page.xtitle}'\n`;
+						vue.script += `titleTemplate: '${page.xtitle}'\n`;
 					}
 				}
 				// define meta SEO
 				if (page.meta.length>0) {
 					if (page.xtitle) vue.script += `,`;
-					vue.script += `\t\t\tmeta: ${JSON.stringify(page.meta)}\n`;
+					vue.script += `meta: ${JSON.stringify(page.meta)}\n`;
 				}
-				vue.script += `\t\t};\n`;
-				vue.script += `\t}`;
+				vue.script += `};\n}`;
 			}
 			// declare variables (data)
 			if (Object.keys(page.variables)!='') {
 				this.debug('- declare data() variables');
 				if (vue.first) vue.script += ',\n'; vue.first = true;
 				let util = require('util');
-				vue.script += `\tdata() {\n`;
-				vue.script += `\t\treturn ${util.inspect(page.variables,{ depth:Infinity })}\n`;
-				vue.script += `\t}\n`;
+				vue.script += `data() {\n`;
+				vue.script += ` return ${util.inspect(page.variables,{ depth:Infinity })}\n`;
+				vue.script += `}\n`;
 			}
 		}
 		return vue;
@@ -728,54 +727,190 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		nodes.map(function(elem) {
 			let cur = $(elem);
 			let name = cur.attr('return')?cur.attr('return'):'';
-			vue.script += `\tasync asyncData({ req, res, params }) {\n`;
-			vue.script += `\t\tif (!process.server) { const req={}, res={}; }\n`;
-			vue.script += `\t\t${cur.text()}`;
-			vue.script += `\t\treturn ${name};\n`;
-			vue.script += `\t}\n`;
+			vue.script += `async asyncData({ req, res, params }) {\n`;
+			vue.script += ` if (!process.server) { const req={}, res={}; }\n`;
+			vue.script += ` ${cur.text()}`;
+			vue.script += ` return ${name};\n`;
+			vue.script += `}\n`;
 			cur.remove();
-			//vue.template = vue.template.replace(cur.html(),'');
-		}); //.bind($,vue)
+		});
 		vue.template = $.html();
-		//vue.script += computed.join(',');
-		if (nodes.length>0) vue.script += `\t}\n`;
-		/*
+		if (nodes.length>0) vue.script += `}\n`;
 		// process ?mounted event
 		this.debug('post-processing vue_mounted tag');
-		nodes = $(`vue_mounted`);
+		nodes = $(`vue_mounted`).toArray();
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
-		if (nodes.length>0) vue.script += `\tasync mounted() {\n`;
+		if (nodes.length>0) vue.script += `async mounted() {\n`;
 		nodes.map(function(i,elem) {
 			let cur = $(elem);
-			let code = cur.text();
-			vue.script += `\t\t${code}`;
-			vue.template = vue.template.replace(cur.parent().html(),''); //@TODO check its getting the whole html of the cur tag
-		}.bind($,vue));
-		if (nodes.length>0) vue.script += `\t}\n`;
-		*/
+			vue.script += cur.text();
+			cur.remove();
+		});
+		vue.template = $.html();
+		if (nodes.length>0) vue.script += `}\n`;
 		// process ?var (vue_computed)
-		/* */
 		this.debug('post-processing vue_computed tag');
-
-		nodes = $('vue\_computed[name]').toArray();
+		nodes = $('vue_computed').toArray();
 		//this.debug('nodes',nodes);
 		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
-		if (nodes.length>0) vue.script += `\tcomputed: {\n`;
-		let computed = [], self = this;
+		if (nodes.length>0) vue.script += `computed: {\n`;
+		let computed = [];
 		nodes.map(function(elem) {
 			let cur = $(elem);
 			let name = cur.attr('name');
 			let code = cur.html();
-			let tmp = '';
-			tmp += `\t\t${name}() {\n`;
-			tmp += '\t\t\t'+code;
-			tmp += `\t\t}`;
-			computed.push(tmp);
+			computed.push(`${name}() {${code}}`);
 			cur.remove();
-		}); //.bind(vue,computed,self)
+		});
 		vue.template = $.html();
 		vue.script += computed.join(',');
-		if (nodes.length>0) vue.script += `\t}\n`;
+		if (nodes.length>0) vue.script += `}\n`;
+		// process ?var (asyncComputed)
+		this.debug('post-processing vue_async_computed tag');
+		nodes = $('vue_async_computed').toArray();
+		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
+		if (nodes.length>0) vue.script += `asyncComputed: {\n`;
+		let async_computed = [];
+		nodes.map(function(elem) {
+			let cur = $(elem);
+			let code = cur.text();
+			if (cur.attr('valor') || cur.attr('watch')) {
+				let lazy = ''; if (cur.attr('lazy')) lazy += `,lazy: ${cur.attr('lazy')}`;
+				let valor = ''; if (cur.attr('valor')) {
+					valor += `,`;
+					let test = cur.attr('valor');
+					if ((test.indexOf('[')!=-1 && test.indexOf(']')!=-1) || 
+						(test.indexOf('{')!=-1 && test.indexOf('}')!=-1) ||
+						(test.indexOf('(')!=-1 && test.indexOf(')')!=-1)
+					) {
+						valor += `default: ${test}`;
+					} else {
+						valor += `default: '${test}'`;
+					}
+				}
+				let watch = ''; if (cur.attr('watch')) {
+					watch += ',';
+					let test = cur.attr('watch');
+					let test_n = [];
+					test.split(',').map(function(x) {
+						let tmp = x.replaceAll('$variables.','')
+						 .replaceAll('$vars','')
+						 .replaceAll('$params','')
+						 .replaceAll('$store','$store.state.');
+						 test_n.push(`'${tmp}'`);
+					});
+					watch += `watch: [${test_n.join(',')}]`;
+				}
+				async_computed.push(`
+					${cur.attr('name')}: {
+						async get() {
+							${code}
+						}
+						${lazy}
+						${valor}
+						${watch}
+					}
+				`);
+			} else {
+				async_computed.push(`async ${cur.attr('name')}() {${code}}`);
+			}
+			cur.remove();
+		});
+		vue.template = $.html();
+		vue.script += async_computed.join(',');
+		if (nodes.length>0) vue.script += `}\n`;
+		// process var ?change -> vue_watched_var
+		this.debug('post-processing vue_async_computed tag');
+		nodes = $('vue_watched_var').toArray();
+		if (nodes.length>0 && vue.first) vue.script += ',\n'; vue.first = true;
+		if (nodes.length>0) vue.script += `watch: {\n`;
+		let watched = [];
+		nodes.map(function(elem) {
+			let cur = $(elem);
+			let code = cur.text();
+			if (cur.attr('deep')) {
+				watched.push(`
+				'${cur.attr('flat')}': {
+					handler(newVal, oldVal) {
+						let evento = { ${cur.attr('newvar')}:newVal, ${cur.attr('oldvar')}:oldVal };
+						${code}
+					},
+					deep: true
+				}
+				`);
+			} else {
+				watched.push(`
+				'${cur.attr('flat')}': function (newVal, oldVal) {
+					let evento = { ${cur.attr('newvar')}:newVal, ${cur.attr('oldvar')}:oldVal };
+					${code}
+				}
+				`);
+			}
+			cur.remove();
+		});
+		vue.template = $.html();
+		vue.script += watched.join(',');
+		if (nodes.length>0) vue.script += `}\n`;
+		// process vue_if tags -- @TODO double-check when vue_if command exists (13-mar-21)
+		this.debug('post-processing vue_if tag');
+		nodes = $('vue_if').toArray();
+		nodes.map(function(elem) {
+			let cur = $(elem);
+			let if_type = cur.attr('tipo');
+			let if_test = cur.attr('expresion');
+			if (cur.attr('target')!='template') {
+				//search refx ID tag
+				let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
+				if (target.length>0) {
+					let target_node = $(target[0]);
+					if (if_type=='v-else') {
+						target_node.attr(if_type,'');
+					} else {
+						target_node.attr(if_type,if_test);
+					}
+				}
+				cur.remove();
+			}
+		});
+		vue.template = $.html();
+		// process vue_for tags -- @TODO double-check when vue_for command exists (13-mar-21)
+		this.debug('post-processing vue_for tag');
+		nodes = $('vue_for').toArray();
+		nodes.map(function(elem) {
+			let cur = $(elem);
+			let iterator = 	cur.attr('iterator')
+							.replaceAll('$variables','')
+							.replaceAll('$vars','')
+							.replaceAll('$params.','')
+							.replaceAll('$store','$store.state.');
+			if (cur.attr('use_index') && cur.attr('use_index')=='false' && cur.attr('key')!='0') {
+				iterator = `(${cur.attr('item')}, ${cur.attr('key')}) in ${iterator}`;
+			} else if (cur.attr('use_index') && cur.attr('use_index')=='false' && cur.attr('key')=='0') {
+				iterator = `${cur.attr('item')} in ${iterator}`;
+			} else if (cur.attr('key') && cur.attr('key')!='0' && cur.attr('use_index')!='false') {
+				iterator = `(${cur.attr('item')}, ${cur.attr('key')}, ${cur.attr('use_index')}) in ${iterator}`;
+			} else {
+				iterator = `(${cur.attr('item')}, ${cur.attr('use_index')})`;
+			}
+			//
+			if (cur.attr('target')!='template') {
+				//search refx ID tag
+				let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
+				if (target.length>0) {
+					let target_node = $(target[0]);
+					target_node.attr('v-for',iterator);
+					if (cur.attr('unique')!=0) target_node.attr(':key',cur.attr('unique'));
+					//cur.remove(); -remove only if target is found..
+				}
+				cur.remove(); // remove also if target node is not found
+			} else {
+				// transform <v_for>x</v_for> -> <template v-for='iterator'>x</template>
+				// lookAt x=v_for_selector.html() and selector.replaceWith('<template v-for>'+x+'</template>')
+				let inner = cur.html();
+				cur.replaceWith(`<template v-for="${iterator}">${inner}</template>`);
+			}
+		});
+		vue.template = $.html();
 		/* */
 		return vue;
 	}
@@ -808,13 +943,19 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 				if (page) {
 					Object.keys(page.imports).map(function(key) {
 						script_start += `import ${page.imports[key]} from '${key}'\n`;
-					}.bind(page,vue));
+					});
 				}
 				// export default
 				script_start += `export default {\n`;
 				vue.script = script_start + vue.script;
 				vue.script += `}`; // close export default
 				// **** **** end script wrap **** **** 
+				// beautify the script and template
+				let beautify_js = require('js-beautify').js;
+				let beautify_vue = require('vue-beautify');
+				vue.script = beautify_js(vue.script, { space_in_empty_paren:false });
+				vue.template = beautify_vue(vue.template, { indent_scripts: 'keep' });
+				//
 				this.x_console.out({ message:'vue test', data:vue });
 			} 
 			//this.x_console.out({ message:'pages debug', data:this.x_state.pages });
