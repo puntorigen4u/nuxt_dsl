@@ -6,5 +6,5 @@ Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into Vue
 
 * * *
 
-&copy; 2020 Pablo Schaffner &lt;pablo@puntorigen.com&gt;.
+&copy; 2020-2021 Pablo Schaffner &lt;pablo@puntorigen.com&gt;.
 Documented by [jsdoc-to-markdown](https://github.com/jsdoc2md/jsdoc-to-markdown).
