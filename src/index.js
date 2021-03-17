@@ -1123,6 +1123,43 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 		return vue;
 	}
 
+	fixVuePaths(vue,page) {
+		for (let key in this.x_state.pages) {
+			if (this.x_state.pages[key].path) {
+				vue.script = vue.script.replaceAll(`{vuepath:${key}}`,this.x_state.pages[key].path);
+			} else {
+				this.x_console.outT({ message:`WARNING! path key doesn't exist for page ${key}`, color:'yellow' });
+			}
+		}
+		// remove / when first char inside router push name
+		vue.script = vue.script.replaceAll(`this.$router.push({ name:'/`,`this.$router.push({ name:'`);
+		return vue;
+	}
+
+	async processLangPo(vue,page) {
+		// writes default lang.po file and converts alternatives to client/lang/iso.js
+		if (this.x_state.central_config.idiomas.indexOf(',')!=-1) {
+			this.debug('process /lang/ po/mo files');
+			let path = require('path'), fs = require('fs');;
+			// .check and create directs if needed
+			let lang_path = path.join(this.x_state.dirs.base,'/lang/');
+			try {
+				await fs.mkdir(lang_path, { recursive:true });
+			} catch(errdir) {
+			}
+			// .create default po file from strings_i18n
+			let def_lang = this.x_state.central_config.idiomas.split(',')[0];
+			
+			// .read other po/mo files from lang dir and convert to .js
+			for (let idioma in this.x_state.central_config.idiomas.split(',')) {
+				if (idioma!=def_lang) {
+
+				}
+			}
+			//
+		}
+	}
+
 	//Transforms the processed nodes into files.
 	async onCreateFiles(processedNodes) {
 		//this.x_console.out({ message:'onCreateFiles', data:processedNodes });
@@ -1160,14 +1197,20 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 				export default {
 					${vue.script};
 				}`
+				// **** **** end script wrap **** **** 
 				// process Mixins
 				vue = this.processMixins(vue,page);
 				// process Styles
 				vue = this.processStyles(vue,page);
 				// removes refx attributes
 				vue = this.removeRefx(vue);
-				// **** **** end script wrap **** **** 
+				// fix {vuepath:} placeholders
+				vue = this.fixVuePaths(vue,page);
+				// process lang files (po)
+				vue = await processLangPo(vue,page);
+				// ********************************** //
 				// beautify the script and template
+				// ********************************** //
 				let beautify = require('js-beautify');
 				let beautify_js = beautify.js;
 				let beautify_vue = beautify.html;
@@ -1175,7 +1218,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 				vue.script = '<script>\n' + beautify_js(vue.script, { space_in_empty_paren:false }) + '\n</script>';
 				vue.template = beautify_vue(vue.template, { indent_scripts: 'keep' });
 				if (vue.style) vue.style = beautify_css(vue.style, { indent_scripts: 'keep' }).replaceAll('<style>','<style>\n');
-				//
+				// ********************************** //
 				this.x_console.out({ message:'vue '+thefile.title, data:{ vue, page_style:page.styles} });
 			} 
 			//this.x_console.out({ message:'pages debug', data:this.x_state.pages });
