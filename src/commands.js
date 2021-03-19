@@ -198,10 +198,11 @@ export default async function(context) {
                     state
                 });
                 //console.log('def_server_path DEBUG',node);
+                let test1 = await context.isExactParentID(node.id, 'def_server_path');
                 if (node.level == 3) {
                     //state.current_folder = node.text;
                     resp.state.current_folder = node.text;
-                } else if (node.level == 4 && await context.isExactParentID(node.id, 'def_server_path')) {
+                } else if (node.level == 4 && test1==true) {
                     let parent_node = await context.dsl_parser.getParentNode({
                         id: node.id
                     });
@@ -1793,7 +1794,7 @@ export default async function(context) {
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
                     if (!tmp.omit) {
-                        if (context.hasParentID(node.id, 'def_textonly') || tmp.span) {
+                        if (context.hasParentID(node.id, 'def_textonly')==true || tmp.span) {
                             resp.open += context.tagParams('span', params) + text + '</span>\n';
                         } else if (context.hasParentID(node.id, 'def_card_title') && !params.class) {
                             resp.open += text + '\n';
@@ -2550,7 +2551,7 @@ export default async function(context) {
                 if (node.text.contains(',')) {
                     // parse output var
                     tmp.var = node.text.split(',').pop(); //last comma element
-                    if (context.hasParentID(node.id, 'def_event_server')) {
+                    if (context.hasParentID(node.id, 'def_event_server')==true) {
                         tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
                             .replaceAll('$vars.', 'resp.')
                             .replaceAll('$params.', 'resp.');
@@ -2573,7 +2574,7 @@ export default async function(context) {
                             value = context.getAsset(value, 'jsfunc');
                         } else {
                             // normalize vue type vars
-                            if (tmp.parent_server) {
+                            if (tmp.parent_server==true) {
                                 value = value.replaceAll('$variables.', 'resp.')
                                     .replaceAll('$vars.', 'resp.')
                                     .replaceAll('$params.', 'resp.');
@@ -2589,7 +2590,10 @@ export default async function(context) {
                     });
                     // write output
                     if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
-                    resp.open += `var ${tmp.var.trim()} = ${JSON.stringify(attrs)};\n`;
+                    let util = require('util');
+                    //resp.open += `var ${tmp.var.trim()} = ${JSON.stringify(attrs)};\n`;
+                    //@TODO create method to output struct escaping quotes if value has 'this.'
+                    resp.open += `var ${tmp.var.trim()} = ${util.inspect(attrs,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`")};\n`;
 
                 } else {
                     resp.valid = false;

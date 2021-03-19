@@ -1207,7 +1207,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 				// fix {vuepath:} placeholders
 				vue = this.fixVuePaths(vue,page);
 				// process lang files (po)
-				vue = await processLangPo(vue,page);
+				vue = await this.processLangPo(vue,page);
 				// ********************************** //
 				// beautify the script and template
 				// ********************************** //
