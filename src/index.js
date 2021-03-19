@@ -1158,6 +1158,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 			}
 			//
 		}
+		return vue;
 	}
 
 	//Transforms the processed nodes into files.
