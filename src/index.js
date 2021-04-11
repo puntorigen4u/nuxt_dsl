@@ -574,42 +574,42 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             this.debug('processing internal_stores.omit');
             let cheerio = require('cheerio');
             let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
-            let nodes = $(`store_mutation`);
-            nodes.map(function(i, elem) {
+            let nodes = $(`store_mutation`).toArray();
+            nodes.map(function(elem) {
                 let cur = $(elem);
                 let store = cur.attr('store') ? cur.attr('store') : '';
                 let mutation = cur.attr('mutation') ? cur.attr('mutation') : '';
                 let params = cur.attr('params') ? cur.attr('params') : '';
                 let code = cur.text();
-                if (self.x_state.stores[store] && !self.x_state.stores[store][':mutations']) {
+                if (self.x_state.stores[store] && !(':mutations' in self.x_state.stores[store])) {
                     self.x_state.stores[store][':mutations'] = {};
                 }
                 self.x_state.stores[store][':mutations'][mutation] = { code, params };
-            }.bind(self, $));
+            });
         }
         //internal_middleware.omit
         if (thefile.file == 'internal_middleware.omit') {
             this.debug('processing internal_middleware.omit');
             let cheerio = require('cheerio');
             let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
-            let nodes = $(`proxy_code`);
-            nodes.map(function(i, elem) {
+            let nodes = $(`proxy_code`).toArray();
+            nodes.map(function(elem) {
                 let cur = $(elem);
                 let name = cur.attr('name') ? cur.attr('name') : '';
                 self.x_state.proxies[name].code = cur.text().trim();
-            }, self, $);
+            });
         }
         //server.omit
         if (thefile.file == 'server.omit') {
             this.debug('processing server.omit');
             let cheerio = require('cheerio');
             let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
-            let nodes = $(`func_code`);
-            nodes.map(function(i, elem) {
+            let nodes = $(`func_code`).toArray();
+            nodes.map(function(elem) {
                 let cur = $(elem);
                 let name = cur.attr('name') ? cur.attr('name') : '';
                 self.x_state.functions[name].code = cur.text().trim();
-            }.bind(self, $));
+            });
         }
     }
 
@@ -1204,12 +1204,11 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (Object.keys(this.x_state.stores).length>0) {
             this.x_console.outT({ message:`creating VueX store definitions`, color:'cyan' });
             let path = require('path');
-            let fs = require('fs').promises, util = require('util');
+            let util = require('util');
+            let safe = require('safe-eval');
             for (let store_name in this.x_state.stores) {
                 let store = this.x_state.stores[store_name];
                 let file = path.join(this.x_state.dirs.store,`${store_name}.js`);
-                //let content = `export const state = () => ({`;
-                let count = { current:0, total:Object.keys(this.x_state.stores).length };
                 let def_types = {
                     'integer': 0,
                     'int': 0,
@@ -1217,13 +1216,13 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     'boolean': false,
                     'array': []
                 };
-                let obj = {};
+                let obj = {}, mutations={};
                 // iterate each store field
-                this.debug(`store ${store_name}`,store);
+                //this.debug(`store ${store_name}`,store);
                 for (let field_name in store) {
                     let field = store[field_name];
                     //this.debug({ message:`checking field ${field_name} within store ${i}` });
-                    if (field.default.trim()=='') {
+                    if (field.default && field.default.trim()=='') {
                         if (field.type in def_types) {
                             obj[field_name]=def_types[field.type];
                         } else {
@@ -1231,27 +1230,59 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                         }
                     } else {
                         if ('integer,int,float,boolean,array'.split(',').includes[field.type]) {
-                            obj[field_name]=field.default;
+                            obj[field_name]=safe(field.default);
                         } else if ('true,false,0,1'.split(',').includes[field.default]) {
-                            obj[field_name]=field.default;
+                            obj[field_name]=safe(field.default);
                         } else {
                             obj[field_name]=''+field.default;
                         }
                     }
                 }
                 // expires?
-                if (store_name in this.x_state.stores_types['versions']) {
-                    obj['version']=this.x_state.stores_types['versions'][store_name];
+                if (store_name in this.x_state.stores_types['expires']) {
+                    obj['expire']=parseInt(this.x_state.stores_types['expires'][store_name]);
                 }
                 // versions?
+                if (store_name in this.x_state.stores_types['versions']) {
+                    obj['version']=parseInt(this.x_state.stores_types['versions'][store_name]);
+                }
                 // write content cfc:11873
-                let content = `export const state = () => (${util.inspect(obj,{ depth:Infinity })})`;
+                delete obj[':mutations'];
+                let content = `export const state = () => (${util.inspect(obj,{ depth:Infinity })})\n`;
                 // :mutations?
-                // append content
+                if (':mutations' in store) {
+                    let muts=[];
+                    for (let mut_name in store[':mutations']) {
+                        let mutation = store[':mutations'][mut_name];
+                        let mut = { params:['state'] };
+                        if (Object.keys(mutation.params).length>0) mut.params.push('objeto');
+                        muts.push(`${mut_name}(${mut.params.join(',')}) {
+                            ${mutation.code}
+                        }`);
+                    }
+                    content += `\nexport const mutations = {${ muts.join(',')}}`;
+                }
                 // write file
-                await fs.writeFile(file, content, 'utf-8');
+                this.writeFile(file,content);
             }
         }
+    }
+
+    async writeFile(file,content,encoding='utf-8') {
+        let fs = require('fs').promises, beautify = require('js-beautify');
+        let beautify_js = beautify.js;
+        let beautify_vue = beautify.html;
+        let beautify_css = beautify.css;
+        let ext = file.split('.').splice(-1)[0].toLowerCase();
+        let resp = content;
+        if (ext=='js') {
+            resp = beautify_js(resp, { space_in_empty_paren: false });
+        } else if (ext=='vue') {
+            resp = beautify_vue(resp, { indent_scripts: 'keep' });
+        } else if (ext=='css') {
+            resp = beautify_css(resp, { indent_scripts: 'keep' });
+        }
+        await fs.writeFile(file, resp, encoding);
     }
 
     //Transforms the processed nodes into files.
@@ -1306,26 +1337,18 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 // ********************************** //
                 // beautify the script and template
                 // ********************************** //
-                let beautify = require('js-beautify');
-                let beautify_js = beautify.js;
-                let beautify_vue = beautify.html;
-                let beautify_css = beautify.css;
-                vue.script = '<script>\n' + beautify_js(vue.script, { space_in_empty_paren: false }) + '\n</script>';
-                vue.template = beautify_vue(vue.template, { indent_scripts: 'keep' });
-                if (vue.style) vue.style = beautify_css(vue.style, { indent_scripts: 'keep' }).replaceAll('<style>', '<style>\n');
+                vue.script = '<script>\n' + vue.script + '\n</script>';
+                if (!vue.style) vue.style = '';
                 vue.full = `${vue.template}\n${vue.script}\n${vue.style}`;
                 // ********************************** //
                 // write files
                 this.x_console.outT({ message: `trying to write vue file ${thefile.file}`, color: 'cyan' });
-                if (page.tipo == 'componente') {
-                    await fs.writeFile(path.join(this.x_state.dirs.components, thefile.file), vue.full, 'utf-8');
-                } else if (page.tipo == 'layout') {
-                    await fs.writeFile(path.join(this.x_state.dirs.layouts, thefile.file), vue.full, 'utf-8');
-                } else {
-                    await fs.writeFile(path.join(this.x_state.dirs.pages, thefile.file), vue.full, 'utf-8');
-                }
+                let w_path = path.join(this.x_state.dirs.pages, thefile.file);
+                if (page.tipo == 'componente') w_path = path.join(this.x_state.dirs.components, thefile.file);
+                if (page.tipo == 'layout') w_path = path.join(this.x_state.dirs.layouts, thefile.file);
+                await this.writeFile(w_path, vue.full);
                 //
-                this.x_console.out({ message: 'vue ' + thefile.title, data: { vue, page_style: page.styles } });
+                //this.x_console.out({ message: 'vue ' + thefile.title, data: { vue, page_style: page.styles } });
             }
             //this.x_console.out({ message:'pages debug', data:this.x_state.pages });
         }
@@ -1352,7 +1375,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 if (!asset.i18n) {
                     let source = path.join(this.x_state.dirs.base, asset.original);
                     let target = path.join(this.x_state.dirs.assets,asset.original.split('/').slice(-1)[0]);
-                    this.debug({ message: `Copying asset`, data:{source,target}, color:'cyan'});
+                    //this.debug({ message: `Copying asset`, data:{source,target}, color:'cyan'});
                     try { await copy(source, target); } catch(e) {}
                 }
             }

@@ -334,7 +334,7 @@ export default async function(context) {
                     if (resp.state.current_store in context.x_state.stores_types['versions'] === false) context.x_state.stores_types['versions'][resp.state.current_store] = tmp.version;
                 }
                 // set expire value
-                if (tmp.version != '') {
+                if (tmp.expire != '') {
                     if (resp.state.current_store in context.x_state.stores_types['expires'] === false) context.x_state.stores_types['expires'][resp.state.current_store] = tmp.expire;
                 }
                 // return
@@ -377,7 +377,37 @@ export default async function(context) {
             }
         },
 
-        //def_store_mutation
+        'def_store_mutation': {
+            x_level: '>3',
+            x_icons: 'help',
+            x_all_hasparent: 'def_store',
+            attributes_aliases: {
+                'params': ':params,params'
+            },
+            hint: 'Representa la modificacion de un store de VueX',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let params = aliases2params('def_store_mutation',node);
+                resp.state.current_store_mutation = node.text.trim();
+                let cur_store = context.x_state.stores[resp.state.current_store];
+                if (!(':mutations' in cur_store)) {
+                    context.x_state.stores[resp.state.current_store][':mutations']={};
+                }
+                context.x_state.stores[resp.state.current_store][':mutations'][resp.state.current_store_mutation] = params;
+                resp.open = context.tagParams('store_mutation', {
+                    store: resp.state.current_store,
+                    mutation: resp.state.current_store_mutation,
+                    ...params
+                }, false) + '\n';
+                resp.close = '</store_mutation>';
+                return resp;
+            }
+        },
+
+        //*def_store_mutation
         //*def_store_field
         //def_store_call
         //def_store_modificar
