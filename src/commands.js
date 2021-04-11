@@ -342,8 +342,43 @@ export default async function(context) {
             }
         },
 
+        'def_store_field': {
+            x_empty: 'icons',
+            x_level: '>3',
+            x_all_hasparent: 'def_store_def',
+            hint: 'Representa al campo de un store de VueX',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { type:'string', default:'', text:node.text.trim() };
+                if (node.text.indexOf(':')!=-1) {
+                    tmp.type = tmp.text.split(':').slice(-1)[0];
+                    tmp.text = tmp.text.split(':')[0];
+                }
+                // parse attributes
+                Object.keys(node.attributes).map(function(keym) {
+                    let key = keym.toLowerCase();
+                    if ([':def,:default,valor,value'].includes(key)) {
+                        tmp.default =node.attributes[keym].toLowerCase();
+                    } else if ([':tipo,:type,tipo,type'].includes(key)) {
+                        tmp.type =node.attributes[keym].toLowerCase();
+                    }
+                });
+                // set
+                if (resp.state.current_store in context.x_state.stores) {
+                    context.x_state.stores[resp.state.current_store][tmp.text.trim()] = {default:tmp.default,type:tmp.type};
+                } else {
+                    context.x_state.stores[resp.state.current_store] = {};
+                    context.x_state.stores[resp.state.current_store][tmp.text.trim()] = {default:tmp.default,type:tmp.type};
+                }
+                // return
+                return resp;
+            }
+        },
+
         //def_store_mutation
-        //def_store_field
+        //*def_store_field
         //def_store_call
         //def_store_modificar
 

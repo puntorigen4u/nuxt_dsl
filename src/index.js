@@ -1200,6 +1200,60 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         return vue;
     }
 
+    async createVueXStores() {
+        if (Object.keys(this.x_state.stores).length>0) {
+            this.x_console.outT({ message:`creating VueX store definitions`, color:'cyan' });
+            let path = require('path');
+            let fs = require('fs').promises, util = require('util');
+            for (let store_name in this.x_state.stores) {
+                let store = this.x_state.stores[store_name];
+                let file = path.join(this.x_state.dirs.store,`${store_name}.js`);
+                //let content = `export const state = () => ({`;
+                let count = { current:0, total:Object.keys(this.x_state.stores).length };
+                let def_types = {
+                    'integer': 0,
+                    'int': 0,
+                    'float': 0.0,
+                    'boolean': false,
+                    'array': []
+                };
+                let obj = {};
+                // iterate each store field
+                this.debug(`store ${store_name}`,store);
+                for (let field_name in store) {
+                    let field = store[field_name];
+                    //this.debug({ message:`checking field ${field_name} within store ${i}` });
+                    if (field.default.trim()=='') {
+                        if (field.type in def_types) {
+                            obj[field_name]=def_types[field.type];
+                        } else {
+                            obj[field_name]='';
+                        }
+                    } else {
+                        if ('integer,int,float,boolean,array'.split(',').includes[field.type]) {
+                            obj[field_name]=field.default;
+                        } else if ('true,false,0,1'.split(',').includes[field.default]) {
+                            obj[field_name]=field.default;
+                        } else {
+                            obj[field_name]=''+field.default;
+                        }
+                    }
+                }
+                // expires?
+                if (store_name in this.x_state.stores_types['versions']) {
+                    obj['version']=this.x_state.stores_types['versions'][store_name];
+                }
+                // versions?
+                // write content cfc:11873
+                let content = `export const state = () => (${util.inspect(obj,{ depth:Infinity })})`;
+                // :mutations?
+                // append content
+                // write file
+                await fs.writeFile(file, content, 'utf-8');
+            }
+        }
+    }
+
     //Transforms the processed nodes into files.
     async onCreateFiles(processedNodes) {
         //this.x_console.out({ message:'onCreateFiles', data:processedNodes });
@@ -1274,9 +1328,41 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 this.x_console.out({ message: 'vue ' + thefile.title, data: { vue, page_style: page.styles } });
             }
             //this.x_console.out({ message:'pages debug', data:this.x_state.pages });
-        } //);
-        
-        // copy static required files for known NPMs packages
+        }
+        // *************************
+        // copy/write related files
+        // *************************
+        // copy static required files for known NPMs packages (gif.js) @TODO improved this ugly hack  
+        //this.x_state.npm['gif.js'] = '*';
+        if (this.x_state.npm['gif.js']) {
+            this.x_console.outT({ message: `downloading required gif.worker.js file for gif.js npm package`, color: 'yellow' });
+            let fetch = require('node-fetch');
+            let static_path = path.join(this.x_state.dirs.static, 'gif.worker.js');
+            let worker = await fetch('https://raw.githubusercontent.com/jnordberg/gif.js/master/dist/gif.worker.js');
+            let contenido = await worker.text();
+            await fs.writeFile(static_path, contenido, 'utf-8');
+        }
+        // copy assets
+        if (Object.keys(this.x_state.assets).length>0) {
+            this.debug({ message: `Copying assets`, color:'cyan'});
+            let copy = require('recursive-copy');
+            for (let i in this.x_state.assets) {
+                //@TODO add support for i18n assets
+                let asset = this.x_state.assets[i];
+                if (!asset.i18n) {
+                    let source = path.join(this.x_state.dirs.base, asset.original);
+                    let target = path.join(this.x_state.dirs.assets,asset.original.split('/').slice(-1)[0]);
+                    this.debug({ message: `Copying asset`, data:{source,target}, color:'cyan'});
+                    try { await copy(source, target); } catch(e) {}
+                }
+            }
+            this.debug({ message:`Copying assets ready`, color:'cyan'});
+        }
+        // create VueX store files
+        if (!this.x_state.central_config.componente) {
+            await this.createVueXStores();
+        }
+        // create index.js file and prepare Nuxt template structure
     }
 
     // ************************

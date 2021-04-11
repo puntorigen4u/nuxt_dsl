@@ -42,6 +42,7 @@
     "jss": "^10.6.0",
     "jss-plugin-global": "^10.6.0",
     "lorem-ipsum": "^2.0.3",
+    "node-fetch": "^2.6.1",
     "open_console": "github:puntorigen4u/console",
     "recursive-copy": "^2.0.10",
     "safe-eval": "^0.4.1"
