@@ -763,7 +763,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (nodes.length > 0 && vue.first) vue.script += ',\n';
         vue.first = true;
         if (nodes.length > 0) vue.script += `async mounted() {\n`;
-        nodes.map(function(i, elem) {
+        nodes.map(function(elem) {
             let cur = $(elem);
             vue.script += cur.text();
             cur.remove();

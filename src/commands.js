@@ -462,10 +462,52 @@ export default async function(context) {
             }
         },
 
+        'def_store_call': {
+            x_level: '>1',
+            x_icons: 'desktop_new',
+            x_text_contains: 'store:',
+            x_or_hasparent: 'def_event_element,def_event_method,def_event_server,def_condicion,def_otra_condicion,def_event_mounted',
+            hint: 'Representa al llamdo de un evento de un store',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let store = node.text.split(' ')[0].replaceAll('store:','').trim();
+                let params = {};
+                let isProxySon = context.hasParentID(node.id, 'def_proxy_def')?true:false;
+                let method = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: '"',
+                    symbol_closing: '"'
+                }).trim();
+                Object.keys(node.attributes).map(function(keym) {
+                    let key = keym.trim();
+                    let value = node.attributes[keym];
+                    value = value.replaceAll('$variables.','this.')
+                                 .replaceAll('$vars.','$this.')
+                                 .replaceAll('$params.','this.')
+                                 .replaceAll('$env.','process.env.');
+                    if (value.contains('$store')) {
+                        if (isProxySon) {
+                            value = value.replaceAll('$store.','store.state.');
+                        } else {
+                            value = value.replaceAll('$store.','this.$store.state.');
+                        }
+                    }
+                    params[key] = value;
+                });
+                let util = require('util');
+                let data = util.inspect(params,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
+                resp.open = (isProxySon?'store.':'this.$store.')+`commit('${store}/${method}', ${data});`;
+                
+                return resp;
+            }
+        },
         //*def_store_mutation
         //*def_store_field
         //*def_store_modificar
-        //def_store_call
+        //*def_store_call
 
         // **************************
         //  VueX PROXIES definitions
@@ -2284,9 +2326,27 @@ export default async function(context) {
         //def_youtube_playlist
         //def_youtube
 
+        'def_event_mounted': {
+            x_icons: 'help',
+            x_level: 3,
+            x_text_contains: ':mounted',
+            hint: 'Evento especial :mounted en pagina vue',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let params = {};
+                resp.open = context.tagParams('vue_mounted', {}, false);
+                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                resp.close = '</vue_mounted>';
+                return resp;
+            }
+        },
+
         //def_script
         //def_event_server
-        //def_event_mounted
+        //*def_event_mounted
         //def_event_method
         //def_event_element
 
