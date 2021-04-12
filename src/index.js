@@ -1342,10 +1342,16 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 vue.full = `${vue.template}\n${vue.script}\n${vue.style}`;
                 // ********************************** //
                 // write files
-                this.x_console.outT({ message: `trying to write vue file ${thefile.file}`, color: 'cyan' });
                 let w_path = path.join(this.x_state.dirs.pages, thefile.file);
-                if (page.tipo == 'componente') w_path = path.join(this.x_state.dirs.components, thefile.file);
-                if (page.tipo == 'layout') w_path = path.join(this.x_state.dirs.layouts, thefile.file);
+                if (page.tipo == 'componente') {
+                    this.x_console.outT({ message: `trying to write vue 'component' file ${thefile.file}`, color: 'cyan' });
+                    w_path = path.join(this.x_state.dirs.components, thefile.file);
+                } else if (page.tipo == 'layout') {
+                    this.x_console.outT({ message: `trying to write vue 'layout' file ${thefile.file}`, color: 'cyan' });
+                    w_path = path.join(this.x_state.dirs.layouts, thefile.file);
+                } else {
+                    this.x_console.outT({ message: `trying to write vue 'page' file ${thefile.file}`, color: 'cyan' });
+                }
                 await this.writeFile(w_path, vue.full);
                 //
                 //this.x_console.out({ message: 'vue ' + thefile.title, data: { vue, page_style: page.styles } });

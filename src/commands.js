@@ -407,10 +407,65 @@ export default async function(context) {
             }
         },
 
+        'def_store_modificar': {
+            x_level: '>4',
+            x_icons: 'desktop_new',
+            x_all_hasparent: 'def_store_mutation',
+            x_text_contains: 'modificar',
+            hint: 'Comando para modificar los valores del state del store padre',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let safe = require('safe-eval');
+                // parse attributes
+                Object.keys(node.attributes).map(function(keym) {
+                    let key = keym.trim();
+                    let value = node.attributes[keym];
+                    let tmp = { val:'' };
+                    if (value=='{now}') {
+                        resp.open += `state.${key} = new Date()\n`;
+                    } else if (value=='') {
+                        let val = '';
+                        if (key in context.x_state.stores[state.current_store]) {
+                            val = context.x_state.stores[state.current_store][key].default;
+                        }
+                        if (val=='') val=`''`;
+                        resp.open += `state.${key} = ${val}\n`;
+                    } else if (value.contains('**')) {
+                        // preprocess value               
+                        let val = value.trim();
+                        if (node.icons.includes('bell')) {
+                            val = getTranslatedTextVar(value);
+                        }
+                        if (val=='') val=`''`;
+                        if (val.contains('this.') || val.contains('params.')) {
+                            val = val.replaceAll('this.','').replaceAll('params.','');
+                            resp.open += `state.${key} = objeto.${val}\n`;
+                        } else {
+                            resp.open += `state.${key} = ${val}\n`;
+                        }
+                    } else if (value.contains('!')==false && safe(value)!==''+value) {
+                        // if val is string
+                        resp.open += `state.${key} = ${value}\n`;
+                    } else {
+                        //if val is not a string
+                        if (value!='' && value.charAt(0)=='!' && value.contains('.')==false) {
+                            resp.open += `state.${key} = !state.${key}\n`;
+                        } else if (value!='' && value.charAt(0)=='!') {
+                            // @TODO name = !store.name
+                        }
+                    }
+                });
+                return resp;
+            }
+        },
+
         //*def_store_mutation
         //*def_store_field
+        //*def_store_modificar
         //def_store_call
-        //def_store_modificar
 
         // **************************
         //  VueX PROXIES definitions
