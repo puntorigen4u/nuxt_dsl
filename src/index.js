@@ -1268,6 +1268,58 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         }
     }
 
+    async createServerMiddleware() {
+        if (Object.keys(this.x_state.functions).length>0) {
+            this.x_console.outT({ message:`creating NuxtJS Server Middleware definitions`, color:'green' });
+            let path = require('path');
+            let util = require('util');
+            let safe = require('safe-eval');
+            let file = path.join(this.x_state.dirs.server,`api.js`);
+            let content = `
+            var express = require('express'), _ = require('underscore'), axios = require('axios');
+            var server = express();
+            var plugins = {
+                bodyParser: require('body-parser'),
+                cookieParser: require('cookie-parser')
+            };
+            server.disable('x-powered-by');
+            server.use(plugins.bodyParser.urlencoded({ extended: false,limit: '2gb' }));
+            server.use(plugins.bodyParser.json({ extended: false,limit: '2gb' }));
+            server.use(plugins.cookieParser());
+            `;
+            //merge functions import's into a single struct
+            let imps = {};
+            for (let x in this.x_state.functions) {
+                for (let imp in this.x_state.functions[x]) {
+                    imps[imp] = this.x_state.functions[x][imp];
+                }
+            }
+            //declare imports
+            content += `// app declared functions imports\n`;
+            for (let x in imps) {
+                content += `var ${imps[x]} = require('${x}');\n`;
+            }
+            content += `// app declared functions\n`;
+            //declare app methods
+            for (let func_name in this.x_state.functions) {
+                let func = this.x_state.functions[func_name];
+                let func_return = ``;
+                if (func.return!='') func_return = `res.send(${func.return});`;
+                content += 
+                `server.${func.method}('${func.path}', async function(req,res) {
+                    var params = req.${(func.method=='get')?'params':'body'};
+                    ${func.code}
+                    ${func_return}
+                });\n`;
+            }
+            //close
+            content += `module.exports = server;\n`;
+            //write file
+            this.writeFile(file,content);
+            this.x_console.outT({ message:`NuxtJS Server Middlewares ready`, color:'green' });
+        }
+    }
+
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
         let beautify_js = beautify.js;
@@ -1390,6 +1442,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         // create VueX store files
         if (!this.x_state.central_config.componente) {
             await this.createVueXStores();
+            await this.createServerMiddleware();
         }
         // create index.js file and prepare Nuxt template structure
     }
