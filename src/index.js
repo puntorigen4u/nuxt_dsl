@@ -1405,6 +1405,44 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         this.writeFile(mime_file,mime);
     }
 
+    async installRequiredPlugins() {
+        this.x_state.plugins['vuetify'] = {
+            global: true,
+            npm: { 'node-sass':'*' },
+            dev_npm: { '@nuxtjs/vuetify':'*' },
+            nuxt_config: {
+                vuetify: {
+                    theme: {
+                        dark: true,
+                        themes: {
+                            dark: {
+                                primary: 'colors.blue.darken2',
+                                accent: 'colors.grey.darken3',
+                                secondary: 'colors.amber.darken3',
+                                info: 'colors.teal.lighten1',
+                                warning: 'colors.amber.base',
+                                error: 'colors.deepOrange.accent4',
+                                success: 'colors.green.accent3'
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.x_state.nuxt_config.build_modules['@nuxtjs/vuetify'] = {};
+        this.x_state.plugins['aos'] = {
+            global: true,
+            npm: { aos:'*' },
+            mode: 'client',
+            customcode: 
+            `import AOS from "aos";
+            import "aos/dist/aos.css";
+            export default ({app}) => {
+                app.AOS = new AOS.init({});
+            };`
+        };
+    }
+
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
         let beautify_js = beautify.js;
@@ -1532,8 +1570,11 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             //create server files (nuxt express, mimetypes)
             await this.prepareServerFiles();
             //declare required plugins
-            //create NuxtJS plugin definition files
+            await this.installRequiredPlugins();
+            //create NuxtJS plugin definition files @TODO cfc:12228
+            //this.x_state.nuxt_config.plugins = await this.createNuxtPlugins(); //return plugin array list for nuxt.config.js
             //create nuxt.config.js file
+            //await this.creatNuxtConfig()
         }
         
     }
