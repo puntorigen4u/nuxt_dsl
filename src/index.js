@@ -1,6 +1,6 @@
 const concepto = require('concepto');
 import { timingSafeEqual } from 'crypto';
-import { runInThisContext } from 'vm';
+import { isContext, runInThisContext } from 'vm';
 //import concepto from '../../concepto/src/index'
 /**
  * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
@@ -1268,12 +1268,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         }
     }
 
-    async createServerMiddleware() {
+    async createServerMethods() {
         if (Object.keys(this.x_state.functions).length>0) {
-            this.x_console.outT({ message:`creating NuxtJS Server Middleware definitions`, color:'green' });
+            this.x_console.outT({ message:`creating NuxtJS server methods`, color:'green' });
             let path = require('path');
-            let util = require('util');
-            let safe = require('safe-eval');
             let file = path.join(this.x_state.dirs.server,`api.js`);
             let content = `
             var express = require('express'), _ = require('underscore'), axios = require('axios');
@@ -1316,8 +1314,95 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             content += `module.exports = server;\n`;
             //write file
             this.writeFile(file,content);
-            this.x_console.outT({ message:`NuxtJS Server Middlewares ready`, color:'green' });
+            this.x_console.outT({ message:`NuxtJS server methods ready`, color:'green' });
         }
+    }
+
+    async createMiddlewares() {
+        if (Object.keys(this.x_state.proxies).length>0) {
+            this.x_console.outT({ message:`creating VueJS Middlewares`, color:'cyan' });
+            let path = require('path');
+            for (let proxy_name in this.x_state.proxies) {
+                let proxy = this.x_state.proxies[proxy_name];
+                let file = path.join(this.x_state.dirs.middleware,`${proxy_name}.js`);
+                //add imports
+                let content = ``;
+                for (let key in proxy.imports) {
+                    content += `import ${proxy.imports[key]} from '${key}'\n`;
+                }
+                //add proxy code
+                content += 
+                `export default async function ({ route, store, redirect, $axios }) {
+                    ${proxy.code}\n
+                }
+                `;
+                //find and replace instances of strings {vuepath:targetnode}
+                for (let page_name in this.x_state.pages) {
+                    if (page_name!='') {
+                        let page = this.x_state.pages[page_name];
+                        if (page.path) {
+                            content = content.replaceAll(`{vuepath:${page_name}}`,page.path);
+                        } else {
+                            this.x_console.outT({ message:`Warning! path key doesn't exist for page ${page_name}`, color:'yellow'});
+                        }
+                    }
+                }
+                //write file
+                this.writeFile(file,content);
+            }
+            this.x_console.outT({ message:`VueJS Middlewares ready`, color:'cyan' });
+        }
+    }
+
+    async prepareServerFiles() {
+        let path = require('path');
+        let index = 
+        `// index.js
+        const sls = require('serverless-http');
+        const binaryMimeTypes = require('./binaryMimeTypes');
+        const express = require('express');
+        const app = express();
+        const { Nuxt } = require('nuxt');
+        const path = require('path');
+        const config = require('./nuxt.config.js');
+
+        async functions nuxtApp() {
+            app.use('/_nuxt', express.static(path.join(__dirname, '.nuxt', 'dist')));
+            const nuxt = new Nuxt(config);
+            await nuxt.ready();
+            app.use(nuxt.render);
+            return app;
+        }
+
+        module.exports.nuxt = async (event, context) => {
+            let nuxt_app = await nuxtApp();
+            let handler = sls(nuxt_app, { binary: binaryMimeTypes });
+            return await handler (event, context);
+        }
+        `;
+        let index_file = path.join(this.x_state.dirs.app,`index.js`);
+        this.writeFile(index_file,index);
+        // allowed binary mimetypes
+        let util = require('util');
+        let allowed = [
+            'application/javascript', 'application/json', 'application/octet-stream', 'application/xml',
+            'font/eot', 'font/opentype', 'font/otf', 
+            'image/jpeg', 'image/png', 'image/svg+xml',
+            'text/comma-separated-values', 'text/css', 'text/html', 'text/javascript', 'text/plain', 'text/text', 'text/xml'
+        ];
+        if (this.x_state.config_node['nuxt:mimetypes']) {
+            let user_mimes = [];
+            for (let usermime in this.x_state.config_node['nuxt:mimetypes']) {
+                user_mimes.push(usermime);
+            }
+            let sum_mime = [...allowed, ...user_mimes];
+            allowed = [...new Set(sum_mime)]; // clean duplicated values from array
+        }
+        let mime = 
+        `// binaryMimeTypes.js
+        module.exports = ${util.inspect(allowed,{ depth:Infinity })};`;
+        let mime_file = path.join(this.x_state.dirs.app,`binaryMimeTypes.js`);
+        this.writeFile(mime_file,mime);
     }
 
     async writeFile(file,content,encoding='utf-8') {
@@ -1439,12 +1524,18 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             }
             this.debug({ message:`Copying assets ready`, color:'cyan'});
         }
-        // create VueX store files
+        // prepare Nuxt template structure
         if (!this.x_state.central_config.componente) {
             await this.createVueXStores();
-            await this.createServerMiddleware();
+            await this.createServerMethods();
+            await this.createMiddlewares();
+            //create server files (nuxt express, mimetypes)
+            await this.prepareServerFiles();
+            //declare required plugins
+            //create NuxtJS plugin definition files
+            //create nuxt.config.js file
         }
-        // create index.js file and prepare Nuxt template structure
+        
     }
 
     // ************************
