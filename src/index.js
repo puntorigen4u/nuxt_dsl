@@ -1,6 +1,6 @@
 const concepto = require('concepto');
-import { timingSafeEqual } from 'crypto';
-import { isContext, runInThisContext } from 'vm';
+//import { timingSafeEqual } from 'crypto';
+//import { isContext, runInThisContext } from 'vm';
 //import concepto from '../../concepto/src/index'
 /**
  * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
@@ -1443,6 +1443,122 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         };
     }
 
+    async createNuxtPlugins() {
+        let path = require('path');
+        let resp = { global_plugins:{}, css_files:[], nuxt_config:[] };
+        for (let plugin_key in this.x_state.plugins) {
+            let plugin = this.x_state.plugins[plugin_key];
+            if (typeof plugin === 'object') {
+                // copy x_state_plugins npm's into npm global imports (for future package.json)
+                if (plugin.npm) this.x_state.npm = {...this.x_state.npm, ...plugin.npm };
+                if (plugin.dev_npm) this.x_state.dev_npm = {...this.x_state.dev_npm, ...plugin.dev_npm };
+                if (plugin.global && plugin.global==true) resp.global_plugins[plugin_key] = '*';
+                if (plugin.styles) {
+                    for (let style_key in plugin.styles) {
+                        let style = plugin.styles[style_key];
+                        if (style.file.contains('/')==false) {
+                            let target = path.join(this.x_state.dirs.css, style.file);
+                            await this.writeFile(target, style.content);
+                            resp.css_files.push(style);
+                        }
+                    }
+                }
+                // write the plugin code
+                let import_as='', code='';
+                if (plugin.var) {
+                    import_as = plugin.var;
+                } else {
+                    import_as = plugin_key.split('/').splice(-1)[0]
+                                                    .replaceAll('-','')
+                                                    .replaceAll('_','')
+                                                    .toLowerCase().trim();
+                }
+                code = `import Vue from 'vue'`;
+                if (plugin.as_star) {
+                    if (plugin.as_star==true) {
+                        code += `import * as ${import_as} from '${plugin_key}'`;
+                    } else {
+                        code += `import ${import_as} from '${plugin_key}'`;
+                    }
+                } else {
+                    code += `import ${import_as} from '${plugin_key}'`;
+                }
+                if (plugin.custom) code += `${plugin.custom}\n`;
+                if (plugin.extra_imports) {
+                    for (let extra in plugin.extra_imports) {
+                        let new_key = plugin.extra_imports[extra]
+                                        .replaceAll('-','')
+                                        .replaceAll('_','')
+                                        .replaceAll('/','')
+                                        .replaceAll('.css','')
+                                        .replaceAll('.','_')
+                                        .toLowerCase().trim();
+                        code += `import ${new_key} from '${plugin.extra_imports[extra]}'\n`;
+                    }
+                }
+                if (plugin.requires) {
+                    for (let req in plugin.requires) code += `require('${plugin.requires[req]}');\n`;
+                }
+                if (plugin.styles) {
+                    for (let style_key in plugin.styles) {
+                        let style = plugin.styles[style_key];
+                        if (style.file.contains('/')) {
+                            code += `import '${style.file}';\n`;
+                        }
+                    }
+                }
+                // add config to plugin code if requested
+                if (plugin.config) {
+                    if (typeof plugin.config === 'object') {
+                        code += 
+                        `const config = ${util.inspect(plugin.config,{ depth:Infinity })};
+                        Vue.use(${import_as},config);`;        
+                    } else {
+                        code += `Vue.use(${import_as},${plugin.config});\n`;
+                    }
+                } else if (plugin.tag) {
+                    code += `Vue.component('${plugin.tag}',${import_as});\n`;
+                } else if (plugin.customvar) {
+                    code += `Vue.use(${plugin.customvar});\n`;
+                } else {
+                    code += `Vue.use(${import_as});\n`;
+                }
+                // if customcode overwrite 'code'
+                if (plugin.customcode) {
+                    code = plugin.customcode;
+                }
+                // write to disk and add to response
+                if (import_as!='vuetify') {
+                    if (plugin.mode) {
+                        resp.nuxt_config.push({ mode:plugin.mode.toLowerCase().trim(), file:`~/plugins/${import_as}.js` });
+                    } else {
+                        resp.nuxt_config.push({ file:`~/plugins/${import_as}.js` });
+                    }
+                    let target = path.join(this.x_state.dirs.plugins, `${import_as}.js`);
+                    await this.writeFile(target, code);
+                }
+            } else {
+                //simple plugin
+                this.x_state.npm[plugin_key] = plugin;
+                let import_as = plugin_key.replaceAll('-','')
+                                          .replaceAll('_','')
+                                          .toLowerCase().trim();
+                code += 
+                `import Vue from 'vue'
+                import ${import_as} from '${plugin_key}'
+                Vue.use(${import_as});
+                `;
+                // write to disk and add to response
+                if (import_as!='vuetify') {
+                    resp.nuxt_config.push({ file:`~/plugins/${import_as}.js` });
+                    let target = path.join(this.x_state.dirs.plugins, `${import_as}.js`);
+                    await this.writeFile(target, code);
+                }
+            }
+        }
+        return resp;
+    }
+
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
         let beautify_js = beautify.js;
@@ -1571,8 +1687,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             await this.prepareServerFiles();
             //declare required plugins
             await this.installRequiredPlugins();
-            //create NuxtJS plugin definition files @TODO cfc:12228
-            //this.x_state.nuxt_config.plugins = await this.createNuxtPlugins(); //return plugin array list for nuxt.config.js
+            //create NuxtJS plugin definition files
+            this.x_state.nuxt_config.plugins = (await this.createNuxtPlugins()).nuxt_config; //return plugin array list for nuxt.config.js
             //create nuxt.config.js file
             //await this.creatNuxtConfig()
         }
