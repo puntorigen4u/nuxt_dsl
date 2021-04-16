@@ -1559,6 +1559,90 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         return resp;
     }
 
+    async createNuxtConfig() {
+        //creates the file nuxt.config.js
+        //define structure with defaults
+        let config = {
+            mode: this.x_state.central_config[':mode'],
+            target: '',
+            components: true,
+            loading: {
+                color: 'orange',
+                height: '2px',
+                continuous: true
+            },
+            head: {
+                title: (this.x_state.config_node['nuxt:title'])?this.x_state.config_node['nuxt:title']:this.x_state.central_config.apptitle,
+                meta: [],
+                link: [
+                    { rel: 'icon', type: 'image/x-icon', href:'/favicon.ico' },
+                    { rel: 'stylesheet', href:'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' }
+                ],
+                script: [],
+                __dangerouslyDisableSanitizers: ['script']
+            },
+            env: {},
+            debug: false,
+            modules: [],
+            buildModules: [],
+            plugins: [],
+            css: [],
+            build: {
+                publicPath: '/_nuxt/'
+            },
+            srcDir: 'client/',
+            performance: {
+                gzip: false
+            },
+            router: {
+                base: '/'
+            },
+            dev: false
+        };
+        //add title:meta data
+        if (this.x_state.config_node['nuxt:meta']) {
+            for (let meta_key in this.x_state.config_node['nuxt:meta']) {
+                if (meta_key.charAt(0)!=':') {
+                    let test = meta_key.toLowerCase().trim();
+                    let value = this.x_state.config_node['nuxt:meta'][meta_key];
+                    if (test=='charset') {
+                        config.head.meta.push({ charset:value });
+                    } else if (test=='description') {
+                        config.head.push({ hid:'description', name:'description', content:value });
+                    } else {
+                        config.head.meta.push({ name:meta_key, content:value });
+                    }
+                }
+            }
+        } else if (this.x_state.config_node.meta && this.x_state.config_node.meta.length>0) {
+            config.head.meta = this.x_state.config_node.meta;
+        }
+        //add custom head scripts
+        //sort head scripts a-z
+        let as_array = [];
+        for (let head in this.x_state.head_script) {
+            as_array.push({ key:head, params:this.x_state.head_script[head] });
+            //config.head.script.push({ ...this.x_state.head_script[head] });
+        }
+        let sorted = as_array.sort(function(key) {
+            let sort_order=1;
+            return function(a,b) {
+                if (a[key] < b[key]) {
+                    return -1 * sort_order;
+                } else if (a[key] > b[key]) {
+                    return 1 * sort_order;
+                } else {
+                    return 0 * sort_order;
+                }
+            }
+        });
+        for (let head in sorted) {
+            config.head.script.push(sorted[head].params);
+        }
+        //nuxt axios config - cfc:12462
+
+    }
+
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
         let beautify_js = beautify.js;
@@ -1678,7 +1762,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             }
             this.debug({ message:`Copying assets ready`, color:'cyan'});
         }
-        // prepare Nuxt template structure
+        // create Nuxt template structure
         if (!this.x_state.central_config.componente) {
             await this.createVueXStores();
             await this.createServerMethods();
@@ -1690,7 +1774,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             //create NuxtJS plugin definition files
             this.x_state.nuxt_config.plugins = (await this.createNuxtPlugins()).nuxt_config; //return plugin array list for nuxt.config.js
             //create nuxt.config.js file
-            //await this.creatNuxtConfig()
+            await this.createNuxtConfig()
+            //execute deploy (npm install, etc)
         }
         
     }
