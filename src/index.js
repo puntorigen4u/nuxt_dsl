@@ -76,7 +76,8 @@ export default class vue_dsl extends concepto {
                 'assets': 'client/assets/',
                 'css': 'client/assets/css/',
                 'store': 'client/store/',
-                'lang': 'client/lang/'
+                'lang': 'client/lang/',
+                'secrets': 'secrets/'
             });
         }
         // read modelos node (virtual DB)
@@ -193,23 +194,27 @@ Vue.use(VueMask);`,
             this.x_state.dev_npm['vue-template-compiler'] = '*';
         }
         // serialize 'secret' config keys as json files in app secrets sub-directory (if any)
-        // extract 'secret's from config keys; this is not needed in VUE DSL, but in EB DSL
-        // commented for future reference
-        /*
+        // extract 'secret's from config keys; 
+        /* */
         this.x_state.secrets={}; //await _extractSecrets(config_node)
+        let path = require('path');
         for (let key in this.x_state.config_node) {
-        	if (this.x_state.config_node[key][':secret']) {
-        		let new_obj = {...this.x_state.config_node[key]};
-        		delete new_obj[':secret']
-        		if (new_obj[':link']) delete new_obj[':link']
-        		// set object keys to uppercase
-        		this.x_state.secrets[key]={};
-        		let obj_keys = Object.keys(new_obj);
-        		obj_keys.map(function(x) {
-        			this.x_state.secrets[key][x.toUpperCase()] = new_obj[x];
-        		}.bind(this));
-        	}
-        }*/
+            if (key.contains(':')==false) {
+                if (this.x_state.config_node[key][':secret']) {
+                    let new_obj = {...this.x_state.config_node[key]};
+                    delete new_obj[':secret']
+                    if (new_obj[':link']) delete new_obj[':link']
+                    // set object keys to uppercase
+                    this.x_state.secrets[key]={};
+                    let obj_keys = Object.keys(new_obj);
+                    for (let x in obj_keys) {
+                        this.x_state.secrets[key][x.toUpperCase()] = new_obj[x];
+                    }
+                    let target = path.join(this.x_state.dirs.secrets, `${key}.json`);
+                    await this.writeFile(target,JSON.stringify(new_obj));
+                }
+            }
+        }
         // set config keys as ENV accesible variables (ex. $config.childnode.attributename)
         for (let key in this.x_state.config_node) {
             // omit special config 'reserved' node keys
@@ -1625,7 +1630,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             //config.head.script.push({ ...this.x_state.head_script[head] });
         }
         let sorted = as_array.sort(function(key) {
-            let sort_order=1;
+            let sort_order=1; //desc=-1
             return function(a,b) {
                 if (a[key] < b[key]) {
                     return -1 * sort_order;
@@ -1640,7 +1645,81 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             config.head.script.push(sorted[head].params);
         }
         //nuxt axios config - cfc:12462
-
+        if (this.x_state.config_node.axios) {
+            let ax_config = { 
+                proxy:(this.x_state.nuxt_config.modules['@nuxtjs/proxy'])?true:false 
+            };
+            ax_config = {...this.x_state.config_node.axios, ...ax_config};
+            if (ax_config.retries) {
+                ax_config.retry = { retries:ax_config.retries };
+                delete ax_config.retries;
+                this.x_state.npm['axios-retry']='*';
+            }
+            if (this.x_state.central_config.deploy.contains('eb:') || this.x_state.central_config.deploy.contains('true')) {
+                if (this.x_state.config_node.axios.deploy) {
+                    ax_config.baseURL = this.x_state.config_node.axios.deploy;
+                    ax_config.browserBaseURL = this.x_state.config_node.axios.deploy;
+                    delete ax_config.deploy;
+                }
+            } else if (this.x_state.central_config.deploy=='local') {
+                if (this.x_state.config_node.axios.local) {
+                    ax_config.baseURL = this.x_state.config_node.axios.local;
+                    ax_config.browserBaseURL = this.x_state.config_node.axios.local;
+                    delete ax_config.local;
+                    if (this.x_state.config_node.axios.local.contains('127.0.0.1')) 
+                        this.x_state.config_node.axios.https=false;
+                }
+            }
+            config.axios = ax_config;
+        }
+        //nuxt vue config
+        if (this.x_state.config_node['vue:config']) {
+            config.vue = { config:this.x_state.config_node['vue:config'] };
+            delete config.vue.config[':secret'];
+            delete config.vue.config[':link'];
+        }
+        //nuxt proxy config keys
+        if (this.x_state.nuxt_config.modules['@nuxtjs/proxy']) {
+            config.proxy = this.x_state.nuxt_config.modules['@nuxtjs/proxy'];
+        }
+        //nuxt env variables
+        config.env={};
+        for (let node_key in this.x_state.config_node) {
+            if (node_key.contains(':')==false) {
+                if ('aurora,vpc,aws'.split(',').includes(node_key)==false) {
+                    if (this.x_state.secrets[node_key]===undefined && typeof this.x_state.config_node[node_key] === 'object') {
+                        config.env[node_key.toLowerCase()]={...this.x_state.config_node[node_key]};
+                    }
+                }
+            }
+        }
+        //nuxt google:analytics
+        if (this.x_state.config_node['google:analytics']) {
+            if (this.x_state.config_node['google:analytics'].local && this.x_state.config_node['google:analytics'].local==true) {
+                config.debug=true;
+            }
+        }
+        //nuxt modules
+        for (let module_key in this.x_state.nuxt_config.modules) {
+            let module = this.x_state.nuxt_config.modules[module_key];
+            if (Object.keys(module)=='') {
+                config.modules.push(module_key);
+            } else {
+                config.modules.push([module_key,module]);
+            }
+        }
+        //nuxt build_modules
+        for (let module_key in this.x_state.nuxt_config.build_modules) {
+            let module = this.x_state.nuxt_config.build_modules[module_key];
+            if (Object.keys(module)=='') {
+                config.buildModules.push(module_key);
+            } else {
+                config.buildModules.push([module_key,module]);
+            }
+        }
+        //nuxt plugins
+        
+        this.x_console.outT({ message:'future nuxt.config.js', data:config});
     }
 
     async writeFile(file,content,encoding='utf-8') {
