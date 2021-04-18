@@ -1836,6 +1836,25 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         //this.x_console.outT({ message:'future package.json', data:data});
     }
 
+    async createServerlessYML() {
+        let yaml = require('yaml'), data = {};
+        if (this.x_state.central_config.deploy.contains('eb:')==false) {
+            data.service = this.x_state.central_config.service_name;
+            data.custom = {
+                prune: {
+                    automatic: true,
+                    includeLayers: true,
+                    number: 1
+                }
+            };
+            //add 'secrets' config json keys - cfc:12895
+
+            //debug
+            let content = yaml.stringify(data);
+            this.x_console.outT({ message:'future serverless.yml', data:content});
+        }
+    }
+
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
         let beautify_js = beautify.js;
@@ -1972,7 +1991,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             await this.createNuxtConfig()
             //create package.json
             await this.createPackageJSON();
-            //create serverless.yml - cfc:12881
+            //create serverless.yml for deploy:sls - cfc:12881
+            await this.createServerlessYML();
             //execute deploy (npm install, etc)
         }
         
