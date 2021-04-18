@@ -1737,6 +1737,76 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         //this.x_console.outT({ message:'future nuxt.config.js', data:data});
     }
 
+    async createPackageJSON() {
+        let data = {
+            name: this.x_state.central_config.service_name,
+            version: '',
+            description: this.x_state.central_config[':description'],
+            main: 'index.js',
+            dependencies: {},
+            devDependencies: {},
+            scripts: {
+                dev: 'nuxt',
+                build: 'nuxt export --no-lock',
+                start: 'nuxt export && nuxt serve',
+                generate: 'nuxt export',
+                deploy: 'nuxt export --no-lock && eb deploy',
+                'start-server': 'nuxt build && node app.js',
+                'start-sls': 'nuxt build && sls offline start'
+            },
+            keywords: [],
+            author: '',
+            license: ''
+        };
+        //if not static
+        if (!this.x_state.central_config.static) {
+            data.scripts = {...data.scripts, ...{
+                build: 'nuxt build --no-lock',
+                start: 'nuxt start --no-lock',
+                generate: 'nuxt generate',
+                deploy: 'nuxt build --no-lock && sls deploy'
+            }};
+        }
+        //if port is not 3000
+        if (this.x_state.central_config.port!=3000) data.scripts.dev = `nuxt --port ${this.x_state.central_config.port}`;
+        if (this.x_state.central_config[':version']) data.version = this.x_state.central_config[':version'];
+        if (this.x_state.central_config[':author']) data.author = this.x_state.central_config[':author'];
+        if (this.x_state.central_config[':license']) data.license = this.x_state.central_config[':license'];
+        if (this.x_state.central_config[':git']) {
+            data.repository = {
+                type: 'git',
+                url: `git+${this.x_state.central_config[':git']}.git`
+            };
+            data.bugs = {
+                url: `${this.x_state.central_config[':git']}/issues`
+            }
+            data.homepage = this.x_state.central_config[':git'];
+        }
+        if (this.x_state.central_config[':keywords']) data.keywords = this.x_state.central_config[':keywords'].split(',');
+        //add dependencies
+        for (let pack in this.x_state.npm) {
+            if (this.x_state.npm[pack].contains('http') && this.x_state.npm[pack].contains('github.com')) {
+                data.dependencies[pack] = `git+${this.x_state.npm[pack]}`;
+            } else {
+                data.dependencies[pack] = this.x_state.npm[pack];
+            }
+        }
+        //add devDependencies
+        for (let pack in this.x_state.dev_npm) {
+            if (this.x_state.dev_npm[pack].contains('http') && this.x_state.dev_npm[pack].contains('github.com')) {
+                data.devDependencies[pack] = `git+${this.x_state.dev_npm[pack]}`;
+            } else {
+                data.devDependencies[pack] = this.x_state.dev_npm[pack];
+            }
+        }
+        //write to disk
+        let path = require('path');
+        let target = path.join(this.x_state.dirs.app,`package.json`);
+        let content = JSON.stringify(data);
+        await this.writeFile(target,content);
+        //this.x_console.outT({ message:'future package.json', data:data});
+    }
+
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
         let beautify_js = beautify.js;
@@ -1744,7 +1814,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         let beautify_css = beautify.css;
         let ext = file.split('.').splice(-1)[0].toLowerCase();
         let resp = content;
-        if (ext=='js') {
+        if (ext=='js' || ext=='json') {
             resp = beautify_js(resp, { space_in_empty_paren: false });
         } else if (ext=='vue') {
             resp = beautify_vue(resp, { indent_scripts: 'keep' });
@@ -1871,6 +1941,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             this.x_state.nuxt_config.css = nuxt_plugs.css_files;
             //create nuxt.config.js file
             await this.createNuxtConfig()
+            //create package.json
+            await this.createPackageJSON();
             //execute deploy (npm install, etc)
         }
         
