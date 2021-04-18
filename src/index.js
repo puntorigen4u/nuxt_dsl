@@ -8,6 +8,7 @@ const concepto = require('concepto');
  * @module 	vue_dsl
  **/
 import internal_commands from './commands'
+
 export default class vue_dsl extends concepto {
 
     constructor(file, config = {}) {
@@ -1251,7 +1252,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 if (store_name in this.x_state.stores_types['versions']) {
                     obj['version']=parseInt(this.x_state.stores_types['versions'][store_name]);
                 }
-                // write content cfc:11873
+                // write content
                 delete obj[':mutations'];
                 let content = `export const state = () => (${util.inspect(obj,{ depth:Infinity })})\n`;
                 // :mutations?
@@ -1535,9 +1536,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 // write to disk and add to response
                 if (import_as!='vuetify') {
                     if (plugin.mode) {
-                        resp.nuxt_config.push({ mode:plugin.mode.toLowerCase().trim(), file:`~/plugins/${import_as}.js` });
+                        resp.nuxt_config.push({ mode:plugin.mode.toLowerCase().trim(), src:`~/plugins/${import_as}.js` });
                     } else {
-                        resp.nuxt_config.push({ file:`~/plugins/${import_as}.js` });
+                        resp.nuxt_config.push({ src:`~/plugins/${import_as}.js` });
                     }
                     let target = path.join(this.x_state.dirs.plugins, `${import_as}.js`);
                     await this.writeFile(target, code);
@@ -1555,7 +1556,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 `;
                 // write to disk and add to response
                 if (import_as!='vuetify') {
-                    resp.nuxt_config.push({ file:`~/plugins/${import_as}.js` });
+                    resp.nuxt_config.push({ src:`~/plugins/${import_as}.js` });
                     let target = path.join(this.x_state.dirs.plugins, `${import_as}.js`);
                     await this.writeFile(target, code);
                 }
@@ -1567,6 +1568,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
     async createNuxtConfig() {
         //creates the file nuxt.config.js
         //define structure with defaults
+        let path = require('path');
+        let target = path.join(this.x_state.dirs.app,`nuxt.config.js`);
         let config = {
             mode: this.x_state.central_config[':mode'],
             target: '',
@@ -1644,7 +1647,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         for (let head in sorted) {
             config.head.script.push(sorted[head].params);
         }
-        //nuxt axios config - cfc:12462
+        //nuxt axios config
         if (this.x_state.config_node.axios) {
             let ax_config = { 
                 proxy:(this.x_state.nuxt_config.modules['@nuxtjs/proxy'])?true:false 
@@ -1718,8 +1721,20 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             }
         }
         //nuxt plugins
-        
-        this.x_console.outT({ message:'future nuxt.config.js', data:config});
+        config.plugins = this.x_state.nuxt_config.plugins;
+        config.css = this.x_state.nuxt_config.css;
+        //muxt server methods
+        if (this.x_state.functions) config.serverMiddleware = ['~/server/api'];
+        //nuxt build - cfc: 12637
+        config.build = { publicPath:'/_nuxt/' };
+        if (this.x_state.central_config.stage && this.x_state.central_config.stage!='production' && this.x_state.central_config.stage!='prod') {
+            config.build.publicPath = `/${this.x_state.central_config.stage}/_nuxt/`;
+        }
+        //we don't need webpack build rules in this edition:omit from cfc, so we are ready here
+        let util = require('util');
+        let content = util.inspect(config,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
+        await this.writeFile(target,content);
+        //this.x_console.outT({ message:'future nuxt.config.js', data:data});
     }
 
     async writeFile(file,content,encoding='utf-8') {
@@ -1851,7 +1866,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             //declare required plugins
             await this.installRequiredPlugins();
             //create NuxtJS plugin definition files
-            this.x_state.nuxt_config.plugins = (await this.createNuxtPlugins()).nuxt_config; //return plugin array list for nuxt.config.js
+            let nuxt_plugs = await this.createNuxtPlugins(); //return plugin array list for nuxt.config.js
+            this.x_state.nuxt_config.plugins = nuxt_plugs.nuxt_config;
+            this.x_state.nuxt_config.css = nuxt_plugs.css_files;
             //create nuxt.config.js file
             await this.createNuxtConfig()
             //execute deploy (npm install, etc)
@@ -2122,10 +2139,18 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     if (Object.keys(key.attributes).length > 0) {
                         // prepare config key
                         let config_key = key.text.toLowerCase().replace(/ /g, '');
-                        let values = {...key.attributes };
-                        /*key.attributes.map(function(x) {
-                        	values = {...values,...x};
-                        });*/
+                        //alt1 let values = {...key.attributes }; 
+                        //alt2, bit slower but considers booleans as string
+                        let values = {};
+                        for (let xz in key.attributes) {
+                        	let x = key.attributes[xz];
+                            if (x=='true') { 
+                                x=true;
+                            } else if (x=='false') {
+                                x=false;
+                            }
+                            values = {...values,...{[xz]:x}};
+                        }
                         resp[config_key] = values;
                         // mark secret status true if contains 'password' icon
                         if (key.icons.includes('password')) resp[config_key][':secret'] = true;
