@@ -1845,10 +1845,69 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     automatic: true,
                     includeLayers: true,
                     number: 1
+                },
+                apigwBinary: {
+                    types: '*/*'
                 }
             };
             //add 'secrets' config json keys - cfc:12895
-
+            //this.x_state.secrets
+            for (let secret in this.x_state.secrets) {
+                data.custom[secret] = '${file(secrets/'+secret+'.json)}'
+            }
+            //domain info
+            if (this.x_state.central_config.dominio) {
+                data.custom.customDomain = {
+                    domainName: this.x_state.central_config.dominio
+                };
+                if (this.x_state.central_config.basepath) data.custom.customDomain.basePath = this.x_state.central_config.basepath;
+                if (this.x_state.central_config.stage) data.custom.customDomain.stage = this.x_state.central_config.stage;
+                data.custom.customDomain.createRoute53Record = true;
+            }
+            //nodejs env on aws
+            data.provider = {
+                name: 'aws',
+                runtime: 'nodejs8.10',
+                timeout: this.x_state.central_config.timeout
+            };
+            if (this.x_state.central_config.stage) data.provider.stage = this.x_state.central_config.stage;
+            //env keys
+            if (Object.keys(this.x_state.config_node)!='') {
+                data.provider.enviroment = {};
+                if (this.x_state.central_config.stage) data.provider.enviroment.STAGE = this.x_state.central_config.stage;
+                if (this.x_state.config_node.vpc) {
+                    data.provider.vpc = {
+                        securityGroupIds: [this.x_state.config_node.vpc.security_group_id],
+                        subnetIDs: []
+                    };
+                    if (this.x_state.secrets.vpc) {
+                        data.provider.vpc.securityGroupIds = ['${self:custom.vpc.SECURITY_GROUP_ID}'];
+                    }
+                    if (this.x_state.config_node.vpc.subnet1_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET1_ID}'); 
+                    if (this.x_state.config_node.vpc.subnet2_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET2_ID}');
+                    if (this.x_state.config_node.vpc.subnet3_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET3_ID}');
+                    if (this.x_state.config_node.vpc.subnet4_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET4_ID}');
+                    if (this.x_state.config_node.vpc.subnet5_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET5_ID}');
+                    if (this.x_state.config_node.vpc.subnet6_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET6_ID}');
+                    if (this.x_state.config_node.vpc.subnet7_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET7_ID}');
+                }
+            }
+            //aws iam for s3 permissions (@TODO later - cfc:12990)
+            /*
+            data.provider.iamRoleStatements = {
+                Effect: 'Allow'
+            };*/
+            //nuxt handler
+            data.functions = {
+                nuxt: {
+                    handler: 'index.nuxt',
+                    events: [{'http':'ANY /'},{'http':'ANY /{proxy+}'}]
+                }
+            };
+            if (this.x_state.central_config['keep-warm']) {
+                data.functions.nuxt.events.push({ schedule: 'rate(20 minutes)'})
+            }
+            // cfc 13016
             //debug
             let content = yaml.stringify(data);
             this.x_console.outT({ message:'future serverless.yml', data:content});
