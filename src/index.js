@@ -1767,6 +1767,35 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 deploy: 'nuxt build --no-lock && sls deploy'
             }};
         }
+        //overwrite if we are a component
+        if (this.x_state.central_config.componente) {
+            data = {
+                name: '',
+                version: '',
+                description: '',
+                main: this.x_state.central_config.service_name+'.vue',
+                dependencies: {},
+                devDependencies: {},
+                scripts: {
+                    test: 'jest',
+                    build: 'poi build --prod'
+                },
+                jest: {
+                    moduleFileExtensions: ['js','vue'],
+                    moduleNameMapper: { '^@/(.*)$':'<rootDir>/src/$1' },
+                    transform: {
+                        '^.+\\.js$': '<rootDir>/node_modules/babel-jest',
+                        '.*\\.(vue)$': '<rootDir>/node_modules/vue-jest'
+                    },
+                    snapshotSerializers: ['<rootDir>/node_modules/jest-serializer-vue'],
+                },
+                unpkg: `umd/${this.x_state.central_config.service_name}.js`,
+                jsdelivr: `umd/${this.x_state.central_config.service_name}.js`,
+                keywords: [],
+                author: '',
+                license: ''
+            };
+        }
         //if port is not 3000
         if (this.x_state.central_config.port!=3000) data.scripts.dev = `nuxt --port ${this.x_state.central_config.port}`;
         if (this.x_state.central_config[':version']) data.version = this.x_state.central_config[':version'];
@@ -1943,6 +1972,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             await this.createNuxtConfig()
             //create package.json
             await this.createPackageJSON();
+            //create serverless.yml - cfc:12881
             //execute deploy (npm install, etc)
         }
         
