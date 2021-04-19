@@ -1965,7 +1965,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         let spawn = require('await-spawn'), path = require('path'), fs = require('fs').promises;
         //let ora = require('ora');
         let node_modules_final = path.join(this.x_state.dirs.app,'node_modules');
-        let npm={};
+        let npm={}, errors=[];
         this.x_console.outT({ message:`Building project`, color:'cyan' });
         let spinner = this.x_console.spinner({ message:'Building project' });
         let node_modules_exist = await this.exists(node_modules_final);
@@ -1984,7 +1984,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             } catch(n) { 
                 npm.install=n; 
                 spinner.fail('Error installing npm packages');
-                return false;
+                errors.push(n);
             }
         } else {
             spinner.succeed(`Using existing npm packages`);
@@ -1997,14 +1997,14 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         } catch(nb) { 
             npm.build = nb; 
             spinner.fail('NUXT build failed');
-            return false;
+            errors.push(nb);
         }
-        this.x_console.out({ message:`Spinner stopped`, color:'cyan' });
-        return true;
+        return errors;
     }
 
     async deploy_aws_eb() {
-        let spawn = require('child_process').spawn;
+        let spawn = require('await-spawn');
+        let errors = [];
         //AWS EB deploy
         this.debug('AWS EB deploy');
         let eb_full = this.x_state.central_config.deploy.replaceAll('eb:','');
@@ -2068,8 +2068,10 @@ jspm_packages/
             await this.writeFile(path.join(eb_base,'.ebignore'),eb_ig);
             //init git if not already
             spinner.succeed('EB config files created successfully');
+            let results = {};
             if (!(await this.exists(path.join(eb_base,'.git')))) {
                 //git directory doesn't exist
+                this.x_console.outT({ message:'CREATING .GIT DIRECTORY' });
                 spinner.start('Initializing project git repository');
                 spinner.text('Creating .gitignore file');
 let git_ignore=`# Mac System files
@@ -2083,14 +2085,13 @@ node_modules/`;
                 await this.writeFile(path.join(eb_base,'.gitignore'),git_ignore);
                 spinner.succeed('.gitignore created');
                 spinner.start('Initializing local git repository ..');
-                let results = {};
                 try {
                     results.git_init = await spawn('git',['init','-q'],{ cwd:eb_base });
                     spinner.succeed('GIT initialized');
                 } catch(gi) { 
                     results.git_init = gi; 
                     spinner.fail('GIT failed to initialize');
-                    //return false;
+                    errors.push(gi);
                 }
                 spinner.start('Adding files to local git ..');
                 try {
@@ -2099,21 +2100,79 @@ node_modules/`;
                 } catch(gi) { 
                     results.git_add = gi; 
                     spinner.fail('git failed to add local files');
-                    //return false;
+                    errors.push(gi);
                 }
                 spinner.start('Creating first git commit ..');
                 try {
-                    results.git_commit = await spawn('git',['commit','-m',"'Inicial'"],{ cwd:eb_base });
+                    results.git_commit = await spawn('git',['commit','-m','Inicial'],{ cwd:eb_base });
                     spinner.succeed('git created first commit successfully');
                 } catch(gi) { 
                     results.git_commit = gi; 
                     spinner.fail('git failed to create first commit');
-                    //return false;
+                    errors.push(gi);
                 }
-                // 18-4-21 @TODO continue - cfc 160 helpers/vue/vue.cfc
+
             }
-            
+            if (this.x_state.central_config.static==true) {
+                spinner.start('Deploying *static version* to AWS ElasticBean .. please wait');
+                //this.x_console.outT({ message:'Deploying *static version* to AWS ElasticBean .. please wait', color:'cyan' });
+            } else {
+                spinner.start('Deploying to AWS ElasticBean .. please wait');
+                //this.x_console.outT({ message:'Deploying to AWS ElasticBean .. please wait', color:'cyan' });
+            }
+            // execute eb deploy
+            try {
+                //console.log('\n');
+                results.eb_deploy = await spawn('eb',['deploy',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
+                spinner.succeed('EB deployed successfully');
+            } catch(gi) { 
+                //test if eb failed because instance has not being created yet, if so create it
+                results.eb_deploy = gi; 
+                spinner.warn('EB failed to deploy');
+                //this.x_console.outT({ message:gi.toString(), color:'red'});
+                if (gi.code==4) {
+                    // IAM credentials are invalid or instance hasn't being created (eb create is missing)
+                    spinner.start('EB it seems this is a new deployment: issuing eb create');
+                    try {
+                        //console.log('\n');
+                        results.eb_create = await spawn('eb',['create',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
+                        spinner.succeed('EB created and deployed successfully');
+                    } catch(ec) {
+                        this.x_console.outT({ message:gi.stdout.toString(), color:'red'});
+                        spinner.fail('EB creation failed');
+                        errors.push(gi);
+                    }
+                } else {
+                    this.x_console.outT({ message:'error: exitcode<>4 ('+gi.code+'):'+gi.stdout.toString(), color:'red'});
+                    errors.push(gi);
+                }
+                //return false;
+            }
+            //if errors.length==0 && this.x_state.central_config.debug=='true'
+            if (true && this.x_state.central_config.debug=='true') {
+                //open eb logging console
+                //@TODO implement npm open-terminal if we are not in a CI enviroment (npm is-ci)
+                let ci = require('ci-info');
+                let terminalTab = require('terminal-tab');
+                if (ci.isCI==false) {
+                    this.x_console.outT({ message:'Opening EB debug terminal ..', color:'cyan'});
+                    try {
+                        this.x_console.outT({ message:`spawning: ${path.resolve(eb_base)} eb open` });
+                        terminalTab.open(`cd ${path.resolve(eb_base)} && eb open`);
+                        //console.log('\n');
+                        //results.eb_log = await spawn('eb',['open',eb_instance],{ cwd:eb_base, stdio:'inherit' }); //
+                    } catch(ot) { 
+                        //test if eb failed because instance has not being created yet, if so create it
+                        results.eb_log = ot;
+                        this.x_console.outT({ message:'WARN: was unable to open new terminal window with EB debugging', data:ot, color:'yellow' }); 
+                    }
+                } else {
+                    this.x_console.outT({ message:'Omitting EB debug, because a CI env has being detected.', color:'yellow' });
+                }
+            }
+            // eb deploy done
         }
+        return errors;
     }
     
     async deploy_aws_logo() {
@@ -2134,9 +2193,14 @@ node_modules/`;
                 this.x_console.title({ title:'Deploying to Amazon AWS Elastic Bean', color:'green' });
                 await this.deploy_aws_logo();
                 // builds the app
-                //if (!(await this.deploy_build())) return false;
+                /*
+                let try_deploy = await this.deploy_build(); 
+                if (try_deploy.length>0) {
+                    console.log('there was one or more errors deploying, check the console',try_deploy);
+                    return false;
+                */
                 await this.deploy_build(); //comment after debugging
-                await this.deploy_aws_eb();
+                await this.deploy_aws_eb(); //test if results.length>0 (meaning there was an error)
             }
         }
         return true;
