@@ -1928,7 +1928,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
     async onEnd() {
         //execute deploy (npm install, etc) AFTER vue compilation (18-4-21: this is new)
         if (!(await this.deploy()) && !this.x_state.central_config.componente) {
-            this.x_console.outT({ message:'Something went wrong deploying', color:'red' });
+            this.x_console.outT({ message:'Something went wrong deploying, check the console, fix it and run again.', color:'red' });
         };
         //restores aws credentials if modified by onPrepare after deployment
         if (!this.x_state.central_config.componente && 
@@ -1969,11 +1969,6 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         this.x_console.outT({ message:`Building project`, color:'cyan' });
         let spinner = this.x_console.spinner({ message:'Building project' });
         let node_modules_exist = await this.exists(node_modules_final);
-        /*try {
-            await fs.access(node_modules_final);
-        } catch(e) {
-            node_modules_exist = false;
-        }*/
         // issue npm install (400mb)
         if (!node_modules_exist) {
             spinner.start(`Installing npm packages`);
@@ -1997,7 +1992,31 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         } catch(nb) { 
             npm.build = nb; 
             spinner.fail('NUXT build failed');
+            this.x_console.out({ message:`Building NUXT again to show error in console`, color:'red' });
+            //build again with output redirected to console, to show it to user
+            try {
+                console.log('\n');
+                npm.build = await spawn('npm',['run','build'],{ cwd:this.x_state.dirs.app, stdio:'inherit' });
+            } catch(eg) {
+            }
             errors.push(nb);
+        }
+        return errors;
+    }
+
+    async deploy_local() {
+        let errors=[];
+        let spawn = require('await-spawn');
+        let spinner = this.x_console.spinner({ message:'Deploying local instance' });
+        this.debug('Local deploy');
+        spinner.start('Deploying local instance');
+        try {
+            results.git_add = await spawn('npm',['run','dev'],{ cwd:this.x_state.dirs.app });
+            spinner.succeed('Project launched successfully');
+        } catch(gi) { 
+            results.git_add = gi; 
+            spinner.fail('Project failed to launch');
+            errors.push(gi);
         }
         return errors;
     }
@@ -2115,14 +2134,11 @@ node_modules/`;
             }
             if (this.x_state.central_config.static==true) {
                 spinner.start('Deploying *static version* to AWS ElasticBean .. please wait');
-                //this.x_console.outT({ message:'Deploying *static version* to AWS ElasticBean .. please wait', color:'cyan' });
             } else {
                 spinner.start('Deploying to AWS ElasticBean .. please wait');
-                //this.x_console.outT({ message:'Deploying to AWS ElasticBean .. please wait', color:'cyan' });
             }
             // execute eb deploy
             try {
-                //console.log('\n');
                 results.eb_deploy = await spawn('eb',['deploy',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
                 spinner.succeed('EB deployed successfully');
             } catch(gi) { 
@@ -2132,42 +2148,49 @@ node_modules/`;
                 //this.x_console.outT({ message:gi.toString(), color:'red'});
                 if (gi.code==4) {
                     // IAM credentials are invalid or instance hasn't being created (eb create is missing)
-                    spinner.start('EB it seems this is a new deployment: issuing eb create');
+                    spinner.start('Checking if AWS credentials are valid ..');
                     try {
-                        //console.log('\n');
-                        results.eb_create = await spawn('eb',['create',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
-                        spinner.succeed('EB created and deployed successfully');
-                    } catch(ec) {
-                        this.x_console.outT({ message:gi.stdout.toString(), color:'red'});
-                        spinner.fail('EB creation failed');
-                        errors.push(gi);
+                        results.eb_create = await spawn('aws',['sts','get-caller-identity'],{ cwd:eb_base }); //, stdio:'inherit'
+                        spinner.succeed('AWS credentials are ok');
+                    } catch(aws_cred) {
+                        spinner.fail('Current AWS credentials are invalid');
+                        errors.push(aws_cred);
+                    }
+                    if (errors.length==0) {
+                        spinner.start('EB it seems this is a new deployment: issuing eb create');
+                        try {
+                            //console.log('\n');
+                            results.eb_create = await spawn('eb',['create',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
+                            spinner.succeed('EB created and deployed successfully');
+                        } catch(ec) {
+                            this.x_console.outT({ message:gi.stdout.toString(), color:'red'});
+                            spinner.fail('EB creation failed');
+                            errors.push(gi);
+                        }
                     }
                 } else {
-                    this.x_console.outT({ message:'error: exitcode<>4 ('+gi.code+'):'+gi.stdout.toString(), color:'red'});
+                    this.x_console.outT({ message:'error: eb create (exitcode:'+gi.code+'):'+gi.stdout.toString(), color:'red'});
                     errors.push(gi);
                 }
-                //return false;
             }
             //if errors.length==0 && this.x_state.central_config.debug=='true'
-            if (true && this.x_state.central_config.debug=='true') {
+            if (errors.length==0 && this.x_state.central_config.debug==true) {
                 //open eb logging console
-                //@TODO implement npm open-terminal if we are not in a CI enviroment (npm is-ci)
-                let ci = require('ci-info');
-                let terminalTab = require('terminal-tab');
+                let ci = require('ci-info');              
                 if (ci.isCI==false) {
-                    this.x_console.outT({ message:'Opening EB debug terminal ..', color:'cyan'});
+                    spinner.start('Opening EB debug terminal ..');
                     try {
-                        this.x_console.outT({ message:`spawning: ${path.resolve(eb_base)} eb open` });
-                        terminalTab.open(`cd ${path.resolve(eb_base)} && eb open`);
-                        //console.log('\n');
-                        //results.eb_log = await spawn('eb',['open',eb_instance],{ cwd:eb_base, stdio:'inherit' }); //
+                        let abs_cmd = path.resolve(eb_base);
+                        let cmd = `clear; sleep 2; clear; cd ${abs_cmd} && clear && eb open ${eb_instance}`;
+                        //await this.launchTerminal(cmd);
+                        results.eb_log = await spawn('npx',['terminal-tab',cmd],{ cwd:abs_cmd }); //, detached:true
+                        spinner.succeed(`EB logging opened on new tab successfully`);
                     } catch(ot) { 
-                        //test if eb failed because instance has not being created yet, if so create it
                         results.eb_log = ot;
-                        this.x_console.outT({ message:'WARN: was unable to open new terminal window with EB debugging', data:ot, color:'yellow' }); 
+                        spinner.fail(`I was unable to open a new tab terminal window with the EB debugging console`);
                     }
                 } else {
-                    this.x_console.outT({ message:'Omitting EB debug, because a CI env has being detected.', color:'yellow' });
+                    spinner.warn(`Omitting EB debug, because a CI env was detected.`);
                 }
             }
             // eb deploy done
@@ -2175,6 +2198,23 @@ node_modules/`;
         return errors;
     }
     
+    //helper for launching terminal windows with a given cmd
+    async launchTerminal(cmd,args=[],basepath) {
+        let spawn = require('await-spawn');
+        let args2 = [cmd,args.join(' ')], resp={ error:false };
+        try {
+            resp = await spawn('npx',['terminal-tab',...args2], { cwd:basepath});
+        } catch(e) {
+            resp = {...e,...{error:true}};
+        }
+        return resp;
+    }
+
+    async deploy_local_logo() {
+        let cfonts = require('cfonts');
+        cfonts.say('Local', { font:'block' });
+    }
+
     async deploy_aws_logo() {
         let asciify = require('asciify-image'), path = require('path');
         let aws = path.join(__dirname,'assets','aws.png');
@@ -2187,20 +2227,54 @@ node_modules/`;
         console.log(logo_txt);
     }
 
+    async deploy_checks() {
+        // check if aws and git cmds are present
+        let errors=[];
+        return errors;
+    }
+
     async deploy() {
         if (this.x_state.central_config.deploy) {
+            let build = {};
             if (this.x_state.central_config.deploy.contains('eb:')) {
                 this.x_console.title({ title:'Deploying to Amazon AWS Elastic Bean', color:'green' });
                 await this.deploy_aws_logo();
                 // builds the app
-                /*
-                let try_deploy = await this.deploy_build(); 
-                if (try_deploy.length>0) {
-                    console.log('there was one or more errors deploying, check the console',try_deploy);
+                build.try_build = await this.deploy_build(); 
+                if (build.try_build.length>0) {
+                    this.x_console.outT({ message:`There was an error building the project.`, color:'red' });
                     return false;
-                */
-                await this.deploy_build(); //comment after debugging
-                await this.deploy_aws_eb(); //test if results.length>0 (meaning there was an error)
+                }
+                // deploys to aws
+                build.deploy_aws_eb = await this.deploy_aws_eb(); //test if results.length>0 (meaning there was an error)
+                if (build.deploy_aws_eb.length>0) {
+                    this.x_console.outT({ message:`There was an error deploying to Amazon AWS.`, color:'red', data:build.deploy_aws_eb.toString()});
+                    return false;
+                }
+                //aws eb deploy done
+            } else if (this.x_state.central_config.deploy=='local') {
+                if (this.x_state.nuxt_is_running==false) {
+                    //only launch nuxt server if its not running already
+                    this.x_console.title({ title:'Deploying Local NuxtJS instance', color:'green' });
+                    await this.deploy_local_logo();
+                    // builds the app
+                    build.try_build = await this.deploy_build(); 
+                    if (build.try_build.length>0) {
+                        this.x_console.outT({ message:`There was an error building the project.`, color:'red' });
+                        return false;
+                    }
+                    //issue npm run dev
+                    build.deploy_local = await this.deploy_local();
+                    if (build.deploy_local.length>0) {
+                        this.x_console.outT({ message:`There was an error deploying locally.`, color:'red', data:build.deploy_local.toString()});
+                        return false;
+                    }
+                } 
+            } else if (this.x_state.central_config.deploy=='localsls') {
+                //sls local deployment
+
+            } else if (this.x_state.central_config.deploy==true) {
+                //sls deploy; use central_config domain for deployment
             }
         }
         return true;
@@ -2554,7 +2628,19 @@ node_modules/`;
             apptitle: central[0].text
         };
         // overwrite default resp with info from central node
-        resp = {...resp, ...central[0].attributes };
+        //resp = {...resp, ...central[0].attributes };
+        //bit slower but transforms string booleans (19-4-21)
+        let values = {};
+        for (let xz in central[0].attributes) {
+            let x = central[0].attributes[xz];
+            if (x=='true') { 
+                x=true;
+            } else if (x=='false') {
+                x=false;
+            }
+            values = {...values,...{[xz]:x}};
+        }
+        resp = {...resp, ...values };
         /*central[0].attributes.map(function(x) {
         	resp = {...resp,...x};
         });*/
