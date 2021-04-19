@@ -32,6 +32,8 @@
     "test_dsle": "npm run dev && node test/pablo.js test/ejecutivos/vue.dsl"
   },
   "dependencies": {
+    "asciify-image": "^0.1.6",
+    "await-spawn": "^4.0.2",
     "cheerio": "^1.0.0-rc.5",
     "concepto": "github:puntorigen4u/concepto",
     "dsl_parser": "github:puntorigen4u/dsl_parser",
@@ -44,6 +46,7 @@
     "lorem-ipsum": "^2.0.3",
     "node-fetch": "^2.6.1",
     "open_console": "github:puntorigen4u/console",
+    "ora": "^5.4.0",
     "recursive-copy": "^2.0.10",
     "safe-eval": "^0.4.1",
     "yaml": "^1.10.2"
@@ -56,7 +59,8 @@
     "@rollup/plugin-node-resolve": "^8.4.0",
     "cross-env": "^7.0.2",
     "jsdoc-to-markdown": "^6.0.1",
-    "rollup": "^2.26.5"
+    "rollup": "^2.26.5",
+    "rollup-plugin-copy-assets": "^2.0.3"
   },
   "scarfSettings": {
     "enabled": false

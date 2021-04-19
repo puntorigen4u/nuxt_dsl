@@ -312,7 +312,7 @@ Vue.use(VueMask);`,
             try {
                 //this.debug('trying to read AWS credentials:',aws_ini_file);
                 aws_ini = await fs.readFile(aws_ini_file, 'utf-8');
-                //this.debug('AWS credentials:',aws_ini);
+                this.debug('AWS credentials:',aws_ini);
             } catch (err_reading) {}
             // 
             if (this.x_state.config_node.aws) {
@@ -1724,7 +1724,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         config.plugins = this.x_state.nuxt_config.plugins;
         config.css = this.x_state.nuxt_config.css;
         //muxt server methods
-        if (this.x_state.functions) config.serverMiddleware = ['~/server/api'];
+        if (this.x_state.functions && Object.keys(this.x_state.functions).length>0) config.serverMiddleware = ['~/server/api'];
         //nuxt build - cfc: 12637
         config.build = { publicPath:'/_nuxt/' };
         if (this.x_state.central_config.stage && this.x_state.central_config.stage!='production' && this.x_state.central_config.stage!='prod') {
@@ -1733,7 +1733,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         //we don't need webpack build rules in this edition:omit from cfc, so we are ready here
         let util = require('util');
         let content = util.inspect(config,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
-        await this.writeFile(target,content);
+        await this.writeFile(target,`export default ${content}`);
         //this.x_console.outT({ message:'future nuxt.config.js', data:data});
     }
 
@@ -1838,7 +1838,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 
     async createServerlessYML() {
         let yaml = require('yaml'), data = {};
-        if (this.x_state.central_config.deploy.contains('eb:')==false) {
+        if (this.x_state.central_config.deploy.contains('eb:')==false &&
+            this.x_state.central_config.deploy!=false &&
+            this.x_state.central_config.deploy!='local') {
             data.service = this.x_state.central_config.service_name;
             data.custom = {
                 prune: {
@@ -1847,7 +1849,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     number: 1
                 },
                 apigwBinary: {
-                    types: '*/*'
+                    types: ['*/*']
                 }
             };
             //add 'secrets' config json keys - cfc:12895
@@ -1892,7 +1894,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     if (this.x_state.config_node.vpc.subnet7_id) data.provider.vpc.subnetIDs.push('${self:custom.vpc.SUBNET7_ID}');
                 }
             }
-            //aws iam for s3 permissions (@TODO later - cfc:12990)
+            //aws iam for s3 permissions (x_state.aws_iam) (@TODO later - cfc:12990)
             /*
             data.provider.iamRoleStatements = {
                 Effect: 'Allow'
@@ -1907,11 +1909,237 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             if (this.x_state.central_config['keep-warm']) {
                 data.functions.nuxt.events.push({ schedule: 'rate(20 minutes)'})
             }
-            // cfc 13016
-            //debug
+            //aws resources for s3 (x_state.aws_resources) (@TODO later - no commands use them - cfc:13017)
+            //serverless plugins
+            data.plugins = ['serverless-apigw-binary',
+                            'serverless-offline',
+                            'serverless-prune-plugin'];
+            if (this.x_state.central_config.dominio) data.plugins.push('serverless-domain-manager');
+            //write yaml to disk
             let content = yaml.stringify(data);
-            this.x_console.outT({ message:'future serverless.yml', data:content});
+            let path = require('path');
+            let target = path.join(this.x_state.dirs.app,`serverless.yml`);
+            await this.writeFile(target,content);
+            //debug
+            //this.debug('future serverless.yml', content);
         }
+    }
+
+    async onEnd() {
+        //execute deploy (npm install, etc) AFTER vue compilation (18-4-21: this is new)
+        if (!(await this.deploy()) && !this.x_state.central_config.componente) {
+            this.x_console.outT({ message:'Something went wrong deploying', color:'red' });
+        };
+        //restores aws credentials if modified by onPrepare after deployment
+        if (!this.x_state.central_config.componente && 
+            this.x_state.central_config.deploy && 
+            this.x_state.central_config.deploy.indexOf('eb:') != -1 && 
+            this.x_state.config_node.aws) {
+            // only execute after deploy and if user requested specific aws credentials on map
+            let path = require('path'), copy = require('recursive-copy'), os = require('os');
+            let fs = require('fs');
+            let aws_bak = path.join(this.x_state.dirs.base, 'aws_backup.ini');
+            let aws_file = path.join(os.homedir(), '/.aws/') + 'credentials';
+            // try to copy aws_bak over aws_ini_file (if bak exists)
+            let exists = s => new Promise(r=>fs.access(s, fs.constants.F_OK, e => r(!e)));
+            if ((await exists(aws_bak))) {
+                await copy(aws_bak,aws_file,{ overwrite:true, dot:true, debug:false });
+                // remove aws_bak file
+                await fs.promises.unlink(aws_bak);
+            }
+        }
+    }
+
+    async exists(dir_or_file) {
+        let fs = require('fs').promises;
+        try {
+            await fs.access(dir_or_file);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    async deploy_build() {
+        // builds the project
+        let spawn = require('await-spawn'), path = require('path'), fs = require('fs').promises;
+        //let ora = require('ora');
+        let node_modules_final = path.join(this.x_state.dirs.app,'node_modules');
+        let npm={};
+        this.x_console.outT({ message:`Building project`, color:'cyan' });
+        let spinner = this.x_console.spinner({ message:'Building project' });
+        let node_modules_exist = await this.exists(node_modules_final);
+        /*try {
+            await fs.access(node_modules_final);
+        } catch(e) {
+            node_modules_exist = false;
+        }*/
+        // issue npm install (400mb)
+        if (!node_modules_exist) {
+            spinner.start(`Installing npm packages`);
+            //this.x_console.outT({ message:`Installing npm packages` });
+            try {
+                npm.install = await spawn('npm',['install'],{ cwd:this.x_state.dirs.app }); //, stdio:'inherit'
+                spinner.succeed(`npm install succesfully`);
+            } catch(n) { 
+                npm.install=n; 
+                spinner.fail('Error installing npm packages');
+                return false;
+            }
+        } else {
+            spinner.succeed(`Using existing npm packages`);
+        }
+        // issue npm run build
+        spinner.start(`Building NUXT project`);
+        try {
+            npm.build = await spawn('npm',['run','build'],{ cwd:this.x_state.dirs.app });
+            spinner.succeed('Project build successfully');
+        } catch(nb) { 
+            npm.build = nb; 
+            spinner.fail('NUXT build failed');
+            return false;
+        }
+        this.x_console.out({ message:`Spinner stopped`, color:'cyan' });
+        return true;
+    }
+
+    async deploy_aws_eb() {
+        let spawn = require('child_process').spawn;
+        //AWS EB deploy
+        this.debug('AWS EB deploy');
+        let eb_full = this.x_state.central_config.deploy.replaceAll('eb:','');
+        let eb_appname = eb_full;
+        let eb_instance = `${eb_appname}-dev`;
+        if (this.x_state.central_config.deploy.contains(',')) {
+            eb_appname = eb_full.split(',')[0];
+            eb_instance = eb_full.split(',').splice(-1)[0];
+        }
+        if (eb_appname!='') {
+            let spinner = this.x_console.spinner({ message:'Creating config files' });
+            //this.x_console.outT({ message:`Creating EB config yml: ${eb_appname} in ${eb_instance}`, color:'yellow' });
+            let yaml = require('yaml');
+            let data = {
+                'branch-defaults': {
+                    master: {
+                        enviroment: eb_instance,
+                        group_suffix: null
+                    }
+                },
+                global: {
+                    application_name: eb_appname,
+                    branch: null,
+                    default_ec2_keyname: 'aws-eb',
+                    default_platform: 'Node.js',
+                    default_region: 'us-east-1',
+                    include_git_submodules: true,
+                    instance_profile: null,
+                    platform_name: null,
+                    platform_version: null,
+                    profile: null,
+                    repository: null,
+                    sc: 'git',
+                    workspace_type: 'Application'
+                }
+            };
+            //create .elasticbeanstalk directory
+            let path = require('path'), fs = require('fs').promises;
+            let eb_base = this.x_state.dirs.app;
+            if (this.x_state.central_config.static) eb_base = path.join(eb_base,'dist');
+            let eb_dir = path.join(eb_base,'.elasticbeanstalk');
+            try { await fs.mkdir(eb_dir, { recursive: true }); } catch(ef) {}
+            //write .elasticbeanstalk/config.yml file with data
+            await this.writeFile(path.join(eb_dir,'config.yml'),yaml.stringify(data));
+            //write .npmrc file
+            await this.writeFile(path.join(eb_base,'.npmrc'),'unsafe-perm=true');
+            //create .ebignore file
+let eb_ig = `node_modules/
+jspm_packages/
+.npm
+.node_repl_history
+*.tgz
+.yarn-integrity
+.editorconfig
+# Mac OSX
+.DS_Store
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml`;
+            await this.writeFile(path.join(eb_base,'.ebignore'),eb_ig);
+            //init git if not already
+            spinner.succeed('EB config files created successfully');
+            if (!(await this.exists(path.join(eb_base,'.git')))) {
+                //git directory doesn't exist
+                spinner.start('Initializing project git repository');
+                spinner.text('Creating .gitignore file');
+let git_ignore=`# Mac System files
+.DS_Store
+.DS_Store?
+__MACOSX/
+Thumbs.db
+# VUE files
+node_modules/`;
+                
+                await this.writeFile(path.join(eb_base,'.gitignore'),git_ignore);
+                spinner.succeed('.gitignore created');
+                spinner.start('Initializing local git repository ..');
+                let results = {};
+                try {
+                    results.git_init = await spawn('git',['init','-q'],{ cwd:eb_base });
+                    spinner.succeed('GIT initialized');
+                } catch(gi) { 
+                    results.git_init = gi; 
+                    spinner.fail('GIT failed to initialize');
+                    //return false;
+                }
+                spinner.start('Adding files to local git ..');
+                try {
+                    results.git_add = await spawn('git',['add','.'],{ cwd:eb_base });
+                    spinner.succeed('git added files successfully');
+                } catch(gi) { 
+                    results.git_add = gi; 
+                    spinner.fail('git failed to add local files');
+                    //return false;
+                }
+                spinner.start('Creating first git commit ..');
+                try {
+                    results.git_commit = await spawn('git',['commit','-m',"'Inicial'"],{ cwd:eb_base });
+                    spinner.succeed('git created first commit successfully');
+                } catch(gi) { 
+                    results.git_commit = gi; 
+                    spinner.fail('git failed to create first commit');
+                    //return false;
+                }
+                // 18-4-21 @TODO continue - cfc 160 helpers/vue/vue.cfc
+            }
+            
+        }
+    }
+    
+    async deploy_aws_logo() {
+        let asciify = require('asciify-image'), path = require('path');
+        let aws = path.join(__dirname,'assets','aws.png');
+        let logo_txt = await asciify(aws, 
+            { 
+                fit:'width',
+                width:25
+            }
+        );
+        console.log(logo_txt);
+    }
+
+    async deploy() {
+        if (this.x_state.central_config.deploy) {
+            if (this.x_state.central_config.deploy.contains('eb:')) {
+                this.x_console.title({ title:'Deploying to Amazon AWS Elastic Bean', color:'green' });
+                await this.deploy_aws_logo();
+                // builds the app
+                //if (!(await this.deploy_build())) return false;
+                await this.deploy_build(); //comment after debugging
+                await this.deploy_aws_eb();
+            }
+        }
+        return true;
     }
 
     async writeFile(file,content,encoding='utf-8') {
@@ -2052,7 +2280,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             await this.createPackageJSON();
             //create serverless.yml for deploy:sls - cfc:12881
             await this.createServerlessYML();
-            //execute deploy (npm install, etc)
+            //execute deploy (npm install, etc) - moved to onEnd
+            /*if (!(await this.deploy())) {
+                this.x_console.outT({ message:'Something went wrong deploying', color:'red' });
+            };*/
         }
         
     }
