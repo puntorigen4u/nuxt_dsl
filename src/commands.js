@@ -497,8 +497,8 @@ export default async function(context) {
                     }
                     params[key] = value;
                 });
-                let util = require('util');
-                let data = util.inspect(params,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
+                //let util = require('util');
+                let data = context.jsDump(params).replaceAll("'`","`").replaceAll("`'","`");
                 resp.open = (isProxySon?'store.':'this.$store.')+`commit('${store}/${method}', ${data});`;
                 
                 return resp;
@@ -2773,7 +2773,7 @@ export default async function(context) {
                     let util = require('util');
                     //resp.open += `var ${tmp.var.trim()} = ${JSON.stringify(attrs)};\n`;
                     //@TODO create method to output struct escaping quotes if value has 'this.'
-                    resp.open += `var ${tmp.var.trim()} = ${util.inspect(attrs,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`")};\n`;
+                    resp.open += `var ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
 
                 } else {
                     resp.valid = false;

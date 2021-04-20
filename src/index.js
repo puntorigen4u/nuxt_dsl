@@ -754,7 +754,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 vue.first = true;
                 let util = require('util');
                 vue.script += `data() {\n`;
-                vue.script += ` return ${util.inspect(page.variables,{ depth:Infinity })}\n`;
+                vue.script += ` return ${this.jsDump(page.variables)}\n`;
                 vue.script += `}\n`;
             }
         }
@@ -1272,7 +1272,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 }
                 // write content
                 delete obj[':mutations'];
-                let content = `export const state = () => (${util.inspect(obj,{ depth:Infinity })})\n`;
+                let content = `export const state = () => (${this.jsDump(obj)})\n`;
                 // :mutations?
                 if (':mutations' in store) {
                     let muts=[];
@@ -1424,7 +1424,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         }
         let mime = 
         `// binaryMimeTypes.js
-        module.exports = ${util.inspect(allowed,{ depth:Infinity })};`;
+        module.exports = ${this.jsDump(allowed)};`;
         let mime_file = path.join(this.x_state.dirs.app,`binaryMimeTypes.js`);
         this.writeFile(mime_file,mime);
     }
@@ -1535,7 +1535,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 if (plugin.config) {
                     if (typeof plugin.config === 'object') {
                         code += 
-                        `const config = ${util.inspect(plugin.config,{ depth:Infinity })};
+                        `const config = ${this.jsDump(plugin.config)};
                         Vue.use(${import_as},config);`;        
                     } else {
                         code += `Vue.use(${import_as},${plugin.config});\n`;
@@ -1753,8 +1753,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             config.build.publicPath = `/${this.x_state.central_config.stage}/_nuxt/`;
         }
         //we don't need webpack build rules in this edition:omit from cfc, so we are ready here
-        let util = require('util');
-        let content = util.inspect(config,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
+        //let util = require('util');
+        //let content = util.inspect(config,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
+        let content = this.jsDump(config).replaceAll("'`","`").replaceAll("`'","`");
         await this.writeFile(target,`export default ${content}`);
         //this.x_console.outT({ message:'future nuxt.config.js', data:data});
     }
@@ -2534,6 +2535,54 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             }
         }
         return resp.join(' ');
+    }
+
+    jsDump(obj) {
+        let resp='';
+        let escape = function(ob) {
+            let nuevo = '';
+            if (typeof ob === 'number') {
+                nuevo += ob;
+            } else if (typeof ob === 'boolean') {
+                nuevo += ob;
+            } else if ((typeof ob === 'string') && (
+                ob.indexOf('this.')!=-1 || 
+                ob.indexOf('new ')!=-1 || 
+                ob.indexOf(`'`)!=-1)
+                ) {
+                nuevo += ob;
+            } else if (typeof ob === 'string') {
+                nuevo += `'${ob}'`;
+            } else {
+                nuevo += ob;
+            }
+            return nuevo;
+        };
+        if (Array.isArray(obj)) {
+            let tmp = [];
+            for (let item in obj) {
+                tmp.push(this.jsDump(obj[item]));
+            }
+            resp = `[${tmp.join(',')}]`;
+        } else if (typeof obj === 'object') {
+            let tmp=[];
+            for (let llave in obj) {
+                let nuevo = `${llave}: `;
+                let valor = obj[llave];
+                if (typeof valor === 'object') {
+                    nuevo += this.jsDump(valor);
+                } else {
+                    nuevo += escape(valor);
+                }
+                tmp.push(nuevo);
+            }
+            resp = `{\n${tmp.join(',')}\n}`;
+        } else if (typeof(obj) === 'string') {
+            resp = escape(obj);
+        } else {
+            resp = obj;
+        }
+        return resp;
     }
 
     // hash helper method
