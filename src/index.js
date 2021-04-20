@@ -1570,9 +1570,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         //define structure with defaults
         let path = require('path');
         let target = path.join(this.x_state.dirs.app,`nuxt.config.js`);
-        let ssr=(this.x_state.central_config[':mode']=='spa')?false:true;
+        let ssr=(this.x_state.central_config[':mode']=='spa')?true:false;
         if (this.x_state.central_config[':ssr']) ssr=this.x_state.central_config[':ssr'];
-        let target_val = (ssr==true)?'server':'static';
+        let target_val = (this.x_state.central_config.static==true)?'static':'server';
         let config = {
             ssr,
             target:target_val,
