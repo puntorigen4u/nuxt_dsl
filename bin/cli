@@ -9,7 +9,7 @@ var myArgs = process.argv.slice(2);
     await base.init();
     //await base.addCommands(require('./more_commands.js'));
     await base.process();
-    console.log('total time passed, since constructor: '+base.secsPassed_()+' secs');
+    console.log('total time passed, since constructor: '+base.secsPassed_());
 
 })().catch(err => {
     console.error(err);

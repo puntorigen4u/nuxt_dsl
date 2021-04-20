@@ -39,7 +39,7 @@ var myArgs = process.argv.slice(2);
     // call writer (when it exists haha)
     //
     */
-    console.log('total time passed, since constructor: '+base.secsPassed_()+' secs');
+    console.log('total time passed, since constructor: '+base.secsPassed_());
 
 })().catch(err => {
     console.error(err);

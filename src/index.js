@@ -2220,7 +2220,7 @@ node_modules/`;
 
     async deploy_local_logo() {
         let cfonts = require('cfonts');
-        cfonts.say('Local', { font:'block' });
+        cfonts.say('Local', { font:'block', gradient:'red,blue' });
     }
 
     async deploy_aws_logo() {
