@@ -6,11 +6,15 @@ String.prototype.replaceAll = function(strReplace, strWith) {
 };
 
 String.prototype.contains = function(test) {
-    if (this.indexOf(test) != -1) {
+    if (typeof this === 'string' && this.indexOf(test) != -1) {
         return true;
     } else {
         return false;
     }
+};
+
+String.prototype.right = function(chars) {
+    return this.substr(this.length-chars);
 };
 
 export default async function(context) {
@@ -2778,6 +2782,56 @@ export default async function(context) {
                 } else {
                     resp.valid = false;
                 }
+                return resp;
+            }
+        },
+
+        'def_literal_js': {
+            x_icons: 'penguin',
+            x_not_text_contains: 'por cada registro en',
+            x_level: '>1',
+            hint: 'Nodo JS literal; solo traduce $variables y referencias de refrescos a metodos async.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { text:node.text };
+                if (node.text.contains('$variables.') && node.text.right(2)=='()') {
+                    tmp.text = tmp.text .replaceAll('$variables.','this.$asyncComputed.')
+                                        .replaceAll('()','.update();')
+                                        .replaceAll(';;',';');
+                } else if (node.text.contains('$vars.') && node.text.right(2)=='()') {
+                    tmp.text = tmp.text .replaceAll('$vars.','this.$asyncComputed.')
+                                        .replaceAll('()','.update();')
+                                        .replaceAll(';;',';');
+                } else if (node.text.contains('$params.') && node.text.right(2)=='()') {
+                    //@TODO check this, doesn't look right
+                    tmp.text = tmp.text .replaceAll('$params.','this.$asyncComputed.')
+                                        .replaceAll('()','.update();')
+                                        .replaceAll(';;',';');
+                } else if (node.text.contains('$store.') && node.text.contains('this.$store.state')==false) {
+                    tmp.text = tmp.text .replaceAll('$store.','this.$store.state.')
+                                        .replaceAll('this.$nuxt.this.$store.','this.$nuxt.$store.');
+                } else {
+                    tmp.text = tmp.text .replaceAll('$variables.','this.')
+                                        .replaceAll('$vars.','this.')
+                                        .replaceAll('$params.','this.')
+                                        .replaceAll('$config.','process.env.');
+                }
+                //scrollTo plugin?
+                if (tmp.text.contains('this.$scrollTo')) {
+                    context.plugins['vue-scrollto'] = {
+                        global:true,
+                        npm: {
+                            'vue-scrollto': '*'
+                        }
+                    };
+                }
+                //vuescript2
+                if (tmp.text.contains('vuescript2')) tmp.text = tmp.text.replaceAll('vuescript2.',`require('vue-script2').`);
+                //code
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                resp.open += tmp.text;
                 return resp;
             }
         },

@@ -302,66 +302,22 @@ Vue.use(VueMask);`,
 
     //Defines preparation steps before processing nodes.
     async onPrepare() {
-        this.deploy_module = { pre:()=>{}, post:()=>{} };
-        if (this.x_state.central_config.deploy) {
-            if (this.x_state.central_config.deploy.contains('eb:')) {
+        this.deploy_module = { pre:()=>{}, post:()=>{}, deploy:()=>true };
+        let deploy = this.x_state.central_config.deploy+'';
+        if (deploy) {
+            if (deploy.contains('eb:')) {
                 this.deploy_module = new deploy_eb({ context:this });
-            } else if (this.x_state.central_config.deploy=='local') {
+            } else if (deploy=='local') {
                 this.deploy_module = new deploy_local({ context:this }); 
                 //
-            } else if (this.x_state.central_config.deploy=='localsls') {
+            } else if (deploy=='localsls') {
                 //sls local deployment
 
-            } else if (this.x_state.central_config.deploy==true) {
+            } else if (deploy==true) {
                 //sls deploy; use central_config domain for deployment
             }
         }
         await this.deploy_module.pre();
-        /*
-        if (!this.x_state.central_config.componente && this.x_state.central_config.deploy && this.x_state.central_config.deploy.indexOf('eb:') != -1) {
-            // if deploying to AWS eb:x, then recover/backup AWS credentials from local system
-            let ini = require('ini'),
-                path = require('path'),
-                fs = require('fs').promises;
-            // read existing AWS credentials if they exist
-            let os = require('os');
-            let aws_ini = '';
-            let aws_ini_file = path.join(os.homedir(), '/.aws/') + 'credentials';
-            try {
-                //this.debug('trying to read AWS credentials:',aws_ini_file);
-                aws_ini = await fs.readFile(aws_ini_file, 'utf-8');
-                this.debug('AWS credentials:',aws_ini);
-            } catch (err_reading) {}
-            // 
-            if (this.x_state.config_node.aws) {
-                // if DSL defines temporal AWS credentials for this app .. 
-                // create backup of aws credentials, if existing previously
-                if (aws_ini != '') {
-                    let aws_bak = path.join(this.x_state.dirs.base, 'aws_backup.ini');
-                    this.x_console.outT({ message: `config:aws:creating .aws/credentials backup`, color: 'yellow' });
-                    await fs.writeFile(aws_bak, aws_ini, 'utf-8');
-                }
-                // debug
-                this.x_console.outT({ message: `config:aws:access ->${this.x_state.config_node.aws.access}` });
-                this.x_console.outT({ message: `config:aws:secret ->${this.x_state.config_node.aws.secret}` });
-                // transform config_node.aws keys into ini
-                let to_ini = ini.stringify({
-                    aws_access_key_id: this.x_state.config_node.aws.access,
-                    aws_secret_access_key: this.x_state.config_node.aws.secret
-                }, { section: 'default' });
-                this.debug('Setting .aws/credentials from config node');
-                // save as .aws/credentials (ini file)
-                await fs.writeFile(aws_ini_file, to_ini, 'utf-8');
-
-            } else if (aws_ini != '') {
-                // if DSL doesnt define AWS credentials, use the ones defined within the local system.
-                let parsed = ini.parse(aws_ini);
-                if (parsed.default) this.debug('Using local system AWS credentials', parsed.default);
-                this.x_state.config_node.aws = { access: '', secret: '' };
-                if (parsed.default.aws_access_key_id) this.x_state.config_node.aws.access = parsed.default.aws_access_key_id;
-                if (parsed.default.aws_secret_access_key) this.x_state.config_node.aws.secret = parsed.default.aws_secret_access_key;
-            }
-        }*/
     }
 
     //Executed when compiler founds an error processing nodes.
@@ -1591,6 +1547,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         let ssr=(this.x_state.central_config[':mode']=='spa')?true:false;
         if (this.x_state.central_config[':ssr']) ssr=this.x_state.central_config[':ssr'];
         let target_val = (this.x_state.central_config.static==true)?'static':'server';
+        let deploy = this.x_state.central_config.deploy+'';
         let config = {
             ssr,
             target:target_val,
@@ -1680,13 +1637,13 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 delete ax_config.retries;
                 this.x_state.npm['axios-retry']='*';
             }
-            if (this.x_state.central_config.deploy.contains('eb:') || this.x_state.central_config.deploy.contains('true')) {
+            if (deploy.contains('eb:') || deploy.contains('true')) {
                 if (this.x_state.config_node.axios.deploy) {
                     ax_config.baseURL = this.x_state.config_node.axios.deploy;
                     ax_config.browserBaseURL = this.x_state.config_node.axios.deploy;
                     delete ax_config.deploy;
                 }
-            } else if (this.x_state.central_config.deploy=='local') {
+            } else if (deploy=='local') {
                 if (this.x_state.config_node.axios.local) {
                     ax_config.baseURL = this.x_state.config_node.axios.local;
                     ax_config.browserBaseURL = this.x_state.config_node.axios.local;
@@ -1861,9 +1818,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 
     async createServerlessYML() {
         let yaml = require('yaml'), data = {};
-        if (this.x_state.central_config.deploy.contains('eb:')==false &&
-            this.x_state.central_config.deploy!=false &&
-            this.x_state.central_config.deploy!='local') {
+        let deploy = this.x_state.central_config.deploy+'';
+        if (deploy.contains('eb:')==false &&
+            deploy!=false &&
+            deploy!='local') {
             data.service = this.x_state.central_config.service_name;
             data.custom = {
                 prune: {
@@ -1954,26 +1912,6 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             this.x_console.outT({ message:'Something went wrong deploying, check the console, fix it and run again.', color:'red' });
         };
         await this.deploy_module.post();
-        /*
-        //restores aws credentials if modified by onPrepare after deployment
-        if (!this.x_state.central_config.componente && 
-            this.x_state.central_config.deploy && 
-            this.x_state.central_config.deploy.indexOf('eb:') != -1 && 
-            this.x_state.config_node.aws) {
-            // @TODO add this block to deploys/eb 'post' method and onPrepare to 'pre' 20-br-21
-            // only execute after deploy and if user requested specific aws credentials on map
-            let path = require('path'), copy = require('recursive-copy'), os = require('os');
-            let fs = require('fs');
-            let aws_bak = path.join(this.x_state.dirs.base, 'aws_backup.ini');
-            let aws_file = path.join(os.homedir(), '/.aws/') + 'credentials';
-            // try to copy aws_bak over aws_ini_file (if bak exists)
-            let exists = s => new Promise(r=>fs.access(s, fs.constants.F_OK, e => r(!e)));
-            if ((await exists(aws_bak))) {
-                await copy(aws_bak,aws_file,{ overwrite:true, dot:true, debug:false });
-                // remove aws_bak file
-                await fs.promises.unlink(aws_bak);
-            }
-        }*/
     }
 
     async exists(dir_or_file) {
@@ -1985,26 +1923,6 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             return false;
         }
     }
-
-    /*
-    async deploy() {
-        if (this.x_state.central_config.deploy) {
-            let build = {};
-            if (this.x_state.central_config.deploy.contains('eb:')) {
-                await (new deploy_eb({ context:this })).deploy();
-                //aws eb deploy done
-            } else if (this.x_state.central_config.deploy=='local') {
-                await (new deploy_local({ context:this })).deploy();
-                //
-            } else if (this.x_state.central_config.deploy=='localsls') {
-                //sls local deployment
-
-            } else if (this.x_state.central_config.deploy==true) {
-                //sls deploy; use central_config domain for deployment
-            }
-        }
-        return true;
-    }*/
 
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
@@ -2537,6 +2455,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         return resp.join(' ');
     }
 
+    //serializes the given obj escaping quotes from values containing js code
     jsDump(obj) {
         let resp='';
         let escape = function(ob) {
