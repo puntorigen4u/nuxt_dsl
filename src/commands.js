@@ -1809,7 +1809,7 @@ export default async function(context) {
                         class: []
                     },
                     tmp = {};
-                let text = node.text.replaceAll('$variables', '')
+                let text = node.text.replaceAll('$variables.', '')
                     .replaceAll('$vars.', '')
                     .replaceAll('$params.', '')
                     .replaceAll('$config.', 'process.env.')

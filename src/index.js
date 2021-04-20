@@ -1570,10 +1570,14 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         //define structure with defaults
         let path = require('path');
         let target = path.join(this.x_state.dirs.app,`nuxt.config.js`);
+        let ssr=(this.x_state.central_config[':mode']=='spa')?false:true;
+        if (this.x_state.central_config[':ssr']) ssr=this.x_state.central_config[':ssr'];
+        let target_val = (ssr==true)?'server':'static';
         let config = {
-            mode: this.x_state.central_config[':mode'],
-            target: '',
+            ssr,
+            target:target_val,
             components: true,
+            telemetry: false,
             loading: {
                 color: 'orange',
                 height: '2px',
@@ -1996,7 +2000,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             //build again with output redirected to console, to show it to user
             try {
                 console.log('\n');
-                npm.build = await spawn('npm',['run','build'],{ cwd:this.x_state.dirs.app, stdio:'inherit' });
+                npm.build = await spawn('npm',['run','dev'],{ cwd:this.x_state.dirs.app, stdio:'inherit', timeout:15000 });
             } catch(eg) {
             }
             errors.push(nb);
@@ -2262,9 +2266,9 @@ node_modules/`;
                 //aws eb deploy done
             } else if (this.x_state.central_config.deploy=='local') {
                 if (this.x_state.nuxt_is_running==false) {
-                    //only launch nuxt server if its not running already
                     this.x_console.title({ title:'Deploying Local NuxtJS instance', color:'green' });
                     await this.deploy_local_logo();
+                    //only launch nuxt server if its not running already
                     // builds the app
                     build.try_build = await this.deploy_build(); 
                     if (build.try_build.length>0) {
@@ -2277,7 +2281,11 @@ node_modules/`;
                         this.x_console.outT({ message:`There was an error deploying locally.`, color:'red', data:build.deploy_local.toString()});
                         return false;
                     }
-                } 
+                } else {
+                    this.x_console.title({ title:'Updating local running NuxtJS instance', color:'green' });
+                    await this.deploy_local_logo();
+                    this.x_console.outT({ message:`Project updated.`, color:'green' });
+                }
             } else if (this.x_state.central_config.deploy=='localsls') {
                 //sls local deployment
 
