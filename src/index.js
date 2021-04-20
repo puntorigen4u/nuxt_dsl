@@ -2005,7 +2005,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
     }
 
     async deploy_local() {
-        let errors=[];
+        let errors=[],results={};
         let spawn = require('await-spawn');
         let spinner = this.x_console.spinner({ message:'Deploying local instance' });
         this.debug('Local deploy');
@@ -2333,7 +2333,7 @@ node_modules/`;
                 vue.script = `{concepto:import:mixins}
 				${script_imports}
 				export default {
-					${vue.script};
+					${vue.script}
 				}`
                 // **** **** end script wrap **** **** 
                 // process Mixins
