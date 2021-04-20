@@ -2008,10 +2008,12 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         let errors=[],results={};
         let spawn = require('await-spawn');
         let spinner = this.x_console.spinner({ message:'Deploying local instance' });
-        this.debug('Local deploy');
+        //this.debug('Local deploy');
         spinner.start('Deploying local instance');
         try {
-            results.git_add = await spawn('npm',['run','dev'],{ cwd:this.x_state.dirs.app });
+            //launch in a new terminal
+            await this.launchTerminal('npm',['run','dev'],this.x_state.dirs.app);
+            //results.git_add = await spawn('npm',['run','dev'],{ cwd:this.x_state.dirs.app });
             spinner.succeed('Project launched successfully');
         } catch(gi) { 
             results.git_add = gi; 
@@ -2201,9 +2203,15 @@ node_modules/`;
     //helper for launching terminal windows with a given cmd
     async launchTerminal(cmd,args=[],basepath) {
         let spawn = require('await-spawn');
-        let args2 = [cmd,args.join(' ')], resp={ error:false };
+        let args_p = '';
+        let resp={ error:false };
+        if (basepath) { 
+            args_p = `sleep 2; clear; cd ${basepath} && ${cmd} ${args.join(' ')}`;
+        } else {
+            args_p = 'sleep 2; clear; '+cmd+' '+args.join(' ')
+        }
         try {
-            resp = await spawn('npx',['terminal-tab',...args2], { cwd:basepath});
+            resp = await spawn('npx',['terminal-tab',args_p]);
         } catch(e) {
             resp = {...e,...{error:true}};
         }
