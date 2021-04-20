@@ -8,6 +8,8 @@ const concepto = require('concepto');
  * @module 	vue_dsl
  **/
 import internal_commands from './commands'
+import deploy_local from './deploys/local'
+import deploy_eb from './deploys/eb'
 
 export default class vue_dsl extends concepto {
 
@@ -300,6 +302,22 @@ Vue.use(VueMask);`,
 
     //Defines preparation steps before processing nodes.
     async onPrepare() {
+        this.deploy_module = { pre:()=>{}, post:()=>{} };
+        if (this.x_state.central_config.deploy) {
+            if (this.x_state.central_config.deploy.contains('eb:')) {
+                this.deploy_module = new deploy_eb({ context:this });
+            } else if (this.x_state.central_config.deploy=='local') {
+                this.deploy_module = new deploy_local({ context:this }); 
+                //
+            } else if (this.x_state.central_config.deploy=='localsls') {
+                //sls local deployment
+
+            } else if (this.x_state.central_config.deploy==true) {
+                //sls deploy; use central_config domain for deployment
+            }
+        }
+        await this.deploy_module.pre();
+        /*
         if (!this.x_state.central_config.componente && this.x_state.central_config.deploy && this.x_state.central_config.deploy.indexOf('eb:') != -1) {
             // if deploying to AWS eb:x, then recover/backup AWS credentials from local system
             let ini = require('ini'),
@@ -343,7 +361,7 @@ Vue.use(VueMask);`,
                 if (parsed.default.aws_access_key_id) this.x_state.config_node.aws.access = parsed.default.aws_access_key_id;
                 if (parsed.default.aws_secret_access_key) this.x_state.config_node.aws.secret = parsed.default.aws_secret_access_key;
             }
-        }
+        }*/
     }
 
     //Executed when compiler founds an error processing nodes.
@@ -1931,14 +1949,17 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 
     async onEnd() {
         //execute deploy (npm install, etc) AFTER vue compilation (18-4-21: this is new)
-        if (!(await this.deploy()) && !this.x_state.central_config.componente) {
+        if (!(await this.deploy_module.deploy()) && !this.x_state.central_config.componente) {
             this.x_console.outT({ message:'Something went wrong deploying, check the console, fix it and run again.', color:'red' });
         };
+        await this.deploy_module.post();
+        /*
         //restores aws credentials if modified by onPrepare after deployment
         if (!this.x_state.central_config.componente && 
             this.x_state.central_config.deploy && 
             this.x_state.central_config.deploy.indexOf('eb:') != -1 && 
             this.x_state.config_node.aws) {
+            // @TODO add this block to deploys/eb 'post' method and onPrepare to 'pre' 20-br-21
             // only execute after deploy and if user requested specific aws credentials on map
             let path = require('path'), copy = require('recursive-copy'), os = require('os');
             let fs = require('fs');
@@ -1951,7 +1972,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 // remove aws_bak file
                 await fs.promises.unlink(aws_bak);
             }
-        }
+        }*/
     }
 
     async exists(dir_or_file) {
@@ -1964,328 +1985,16 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         }
     }
 
-    async deploy_build() {
-        // builds the project
-        let spawn = require('await-spawn'), path = require('path'), fs = require('fs').promises;
-        //let ora = require('ora');
-        let node_modules_final = path.join(this.x_state.dirs.app,'node_modules');
-        let npm={}, errors=[];
-        this.x_console.outT({ message:`Building project`, color:'cyan' });
-        let spinner = this.x_console.spinner({ message:'Building project' });
-        let node_modules_exist = await this.exists(node_modules_final);
-        // issue npm install (400mb)
-        if (!node_modules_exist) {
-            spinner.start(`Installing npm packages`);
-            //this.x_console.outT({ message:`Installing npm packages` });
-            try {
-                npm.install = await spawn('npm',['install'],{ cwd:this.x_state.dirs.app }); //, stdio:'inherit'
-                spinner.succeed(`npm install succesfully`);
-            } catch(n) { 
-                npm.install=n; 
-                spinner.fail('Error installing npm packages');
-                errors.push(n);
-            }
-        } else {
-            spinner.succeed(`Using existing npm packages`);
-        }
-        // issue npm run build
-        spinner.start(`Building NUXT project`);
-        try {
-            npm.build = await spawn('npm',['run','build'],{ cwd:this.x_state.dirs.app });
-            spinner.succeed('Project build successfully');
-        } catch(nb) { 
-            npm.build = nb; 
-            spinner.fail('NUXT build failed');
-            this.x_console.out({ message:`Building NUXT again to show error in console`, color:'red' });
-            //build again with output redirected to console, to show it to user
-            try {
-                console.log('\n');
-                npm.build = await spawn('npm',['run','dev'],{ cwd:this.x_state.dirs.app, stdio:'inherit', timeout:15000 });
-            } catch(eg) {
-            }
-            errors.push(nb);
-        }
-        return errors;
-    }
-
-    async deploy_local() {
-        let errors=[],results={};
-        let spawn = require('await-spawn');
-        let spinner = this.x_console.spinner({ message:'Deploying local instance' });
-        //this.debug('Local deploy');
-        spinner.start('Deploying local instance');
-        try {
-            //launch in a new terminal
-            await this.launchTerminal('npm',['run','dev'],this.x_state.dirs.app);
-            //results.git_add = await spawn('npm',['run','dev'],{ cwd:this.x_state.dirs.app });
-            spinner.succeed('Project launched successfully');
-        } catch(gi) { 
-            results.git_add = gi; 
-            spinner.fail('Project failed to launch');
-            errors.push(gi);
-        }
-        return errors;
-    }
-
-    async deploy_aws_eb() {
-        let spawn = require('await-spawn');
-        let errors = [];
-        //AWS EB deploy
-        this.debug('AWS EB deploy');
-        let eb_full = this.x_state.central_config.deploy.replaceAll('eb:','');
-        let eb_appname = eb_full;
-        let eb_instance = `${eb_appname}-dev`;
-        if (this.x_state.central_config.deploy.contains(',')) {
-            eb_appname = eb_full.split(',')[0];
-            eb_instance = eb_full.split(',').splice(-1)[0];
-        }
-        if (eb_appname!='') {
-            let spinner = this.x_console.spinner({ message:'Creating config files' });
-            //this.x_console.outT({ message:`Creating EB config yml: ${eb_appname} in ${eb_instance}`, color:'yellow' });
-            let yaml = require('yaml');
-            let data = {
-                'branch-defaults': {
-                    master: {
-                        enviroment: eb_instance,
-                        group_suffix: null
-                    }
-                },
-                global: {
-                    application_name: eb_appname,
-                    branch: null,
-                    default_ec2_keyname: 'aws-eb',
-                    default_platform: 'Node.js',
-                    default_region: 'us-east-1',
-                    include_git_submodules: true,
-                    instance_profile: null,
-                    platform_name: null,
-                    platform_version: null,
-                    profile: null,
-                    repository: null,
-                    sc: 'git',
-                    workspace_type: 'Application'
-                }
-            };
-            //create .elasticbeanstalk directory
-            let path = require('path'), fs = require('fs').promises;
-            let eb_base = this.x_state.dirs.app;
-            if (this.x_state.central_config.static) eb_base = path.join(eb_base,'dist');
-            let eb_dir = path.join(eb_base,'.elasticbeanstalk');
-            try { await fs.mkdir(eb_dir, { recursive: true }); } catch(ef) {}
-            //write .elasticbeanstalk/config.yml file with data
-            await this.writeFile(path.join(eb_dir,'config.yml'),yaml.stringify(data));
-            //write .npmrc file
-            await this.writeFile(path.join(eb_base,'.npmrc'),'unsafe-perm=true');
-            //create .ebignore file
-let eb_ig = `node_modules/
-jspm_packages/
-.npm
-.node_repl_history
-*.tgz
-.yarn-integrity
-.editorconfig
-# Mac OSX
-.DS_Store
-# Elastic Beanstalk Files
-.elasticbeanstalk/*
-!.elasticbeanstalk/*.cfg.yml
-!.elasticbeanstalk/*.global.yml`;
-            await this.writeFile(path.join(eb_base,'.ebignore'),eb_ig);
-            //init git if not already
-            spinner.succeed('EB config files created successfully');
-            let results = {};
-            if (!(await this.exists(path.join(eb_base,'.git')))) {
-                //git directory doesn't exist
-                this.x_console.outT({ message:'CREATING .GIT DIRECTORY' });
-                spinner.start('Initializing project git repository');
-                spinner.text('Creating .gitignore file');
-let git_ignore=`# Mac System files
-.DS_Store
-.DS_Store?
-__MACOSX/
-Thumbs.db
-# VUE files
-node_modules/`;
-                
-                await this.writeFile(path.join(eb_base,'.gitignore'),git_ignore);
-                spinner.succeed('.gitignore created');
-                spinner.start('Initializing local git repository ..');
-                try {
-                    results.git_init = await spawn('git',['init','-q'],{ cwd:eb_base });
-                    spinner.succeed('GIT initialized');
-                } catch(gi) { 
-                    results.git_init = gi; 
-                    spinner.fail('GIT failed to initialize');
-                    errors.push(gi);
-                }
-                spinner.start('Adding files to local git ..');
-                try {
-                    results.git_add = await spawn('git',['add','.'],{ cwd:eb_base });
-                    spinner.succeed('git added files successfully');
-                } catch(gi) { 
-                    results.git_add = gi; 
-                    spinner.fail('git failed to add local files');
-                    errors.push(gi);
-                }
-                spinner.start('Creating first git commit ..');
-                try {
-                    results.git_commit = await spawn('git',['commit','-m','Inicial'],{ cwd:eb_base });
-                    spinner.succeed('git created first commit successfully');
-                } catch(gi) { 
-                    results.git_commit = gi; 
-                    spinner.fail('git failed to create first commit');
-                    errors.push(gi);
-                }
-
-            }
-            if (this.x_state.central_config.static==true) {
-                spinner.start('Deploying *static version* to AWS ElasticBean .. please wait');
-            } else {
-                spinner.start('Deploying to AWS ElasticBean .. please wait');
-            }
-            // execute eb deploy
-            try {
-                results.eb_deploy = await spawn('eb',['deploy',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
-                spinner.succeed('EB deployed successfully');
-            } catch(gi) { 
-                //test if eb failed because instance has not being created yet, if so create it
-                results.eb_deploy = gi; 
-                spinner.warn('EB failed to deploy');
-                //this.x_console.outT({ message:gi.toString(), color:'red'});
-                if (gi.code==4) {
-                    // IAM credentials are invalid or instance hasn't being created (eb create is missing)
-                    spinner.start('Checking if AWS credentials are valid ..');
-                    try {
-                        results.eb_create = await spawn('aws',['sts','get-caller-identity'],{ cwd:eb_base }); //, stdio:'inherit'
-                        spinner.succeed('AWS credentials are ok');
-                    } catch(aws_cred) {
-                        spinner.fail('Current AWS credentials are invalid');
-                        errors.push(aws_cred);
-                    }
-                    if (errors.length==0) {
-                        spinner.start('EB it seems this is a new deployment: issuing eb create');
-                        try {
-                            //console.log('\n');
-                            results.eb_create = await spawn('eb',['create',eb_instance],{ cwd:eb_base }); //, stdio:'inherit'
-                            spinner.succeed('EB created and deployed successfully');
-                        } catch(ec) {
-                            this.x_console.outT({ message:gi.stdout.toString(), color:'red'});
-                            spinner.fail('EB creation failed');
-                            errors.push(gi);
-                        }
-                    }
-                } else {
-                    this.x_console.outT({ message:'error: eb create (exitcode:'+gi.code+'):'+gi.stdout.toString(), color:'red'});
-                    errors.push(gi);
-                }
-            }
-            //if errors.length==0 && this.x_state.central_config.debug=='true'
-            if (errors.length==0 && this.x_state.central_config.debug==true) {
-                //open eb logging console
-                let ci = require('ci-info');              
-                if (ci.isCI==false) {
-                    spinner.start('Opening EB debug terminal ..');
-                    try {
-                        let abs_cmd = path.resolve(eb_base);
-                        let cmd = `clear; sleep 2; clear; cd ${abs_cmd} && clear && eb open ${eb_instance}`;
-                        //await this.launchTerminal(cmd);
-                        results.eb_log = await spawn('npx',['terminal-tab',cmd],{ cwd:abs_cmd }); //, detached:true
-                        spinner.succeed(`EB logging opened on new tab successfully`);
-                    } catch(ot) { 
-                        results.eb_log = ot;
-                        spinner.fail(`I was unable to open a new tab terminal window with the EB debugging console`);
-                    }
-                } else {
-                    spinner.warn(`Omitting EB debug, because a CI env was detected.`);
-                }
-            }
-            // eb deploy done
-        }
-        return errors;
-    }
-    
-    //helper for launching terminal windows with a given cmd
-    async launchTerminal(cmd,args=[],basepath) {
-        let spawn = require('await-spawn');
-        let args_p = '';
-        let resp={ error:false };
-        if (basepath) { 
-            args_p = `sleep 2; clear; cd ${basepath} && ${cmd} ${args.join(' ')}`;
-        } else {
-            args_p = 'sleep 2; clear; '+cmd+' '+args.join(' ')
-        }
-        try {
-            resp = await spawn('npx',['terminal-tab',args_p]);
-        } catch(e) {
-            resp = {...e,...{error:true}};
-        }
-        return resp;
-    }
-
-    async deploy_local_logo() {
-        let cfonts = require('cfonts');
-        cfonts.say('Local', { font:'block', gradient:'red,blue' });
-    }
-
-    async deploy_aws_logo() {
-        let asciify = require('asciify-image'), path = require('path');
-        let aws = path.join(__dirname,'assets','aws.png');
-        let logo_txt = await asciify(aws, 
-            { 
-                fit:'width',
-                width:25
-            }
-        );
-        console.log(logo_txt);
-    }
-
-    async deploy_checks() {
-        // check if aws and git cmds are present
-        let errors=[];
-        return errors;
-    }
-
+    /*
     async deploy() {
         if (this.x_state.central_config.deploy) {
             let build = {};
             if (this.x_state.central_config.deploy.contains('eb:')) {
-                this.x_console.title({ title:'Deploying to Amazon AWS Elastic Bean', color:'green' });
-                await this.deploy_aws_logo();
-                // builds the app
-                build.try_build = await this.deploy_build(); 
-                if (build.try_build.length>0) {
-                    this.x_console.outT({ message:`There was an error building the project.`, color:'red' });
-                    return false;
-                }
-                // deploys to aws
-                build.deploy_aws_eb = await this.deploy_aws_eb(); //test if results.length>0 (meaning there was an error)
-                if (build.deploy_aws_eb.length>0) {
-                    this.x_console.outT({ message:`There was an error deploying to Amazon AWS.`, color:'red', data:build.deploy_aws_eb.toString()});
-                    return false;
-                }
+                await (new deploy_eb({ context:this })).deploy();
                 //aws eb deploy done
             } else if (this.x_state.central_config.deploy=='local') {
-                if (this.x_state.nuxt_is_running==false) {
-                    this.x_console.title({ title:'Deploying Local NuxtJS instance', color:'green' });
-                    await this.deploy_local_logo();
-                    //only launch nuxt server if its not running already
-                    // builds the app
-                    build.try_build = await this.deploy_build(); 
-                    if (build.try_build.length>0) {
-                        this.x_console.outT({ message:`There was an error building the project.`, color:'red' });
-                        return false;
-                    }
-                    //issue npm run dev
-                    build.deploy_local = await this.deploy_local();
-                    if (build.deploy_local.length>0) {
-                        this.x_console.outT({ message:`There was an error deploying locally.`, color:'red', data:build.deploy_local.toString()});
-                        return false;
-                    }
-                } else {
-                    this.x_console.title({ title:'Updating local running NuxtJS instance', color:'green' });
-                    await this.deploy_local_logo();
-                    this.x_console.outT({ message:`Project updated.`, color:'green' });
-                }
+                await (new deploy_local({ context:this })).deploy();
+                //
             } else if (this.x_state.central_config.deploy=='localsls') {
                 //sls local deployment
 
@@ -2294,7 +2003,7 @@ node_modules/`;
             }
         }
         return true;
-    }
+    }*/
 
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, beautify = require('js-beautify');
@@ -2435,9 +2144,6 @@ node_modules/`;
             //create serverless.yml for deploy:sls - cfc:12881
             await this.createServerlessYML();
             //execute deploy (npm install, etc) - moved to onEnd
-            /*if (!(await this.deploy())) {
-                this.x_console.outT({ message:'Something went wrong deploying', color:'red' });
-            };*/
         }
         
     }
