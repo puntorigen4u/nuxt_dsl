@@ -78,7 +78,7 @@ export default async function(context) {
                 .replaceAll('$store.', '$store.state.').trim();
             //
             if (keytest == 'props') {
-                value.split(',').map(x => {
+                value.split(' ').map(x => {
                     params[x] = null
                 });
             } else if (keytest in attr_map && value != tvalue) {
@@ -1182,19 +1182,7 @@ export default async function(context) {
                 }
                 // render by type
                 delete params.type;
-                if (tmp.type == 'text') {
-                    if (context.x_state.es6) {
-                        if (params[':mask']) {
-                            params['v-mask'] = params[':mask'];
-                            delete params[':mask'];
-                        } else if (params['mask']) {
-                            params['v-mask'] = `'${params['mask']}'`;
-                            delete params['mask'];
-                        }
-                    }
-                    resp.open += context.tagParams('v-text-field', params, false) + '\n';
-                    resp.close += `</v-text-field>\n`;
-                } else if (tmp.type == 'combo') {
+                if (tmp.type == 'combo') {
                     resp.open += context.tagParams('v-combobox', params, false) + '\n';
                     resp.close += `</v-combobox>\n`;
                 } else if (tmp.type == 'toogle') {
@@ -1262,6 +1250,17 @@ export default async function(context) {
                         resp.open += context.tagParams('v-select', params, false) + '\n';
                         resp.close += '</v-select>\n';
                     }
+                } else {
+                    // text type or any other type
+                    if (tmp[':mask']) {
+                        tmp['v-mask'] = tmp[':mask'];
+                        delete tmp[':mask'];
+                    } else if (tmp['mask']) {
+                        tmp['v-mask'] = `'${tmp['mask']}'`;
+                        delete tmp['mask'];
+                    }
+                    resp.open += context.tagParams('v-text-field', tmp, false) + '\n';
+                    resp.close += `</v-text-field>\n`;
                 }
                 // return
                 return resp;
@@ -1503,7 +1502,7 @@ export default async function(context) {
                         .replaceAll('$store.', '$store.state.');
                     // query attributes
                     if (key.toLowerCase() == 'props') {
-                        for (let i of value.split(',')) {
+                        for (let i of value.split(' ')) {
                             params[i] = null;
                         }
                     } else {
@@ -1540,7 +1539,7 @@ export default async function(context) {
                         .replaceAll('$env.', 'process.env.')
                         .replaceAll('$store.', '$store.state.').trim();
                     if (keytest == 'props') {
-                        for (let i of tvalue.split(',')) {
+                        for (let i of tvalue.split(' ')) {
                             params[i] = null;
                         }
                     } else {
@@ -1591,7 +1590,7 @@ export default async function(context) {
                     if (keytest == 'class') {
                         params.class = tvalue;
                     } else if (keytest == 'props') {
-                        for (let i of tvalue.split(',')) {
+                        for (let i of tvalue.split(' ')) {
                             params[i] = null;
                         }
                     } else if ('padding,margen'.split(',').includes(keytest)) {
@@ -1767,7 +1766,7 @@ export default async function(context) {
                         .replaceAll('$store.', '$store.state.');
                     // query attributes
                     if (key.toLowerCase() == 'props') {
-                        for (let i of value.split(',')) {
+                        for (let i of value.split(' ')) {
                             params[i] = null;
                         }
                     } else if (key.charAt(0) != ':' && value != node.attributes[key]) {
@@ -2044,14 +2043,14 @@ export default async function(context) {
                     }
                     delete params.scrollto;
                 }
-                // re-map props latest version vuetify props to one used here
+                // re-map props from older version of vuetify props to ones used here
                 if (params.text && params.text == null) {
                     params.flat = null;
                     delete params.text;
                 }
-                if (params.rounded && params.rounded == null) {
-                    params.round = null;
-                    delete params.rounded;
+                if (params.round && params.round == null) {
+                    params.rounded = null;
+                    delete params.round;
                 }
                 // pre-process text
                 let text = node.text.trim().replaceAll('boton:', '');

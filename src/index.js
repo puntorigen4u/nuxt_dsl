@@ -1934,7 +1934,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (ext=='js' || ext=='json') {
             resp = beautify_js(resp, { space_in_empty_paren: false });
         } else if (ext=='vue') {
-            resp = beautify_vue(resp, { indent_scripts: 'keep' });
+            resp = beautify_vue(resp.replaceAll(`="xpropx"`,''), { indent_scripts: 'keep' });
         } else if (ext=='css') {
             resp = beautify_css(resp, { indent_scripts: 'keep' });
         }
@@ -2446,8 +2446,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         }
         // process
         for (let [key, value] of Object.entries(tmp)) {
-            if (value === null) {
-                resp.push(key);
+            if (value == null) {
+                //needed cause cheerio assigns empty values to props, and vue props don't have values
+                //little hack that works together with writeFile method
+                resp.push(`${key}='xpropx'`); 
             } else if (typeof value !== 'object' && typeof value !== 'function' && typeof value !== 'undefined') {
                 resp.push(`${key}='${value}'`);
             }
