@@ -721,9 +721,6 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 vue.script += `data() {\n`;
                 vue.script += ` return ${this.jsDump(page.variables)}\n`;
                 vue.script += `}\n`;
-                if (page.tipo != 'componente') {
-                    console.log('PABLO PABLO..VARS:',page.variables);
-                }
             }
         }
         return vue;

@@ -2402,6 +2402,8 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
+                if (resp.state.vars_path) resp.state.vars_last_level = resp.state.vars_path.length;
+                //console.log('FIRST CALL var state',resp.state );
                 let params = {},
                     tmp = {
                         type: 'string',
@@ -2543,18 +2545,45 @@ export default async function(context) {
                     resp.state.vars_last_level = tmp.level;
                 } else {
                     // variables[prev_node_text][current_field] = value
-                    if (resp.state.vars_last_level == tmp.level) {
-                        // this node is a brother of the last processed one
+                    //console.log(`testing ${tmp.level} (current level) with ${resp.state.vars_last_level} (last var level)`);
+                    if (tmp.level>resp.state.vars_last_level) {
+                        //current is son of prev
+                        //console.log(`current var '${tmp.field}' (${tmp.level}) is SON of '${resp.state.vars_path.join('.')}' (${resp.state.vars_last_level})`);
+                        resp.state.vars_path.push(tmp.field); // push new var to paths
+                        resp.state.vars_types.push(tmp.type);
+                        //console.log(`trying to set: ${resp.state.vars_path.join('.')} on context.x_state.pages['${state.current_page}'].variables as ${tmp.type}`);
+
+                    } else if (tmp.level==resp.state.vars_last_level) {
+                        //current is brother of prev
+                        //console.log(`current var '${tmp.field}' (${tmp.level}) is BROTHER of '${resp.state.vars_path.join('.')}' (${resp.state.vars_last_level})`);
                         resp.state.vars_path.pop(); // remove last field from var path
                         resp.state.vars_types.pop(); // remove last field type from vars_types
+                        //console.log(`vars_path AFTER pop: `,resp.state.vars_path);
+                        resp.state.vars_path.push(tmp.field); // push new var to paths
+                        resp.state.vars_types.push(tmp.type);
+                        //console.log(`trying to set: ${resp.state.vars_path.join('.')} on context.x_state.pages['${state.current_page}'].variables as ${tmp.type}`);
+
+                    } else {
+                        //current path is smaller than last
+                        //console.log(`current var '${tmp.field}' (${tmp.level}) is UPPER of '${resp.state.vars_path.join('.')}' (${resp.state.vars_last_level})`);
+                        //console.log(`new var has higher hierarchy than last! ${resp.state.vars_last_level} > ${tmp.level}`);
+                        let amount=new Array(resp.state.vars_last_level-tmp.level+1);
+                        for (let t of amount) {
+                            //console.log(`vars_path before pop: `,resp.state.vars_path);
+                            resp.state.vars_path.pop(); // remove last field from var path
+                            resp.state.vars_types.pop(); // remove last field type from vars_types
+                        }
+                        //console.log(`vars_path AFTER pops: `,resp.state.vars_path);
+                        resp.state.vars_path.push(tmp.field); // push new var to paths
+                        resp.state.vars_types.push(tmp.type);
+                        //console.log(`trying to set: ${resp.state.vars_path.join('.')} on context.x_state.pages['${state.current_page}'].variables as ${tmp.type}`);
                     }
-                    resp.state.vars_path.push(tmp.field); // push new var to paths
-                    //console.log(`trying to set: ${resp.state.vars_path.join('.')} on context.x_state.pages['${state.current_page}'].variables as ${tmp.type}`);
-                    if (resp.state.vars_types[resp.state.vars_types.length - 1] == 'object') {
+                    //console.log('MY DAD TYPE:'+resp.state.vars_types[resp.state.vars_types.length - 2]);
+                    if (resp.state.vars_types[resp.state.vars_types.length - 2] == 'object') {
                         // dad was an object
                         //console.log('dad was an object',resp.state.vars_types[resp.state.vars_types.length-1]);
                         setToValue(context.x_state.pages[state.current_page].variables, params.value, resp.state.vars_path.join('.'));
-                    } else if (resp.state.vars_types[resp.state.vars_types.length - 1] == 'array') {
+                    } else if (resp.state.vars_types[resp.state.vars_types.length - 2] == 'array') {
                         //console.log('dad was an array',resp.state.vars_types[resp.state.vars_types.length-1]);
                         // dad is an array.. 
                         let copy_dad = [...resp.state.vars_path];
@@ -2579,9 +2608,11 @@ export default async function(context) {
                         // re-set daddy with new value
                         setToValue(context.x_state.pages[state.current_page].variables, daddy, copy_dad.join('.'));
                     }
-                    resp.state.vars_types.push(tmp.type); // push new var type to vars_types
+                    //*resp.state.vars_types.push(tmp.type); // push new var type to vars_types
                     context.x_state.pages[state.current_page].var_types[resp.state.vars_path.join('.')] = tmp.type;
-                    resp.state.vars_last_level = tmp.level;
+                    resp.state.vars_last_level = resp.state.vars_path.length;
+                    //console.log('BEFORE close: state for next var (cur level: '+tmp.level+', last_level:'+resp.state.vars_last_level+')',resp.state);
+                    //resp.state.vars_last_level = tmp.level;
                 }
                 return resp;
             }
