@@ -648,31 +648,40 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 this.debug('- declare componente:props');
                 if (vue.first) vue.script += ',\n';
                 vue.first = true;
+                let isNumeric = function(n) {
+                    return !isNaN(parseFloat(n)) && isFinite(n);
+                };
                 let props = [];
                 if (Object.keys(page.defaults) != '') {
-                    page.params.split(',').map(function(param) {
+                    page.params.split(',').map(function(key) {
                         let def_val = '';
                         if (page.defaults[key]) def_val = page.defaults[key];
-                        if (def_val == true || def_val == 'true' || def_val == 'false' || def_val == false) {
-                            props.push(`${key}: { default: ${def_val}}`);
-                        } else if (!isNaN(+(def_val))) { //if def_val is number or string with number
-                            props.push(`${key}: { default: ${def_val}}`);
+                        if (def_val == 'true' || def_val == 'false') {
+                            props.push(`${key}: { type: Boolean, default: ${def_val}}`);
+                        } else if (isNumeric(def_val)) { //if def_val is number or string with number
+                            props.push(`${key}: { type: Number, default: ${def_val}}`);
                         } else if (def_val.indexOf('[') != -1 && def_val.indexOf(']') != -1) {
                             props.push(`${key}: { type: Array, default: () => ${def_val}}`);
                         } else if (def_val.indexOf('{') != -1 && def_val.indexOf('}') != -1) {
                             props.push(`${key}: { type: Object, default: () => ${def_val}}`);
+                        } else if (def_val.indexOf("()") != -1) { //ex. new Date()
+                            props.push(`${key}: { type: Object, default: () => ${def_val}}`);
+                        } else if (def_val.toLowerCase().indexOf("null") != -1) {
+                            props.push(`${key}: { default: null }`);
                         } else if (def_val.indexOf("'") != -1) {
-                            props.push(`${key}: { default: ${def_val}}`);
+                            props.push(`${key}: { type: String, default: ${def_val}}`);
                         } else {
                             props.push(`${key}: { default: '${def_val}' }`);
                         }
                     });
+                    vue.script += `\tprops: {${props.join(',')}}`;
                 } else {
-                    page.params.split(',').map(function(param) {
+                    page.params.split(',').map(function(key) {
                         props.push(`'${key}'`);
                     });
+                    vue.script += `\tprops: [${props.join(',')}]`;                    
                 }
-                vue.script += `\tprops: {${props.join(',')}}`;
+                
             }
             // declare meta data
             if (page.xtitle || page.meta.length > 0) {
@@ -712,6 +721,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 vue.script += `data() {\n`;
                 vue.script += ` return ${this.jsDump(page.variables)}\n`;
                 vue.script += `}\n`;
+                if (page.tipo != 'componente') {
+                    console.log('PABLO PABLO..VARS:',page.variables);
+                }
             }
         }
         return vue;
@@ -2490,7 +2502,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             for (let llave in obj) {
                 let nuevo = `${llave}: `;
                 let valor = obj[llave];
-                if (typeof valor === 'object') {
+                if (typeof valor === 'object' || Array.isArray(valor)) {
                     nuevo += this.jsDump(valor);
                 } else {
                     nuevo += escape(valor);

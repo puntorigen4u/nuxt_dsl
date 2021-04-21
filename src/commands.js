@@ -646,7 +646,16 @@ export default async function(context) {
                             params[key] = value;
                         }
                         //context.x_state.pages[resp.state.current_page].xtitle = value;
-
+                        
+                    }
+                    if (resp.state.from_def_layout || resp.state.from_def_componente) {
+                        if (key=='params') {
+                            context.x_state.pages[resp.state.current_page].params=value;
+                        } else if (key.contains('params:') || key.contains('param:')) {
+                            let tmpo = key.replaceAll('params:','').replaceAll('param:','').trim();
+                            context.x_state.pages[resp.state.current_page].defaults[tmpo] = value;
+                        }
+                        //console.log('PABLO COMPONENTE!! o LAYOUT!!',{ key, value });
                     }
                 }.bind(this));
                 // has comments ?
@@ -2044,11 +2053,11 @@ export default async function(context) {
                     delete params.scrollto;
                 }
                 // re-map props from older version of vuetify props to ones used here
-                if (params.text && params.text == null) {
-                    params.flat = null;
-                    delete params.text;
+                if ('flat' in params && params.flat == null) {
+                    params.text = null;
+                    delete params.flat;
                 }
-                if (params.round && params.round == null) {
+                if ('round' in params && params.round == null) {
                     params.rounded = null;
                     delete params.round;
                 }
@@ -2199,11 +2208,10 @@ export default async function(context) {
                     state
                 });
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_contenido',node);
                 // write tag
-                resp.open += context.tagParams('main', {}, false) + `\n`;
-                resp.open += context.tagParams('v-content', {}, false) + `\n`;
-                resp.close += `</v-content>\n`;
-                resp.close += `</main>\n`;
+                resp.open += context.tagParams('v-main', params, false) + `\n`;
+                resp.close += `</v-main>\n`;
                 return resp;
             }
         },
@@ -2856,7 +2864,7 @@ export default async function(context) {
         //def_modificar
         //def_probar
         //def_event_try (def_probar_try)
-        //def_literal_js
+        //*def_literal_js
         //def_guardar_nota
         //def_console
         //def_xcada_registro
