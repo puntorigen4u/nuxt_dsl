@@ -2972,11 +2972,33 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let tmp = { var:node.text.split(',').splice(-1)[0] };
+                let tmp = { var:node.text.split(',').pop() };
                 //code
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
                 context.x_state.npm['nanoid']='2.1.1';
                 resp.open += `let ${tmp.var} = require('nanoid')();\n`;
+                return resp;
+            }
+        },
+
+        'def_aftertime': {
+            x_icons: 'desktop_new',
+            x_text_pattern: `ejecutar en "*" +(segundos|minutos|horas)`,
+            x_level: '>2',
+            hint: 'Ejecuta su contenido desfasado en los segundos especificados.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let time = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: '"',
+                    symbol_closing: '"'
+                }).trim();
+                //code
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                resp.open += `setTimeout(function q() {\n`;
+                resp.close = `}.bind(this), 1000*${time});\n`;
                 return resp;
             }
         },
@@ -2989,7 +3011,7 @@ export default async function(context) {
         //def_consultar_web
         //def_consultar_web_upload
         //def_consultar_web_download
-        //def_aftertime
+        //*def_aftertime
         //*def_struct
         //def_extender
         //*def_npm_instalar
