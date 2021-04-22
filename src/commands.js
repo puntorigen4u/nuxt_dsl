@@ -2956,7 +2956,7 @@ export default async function(context) {
                 attr.var = node.text.split(',').splice(-1)[0];
                 //code
                 context.x_state.npm[attr.text] = attr.version;
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;                
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
                 if (attr.tipo=='import') {
                     if ('current_func' in resp.state) {
                         context.x_state.functions[resp.state.current_func].imports[attr.text] = attr.tipo_;
@@ -2966,6 +2966,24 @@ export default async function(context) {
                 } else if (attr.require) {
                     resp.open += `let ${attr.var} = require('${attr.text}');\n`;
                 }
+                return resp;
+            }
+        },
+
+        'def_crear_id_unico': {
+            x_icons: 'desktop_new',
+            x_text_contains: 'crear id unico,,', //,,=requires comma
+            x_level: '>2',
+            hint: 'Obtiene un id unico (en 103 trillones) y lo asigna a la variable luego de la coma.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { var:node.text.split(',').splice(-1)[0] };
+                //code
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                context.x_state.npm['nanoid']='2.1.1';
+                resp.open += `let ${tmp.var} = require('nanoid')();\n`;
                 return resp;
             }
         },
@@ -2995,7 +3013,7 @@ export default async function(context) {
         //def_guardar_nota
         //*def_console
         //def_xcada_registro
-        //def_crear_id_unico
+        //*def_crear_id_unico
         //def_enviarpantalla
 
         // OTHER node types
