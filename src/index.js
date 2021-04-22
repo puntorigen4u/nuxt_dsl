@@ -1127,7 +1127,7 @@ ${cur.attr('name')}: {
             vue.script += `mixins: [${Object.keys(page.mixins).join(',')}]`;
             let mixins = [];
             for (let key in page.mixins) {
-                mixins.push(`import ${key} from '${page.mixins[key]}'`);
+                mixins.push(`import ${key} from '${page.mixins[key]}';`);
             }
             vue.script = vue.script.replaceAll('{concepto:import:mixins}', mixins.join(';'));
         } else {
@@ -1316,7 +1316,7 @@ ${cur.attr('name')}: {
                 //add imports
                 let content = ``;
                 for (let key in proxy.imports) {
-                    content += `import ${proxy.imports[key]} from '${key}'\n`;
+                    content += `import ${proxy.imports[key]} from '${key}';\n`;
                 }
                 //add proxy code
                 content += 
@@ -1464,12 +1464,12 @@ ${cur.attr('name')}: {
                 code = `import Vue from 'vue';\n`;
                 if (plugin.as_star) {
                     if (plugin.as_star==true) {
-                        code += `import * as ${import_as} from '${plugin_key}'\n`;
+                        code += `import * as ${import_as} from '${plugin_key}';\n`;
                     } else {
-                        code += `import ${import_as} from '${plugin_key}'\n`;
+                        code += `import ${import_as} from '${plugin_key}';\n`;
                     }
                 } else {
-                    code += `import ${import_as} from '${plugin_key}'\n`;
+                    code += `import ${import_as} from '${plugin_key}';\n`;
                 }
                 if (plugin.custom) code += `${plugin.custom}\n`;
                 if (plugin.extra_imports) {
@@ -2002,7 +2002,7 @@ ${cur.attr('name')}: {
                 // header for imports
                 if (page) {
                     for (let key in page.imports) {
-                        script_imports += `import ${page.imports[key]} from '${key}'\n`;
+                        script_imports += `import ${page.imports[key]} from '${key}';\n`;
                     } //);
                 }
                 // export default

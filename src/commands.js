@@ -848,23 +848,16 @@ export default async function(context) {
                 if (tmp.params.margen && tmp.params.margen == 'true') {
                     delete params.margen;
                     if (tmp.params.center && tmp.params.center == 'true') {
-                        resp.open += `<v-container fill-height>\n`;
-                        if (context.x_state.es6) {
-                            resp.open += `<v-row wrap align-center>\n`;
-                        } else {
-                            resp.open += `<v-layout row wrap align-center>\n`;
-                        }
+                        //resp.open += `<v-container fill-height='xpropx'>\n`;
+                        resp.open += context.tagParams('v-container', { 'fill-height':null }, false) + '\n';
+                        resp.open += context.tagParams('v-row', { 'align-center':null }, false) + '\n';
                     } else {
                         if (tmp.tipo == 'flex') {
                             resp.open += `<v-container>\n`;
                             params.row = null;
                             resp.open += context.tagParams('v-layout', params, false) + '\n';
                         } else if (tmp.tipo == 'wrap') {
-                            if (context.x_state.es6) {
-                                resp.open += `<v-container fill-height container--fluid grid-list-xl>\n`;
-                            } else {
-                                resp.open += `<v-container fill-height fluid grid-list-xl>\n`;    
-                            }
+                            resp.open += context.tagParams('v-container', { 'fill-height':null, 'container--fluid':null, 'grid-list-xl':null }, false) + '\n';
                             params.wrap = null;
                             resp.open += context.tagParams('v-layout', params, false) + '\n';
                         }
@@ -896,7 +889,7 @@ export default async function(context) {
                             resp.open += context.tagParams('v-layout', params, false) + '\n';
                         }
                     } else {
-                        resp.open += '<v-layout wrap>\n';
+                        resp.open += context.tagParams('v-layout', { wrap:null }, false)+'\n';
                     }
                     // part flex
                     if (tmp.tipo == 'flex' && tmp.params.center && tmp.params.center == 'true') {
@@ -2957,13 +2950,13 @@ export default async function(context) {
                 //code
                 context.x_state.npm[attr.text] = attr.version;
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
-                if (attr.tipo=='import') {
+                if (!attr.require) {
                     if ('current_func' in resp.state) {
                         context.x_state.functions[resp.state.current_func].imports[attr.text] = attr.tipo_;
                     } else {
                         context.x_state.pages[resp.state.current_page].imports[attr.text] = attr.tipo_;
                     }
-                } else if (attr.require) {
+                } else {
                     resp.open += `let ${attr.var} = require('${attr.text}');\n`;
                 }
                 return resp;
