@@ -40,10 +40,29 @@ export default class base_deploy {
         let spawn = require('await-spawn'), path = require('path'), fs = require('fs').promises;
         //let ora = require('ora');
         let node_modules_final = path.join(this.context.x_state.dirs.app,'node_modules');
+        let node_package = path.join(this.context.x_state.dirs.app,'package.json');
         let npm={}, errors=[];
         this.context.x_console.outT({ message:`Building project`, color:'cyan' });
         let spinner = this.context.x_console.spinner({ message:'Building project' });
         let node_modules_exist = await this.exists(node_modules_final);
+        let node_package_exist = await this.exists(node_package);
+        if (node_modules_exist && node_package_exist) {
+            //test if every package required is within node_modules
+            spinner.start(`Some npm packages where installed; checking ..`);
+            let pkg = JSON.parse(((await fs.readFile(node_package, 'utf-8'))));
+            let all_ok = true;
+            for (let pk in pkg.dependencies) {
+                let tst_dir = path.join(this.context.x_state.dirs.app,'node_modules',pk);
+                let tst_exist = await this.exists(tst_dir);
+                if (!tst_exist) all_ok = false;
+            } 
+            node_modules_exist=all_ok;
+            if (all_ok) {
+                spinner.succeed('Using existing npm packages');
+            } else {
+                spinner.warn('Some packages are new, requesting them');
+            }
+        }
         // issue npm install (400mb)
         if (!node_modules_exist) {
             spinner.start(`Installing npm packages`);
@@ -56,8 +75,6 @@ export default class base_deploy {
                 spinner.fail('Error installing npm packages');
                 errors.push(n);
             }
-        } else {
-            spinner.succeed(`Using existing npm packages`);
         }
         // issue npm run build
         spinner.start(`Building NUXT project`);

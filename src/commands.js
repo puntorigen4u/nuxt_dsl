@@ -2762,7 +2762,7 @@ export default async function(context) {
 
         'def_struct': {
             x_icons: 'desktop_new',
-            x_text_contains: 'struct',
+            x_text_contains: 'struct,,',
             x_not_text_contains: 'traducir',
             x_level: '>3',
             hint: 'Crea una variable de tipo Objeto, con los campos y valores definidos en sus atributos.',
@@ -2771,7 +2771,7 @@ export default async function(context) {
                     state
                 });
                 let tmp = {};
-                if (node.text.contains(',')) {
+                //if (node.text.contains(',')) {
                     // parse output var
                     tmp.var = node.text.split(',').pop(); //last comma element
                     if (context.hasParentID(node.id, 'def_event_server')==true) {
@@ -2794,7 +2794,7 @@ export default async function(context) {
                         if (node.icons.includes('bell')) {
                             value = getTranslatedTextVar(value);
                         } else if (value.contains('assets:')) {
-                            value = context.getAsset(value, 'jsfunc');
+                            value = context.getAsset(value, 'js');
                         } else {
                             // normalize vue type vars
                             if (tmp.parent_server==true) {
@@ -2817,10 +2817,10 @@ export default async function(context) {
                     //resp.open += `var ${tmp.var.trim()} = ${JSON.stringify(attrs)};\n`;
                     //@TODO create method to output struct escaping quotes if value has 'this.'
                     resp.open += `var ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
-
+                    /*
                 } else {
                     resp.valid = false;
-                }
+                }*/
                 return resp;
             }
         },
@@ -2946,7 +2946,7 @@ export default async function(context) {
                     symbol: '"',
                     symbol_closing: '"'
                 }).trim();
-                attr.var = node.text.split(',').splice(-1)[0];
+                attr.var = attr.tipo_ = node.text.split(',').pop();
                 //code
                 context.x_state.npm[attr.text] = attr.version;
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;

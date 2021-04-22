@@ -2430,9 +2430,9 @@ ${cur.attr('name')}: {
     //gets the asset code for a given string like: assets:assetname
     getAsset(text = this.throwIfMissing('text'), type = 'js') {
         //this.x_state.assets
-        let resp = text,
-            type_o = text.replaceAll('jsfunc', 'js').toLowerCase();
-        if (resp.toLowerCase().indexOf('assets:') != -1) {
+        let resp = text.replaceAll('assets:',''),
+            type_o = type.replaceAll('jsfunc', 'js').toLowerCase();
+        if (text.contains('assets:')) {
             if (resp in this.x_state.assets) {
                 if (this.x_state.central_config.idiomas.indexOf(',') != -1 && this.x_state.assets[resp].i18n == true) {
                     let first_key = this.x_state.assets[resp].i18n_keys.split(',')[0];
@@ -2447,7 +2447,7 @@ ${cur.attr('name')}: {
 
                 } else if (resp in this.x_state.assets && type_o in this.x_state.assets[resp]) {
                     resp = this.x_state.assets[resp][type_o];
-                    if (type.toLowerCase().indexOf('js') != -1) {
+                    if (type_o=='js') {
                         resp = `require('${resp}')`;
                     }
 
