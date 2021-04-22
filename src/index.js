@@ -1935,6 +1935,7 @@ ${cur.attr('name')}: {
     async writeFile(file,content,encoding='utf-8') {
         let fs = require('fs').promises, prettier = require('prettier');
         let ext = file.split('.').splice(-1)[0].toLowerCase();
+        //console.log('writeFile:'+file+' (ext:'+ext+')');
         /*let beautify = require('js-beautify');
         let beautify_js = beautify.js;
         let beautify_vue = beautify.html;

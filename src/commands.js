@@ -481,7 +481,8 @@ export default async function(context) {
                 });
                 let store = node.text.split(' ')[0].replaceAll('store:','').trim();
                 let params = {};
-                let isProxySon = context.hasParentID(node.id, 'def_proxy_def')?true:false;
+                //let isProxySon = (context.hasParentID(node.id, 'def_proxy_def')==true)?true:false;
+                let isProxySon = ('current_proxy' in resp.state)?true:false;
                 let method = context.dsl_parser.findVariables({
                     text: node.text,
                     symbol: '"',
@@ -494,8 +495,8 @@ export default async function(context) {
                                  .replaceAll('$vars.','$this.')
                                  .replaceAll('$params.','this.')
                                  .replaceAll('$env.','process.env.');
-                    if (value.contains('$store')) {
-                        if (isProxySon) {
+                    if (value.contains('$store.')) {
+                        if (isProxySon==true) {
                             value = value.replaceAll('$store.','store.state.');
                         } else {
                             value = value.replaceAll('$store.','this.$store.state.');
@@ -505,7 +506,7 @@ export default async function(context) {
                 });
                 //let util = require('util');
                 let data = context.jsDump(params).replaceAll("'`","`").replaceAll("`'","`");
-                resp.open = (isProxySon?'store.':'this.$store.')+`commit('${store}/${method}', ${data});`;
+                resp.open = ((isProxySon==true)?'store.':'this.$store.')+`commit('${store}/${method}', ${data});`;
                 
                 return resp;
             }
@@ -2874,6 +2875,10 @@ export default async function(context) {
                 }
                 //vuescript2
                 if (tmp.text.contains('vuescript2')) tmp.text = tmp.text.replaceAll('vuescript2.',`require('vue-script2').`);
+                //underscore
+                if (tmp.text.contains('_.')) {
+                    context.x_state.pages[resp.state.current_page].imports['underscore'] = '_';
+                }
                 //code
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
                 resp.open += tmp.text;
@@ -2930,6 +2935,41 @@ export default async function(context) {
             }
         },
 
+        'def_npm_instalar': {
+            x_icons: 'desktop_new',
+            x_text_contains: 'npm:install|npm:instalar',
+            x_level: '>2',
+            hint: 'Instala el paquete npm indicado entrecomillas y lo instancia en la página (import:true) o función actual, o lo asigna a la variable indicada luego de la coma.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let defaults = { text:node.text, tipo:'import', tipo_:'', version:'*', git:'', init:'' };
+                let attr = aliases2params('def_npm_instalar', node);  
+                attr = {...defaults, ...attr};
+                if (attr.import && attr.import!='true') attr.tipo_ = attr.import;
+                attr.text = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: '"',
+                    symbol_closing: '"'
+                }).trim();
+                attr.var = node.text.split(',').splice(-1)[0];
+                //code
+                context.x_state.npm[attr.text] = attr.version;
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;                
+                if (attr.tipo=='import') {
+                    if ('current_func' in resp.state) {
+                        context.x_state.functions[resp.state.current_func].imports[attr.text] = attr.tipo_;
+                    } else {
+                        context.x_state.pages[resp.state.current_page].imports[attr.text] = attr.tipo_;
+                    }
+                } else if (attr.require) {
+                    resp.open += `let ${attr.var} = require('${attr.text}');\n`;
+                }
+                return resp;
+            }
+        },
+
         //*def_responder (@todo i18n)
         //def_insertar_modelo
         //def_consultar_modelo
@@ -2941,7 +2981,7 @@ export default async function(context) {
         //def_aftertime
         //*def_struct
         //def_extender
-        //def_npm_instalar
+        //*def_npm_instalar
         //def_agregar_campos
         //def_preguntar
         //def_array_transformar
@@ -2953,7 +2993,7 @@ export default async function(context) {
         //def_event_try (def_probar_try)
         //*def_literal_js
         //def_guardar_nota
-        //def_console
+        //*def_console
         //def_xcada_registro
         //def_crear_id_unico
         //def_enviarpantalla
