@@ -819,15 +819,14 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     watch += `watch: [${test_n.join(',')}]`;
                 }
                 async_computed.push(`
-					${cur.attr('name')}: {
-						async get() {
-							${code}
-						}
-						${lazy}
-						${valor}
-						${watch}
-					}
-				`);
+${cur.attr('name')}: {
+    async get() {
+        ${code}
+    }
+    ${lazy}
+    ${valor}
+    ${watch}
+}`);
             } else {
                 async_computed.push(`async ${cur.attr('name')}() {${code}}`);
             }
@@ -1355,7 +1354,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         const path = require('path');
         const config = require('./nuxt.config.js');
 
-        async functions nuxtApp() {
+        async function nuxtApp() {
             app.use('/_nuxt', express.static(path.join(__dirname, '.nuxt', 'dist')));
             const nuxt = new Nuxt(config);
             await nuxt.ready();
@@ -1462,15 +1461,15 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                                                     .replaceAll('_','')
                                                     .toLowerCase().trim();
                 }
-                code = `import Vue from 'vue'`;
+                code = `import Vue from 'vue';\n`;
                 if (plugin.as_star) {
                     if (plugin.as_star==true) {
-                        code += `import * as ${import_as} from '${plugin_key}'`;
+                        code += `import * as ${import_as} from '${plugin_key}'\n`;
                     } else {
-                        code += `import ${import_as} from '${plugin_key}'`;
+                        code += `import ${import_as} from '${plugin_key}'\n`;
                     }
                 } else {
-                    code += `import ${import_as} from '${plugin_key}'`;
+                    code += `import ${import_as} from '${plugin_key}'\n`;
                 }
                 if (plugin.custom) code += `${plugin.custom}\n`;
                 if (plugin.extra_imports) {
@@ -1533,8 +1532,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                                           .replaceAll('_','')
                                           .toLowerCase().trim();
                 code += 
-                `import Vue from 'vue'
-                import ${import_as} from '${plugin_key}'
+                `import Vue from 'vue';
+                import ${import_as} from '${plugin_key}';
                 Vue.use(${import_as});
                 `;
                 // write to disk and add to response
@@ -1934,19 +1933,42 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
     }
 
     async writeFile(file,content,encoding='utf-8') {
-        let fs = require('fs').promises, beautify = require('js-beautify');
+        let fs = require('fs').promises, prettier = require('prettier');
+        let ext = file.split('.').splice(-1)[0].toLowerCase();
+        /*let beautify = require('js-beautify');
         let beautify_js = beautify.js;
         let beautify_vue = beautify.html;
-        let beautify_css = beautify.css;
-        let ext = file.split('.').splice(-1)[0].toLowerCase();
+        let beautify_css = beautify.css;*/
+        let resp = content;
+        if (ext=='js') {
+            resp = prettier.format(resp, { parser: 'babel', useTabs:true, singleQuote:true });
+        } else if (ext=='json') {
+            resp = prettier.format(resp, { parser: 'json' });
+        } else if (ext=='vue') {
+            //resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{});
+            resp = prettier.format(resp.replaceAll(`="xpropx"`,''), { 
+                parser: 'vue',
+                htmlWhitespaceSensitivity: 'ignore',
+                useTabs: true,
+                printWidth: 2000,
+                embeddedLanguageFormatting: 'auto',
+                singleQuote: true,
+                trailingComma: 'none'
+            });
+
+        } else if (ext=='css') {
+            resp = prettier.format(resp, { parser: 'css' });
+        }
+        /*
+        
         let resp = content;
         if (ext=='js' || ext=='json') {
-            resp = beautify_js(resp, { space_in_empty_paren: false });
+            resp = beautify_js(resp, { eval_code: false }).replaceAll(`\n\n`,'');
         } else if (ext=='vue') {
-            resp = beautify_vue(resp.replaceAll(`="xpropx"`,''), { indent_scripts: 'keep' });
+            resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{}); //{ indent_scripts: 'keep' }
         } else if (ext=='css') {
             resp = beautify_css(resp, { indent_scripts: 'keep' });
-        }
+        }*/
         await fs.writeFile(file, resp, encoding);
     }
 
@@ -2475,10 +2497,15 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 nuevo += ob;
             } else if (typeof ob === 'boolean') {
                 nuevo += ob;
+            } else if (typeof ob === 'string' &&
+                ob.indexOf(`'`)==-1 && 
+                ob.indexOf('**')!=-1 && ob.substr(ob.length-2)=='**') {
+                nuevo += ob.replaceAll('**',''); //escape single ** vars 21-abr-21
             } else if ((typeof ob === 'string') && (
                 ob.indexOf('this.')!=-1 || 
                 ob.indexOf('new ')!=-1 || 
-                ob.indexOf(`'`)!=-1)
+                ob.indexOf(`'`)!=-1 || 
+                ob.indexOf('`')!=-1)
                 ) {
                 nuevo += ob;
             } else if (typeof ob === 'string') {

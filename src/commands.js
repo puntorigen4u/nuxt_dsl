@@ -34,6 +34,7 @@ export default async function(context) {
             symbol: `**`,
             symbol_closing: `**`
         });
+        //console.log('translated text:'+text,vars);
         let new_vars = context.dsl_parser.replaceVarsSymbol({
             text,
             from: {
@@ -45,6 +46,7 @@ export default async function(context) {
                 close: '}'
             }
         });
+        //console.log('translated new_vars text:'+text,new_vars);
         if ('${' + vars + '}' == new_vars) {
             return vars;
         } else {
@@ -1801,8 +1803,13 @@ export default async function(context) {
                 //
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
                 let tag = node.text.replace('html:', '');
-                resp.open += context.tagParams(tag, params, false) + '\n';
-                resp.close += `</${tag}>\n`;
+                if (node.nodes_raw && node.nodes_raw.length > 0) {
+                    resp.open += context.tagParams(tag, params, false) + '\n';
+                    resp.close += `</${tag}>\n`;
+                } else {
+                    // doesn't have children nodes (self-close)
+                    resp.open += context.tagParams(tag, params, true)+'\n';
+                }
                 return resp;
             }
         },
@@ -2870,6 +2877,55 @@ export default async function(context) {
                 //code
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
                 resp.open += tmp.text;
+                if (resp.open.right(1)!=';') resp.open += ';\n';
+                return resp;
+            }
+        },
+
+        'def_console': {
+            x_icons: 'clanbomber',
+            x_not_icons: 'desktop_new',
+            x_level: '>1',
+            hint: 'Emite su texto a la consola. Soporta mostrar los datos/variables de sus atributos.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { text:node.text };
+                if (node.icons.includes('bell')) {
+                    tmp.text = getTranslatedTextVar(tmp.text);
+                } else {
+                    tmp.text = `'${tmp.text}'`;
+                }
+                //attr
+                // process attributes
+                let attrs = {...node.attributes
+                };
+                Object.keys(node.attributes).map(function(key) {
+                    let keytest = key.toLowerCase().trim();
+                    let value = node.attributes[key].trim();
+                    let valuet = getTranslatedTextVar(value);
+                    if (value.contains('assets:')) {
+                        value = context.getAsset(value, 'jsfunc');
+                    } else {
+                        // normalize vue type vars                        
+                        value = value.replaceAll('$variables.', 'this.')
+                            .replaceAll('$vars.', 'this.')
+                            .replaceAll('$params.', 'this.')
+                            .replaceAll('$store.', 'this.$store.state.');
+                    }
+                    //bell
+                    if (node.icons.includes('bell') && value.replaceAll('**','')!=valuet) { // && value!=`**${valuet}**`) {
+                        value = getTranslatedTextVar(value);
+                    } else if (!node.icons.includes('bell') && value.contains('**')) {
+                        value = `'${value}'`;
+                    }
+                    // modify values to copy
+                    attrs[key] = value;
+                });
+                //code
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                resp.open += `console.log(${tmp.text},${context.jsDump(attrs)});\n`;
                 return resp;
             }
         },

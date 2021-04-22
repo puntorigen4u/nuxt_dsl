@@ -50,6 +50,7 @@
     "open_console": "github:puntorigen4u/console",
     "open-terminal": "^0.1.11",
     "ora": "^5.4.0",
+    "prettier": "^2.2.1",
     "recursive-copy": "^2.0.10",
     "safe-eval": "^0.4.1",
     "terminal-tab": "^0.0.7",
