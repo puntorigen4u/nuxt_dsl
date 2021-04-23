@@ -2492,6 +2492,9 @@ ${cur.attr('name')}: {
     //serializes the given obj escaping quotes from values containing js code
     jsDump(obj) {
         let resp='';
+        let isNumeric = function(n) {
+            return !isNaN(parseFloat(n)) && isFinite(n);
+        };
         let escape = function(ob) {
             let nuevo = '';
             if (typeof ob === 'number') {
@@ -2506,7 +2509,9 @@ ${cur.attr('name')}: {
                 ob.indexOf('this.')!=-1 || 
                 ob.indexOf('new ')!=-1 || 
                 ob.indexOf(`'`)!=-1 || 
-                ob.indexOf('`')!=-1)
+                ob.indexOf('`')!=-1 ||
+                isNumeric(ob) ||
+                ob=='true' || ob=='false')
                 ) {
                 nuevo += ob;
             } else if (typeof ob === 'string') {

@@ -2827,7 +2827,14 @@ export default async function(context) {
                         }
                     }
                     // modify values to copy
-                    attrs[key] = value;
+                    /*if (typeof value === 'string') {
+                        if (value=='true') { value=true;
+                        } else if (value=='false') { value=false;
+                        } else if (parseFloat(value+'')===value) { value=parseFloat(value); 
+                        }
+                    } else {*/
+                        attrs[key] = value;
+                    //}
                 });
                 // write output
                 if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
@@ -2924,7 +2931,8 @@ export default async function(context) {
                 //code
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
                 resp.open += tmp.text;
-                if (resp.open.right(1)!=';') resp.open += ';\n';
+                if (resp.open.right(1)!=';') resp.open += ';';
+                resp.open += '\n';
                 return resp;
             }
         },
