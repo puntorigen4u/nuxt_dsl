@@ -2502,8 +2502,7 @@ ${cur.attr('name')}: {
             } else if (typeof ob === 'boolean') {
                 nuevo += ob;
             } else if (typeof ob === 'string' &&
-                ob.indexOf(`'`)==-1 && 
-                ob.indexOf('**')!=-1 && ob.substr(ob.length-2)=='**') {
+                ob.substr(0,2)=='**' && ob.substr(ob.length-2)=='**') {
                 nuevo += ob.replaceAll('**',''); //escape single ** vars 21-abr-21
             } else if ((typeof ob === 'string') && (
                 ob.indexOf('this.')!=-1 || 

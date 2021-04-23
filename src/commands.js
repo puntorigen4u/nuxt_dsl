@@ -28,7 +28,7 @@ export default async function(context) {
             });
         }
     };
-    const getTranslatedTextVar = function(text) {
+    const getTranslatedTextVar = function(text,keep_if_same=false) {
         let vars = context.dsl_parser.findVariables({
             text,
             symbol: `**`,
@@ -48,6 +48,7 @@ export default async function(context) {
         });
         //console.log('translated new_vars text:'+text,new_vars);
         if ('${' + vars + '}' == new_vars) {
+            if (keep_if_same==true) return text;
             return vars;
         } else {
             return `\`${new_vars}\``;
@@ -2810,7 +2811,7 @@ export default async function(context) {
                     let keytest = key.toLowerCase().trim();
                     let value = node.attributes[key].trim();
                     if (node.icons.includes('bell')) {
-                        value = getTranslatedTextVar(value);
+                        value = getTranslatedTextVar(value,true);
                     } else if (value.contains('assets:')) {
                         value = context.getAsset(value, 'js');
                     } else {
@@ -2826,20 +2827,15 @@ export default async function(context) {
                                 .replaceAll('$store.', 'this.$store.state.');
                         }
                     }
-                    // modify values to copy
-                    /*if (typeof value === 'string') {
-                        if (value=='true') { value=true;
-                        } else if (value=='false') { value=false;
-                        } else if (parseFloat(value+'')===value) { value=parseFloat(value); 
-                        }
-                    } else {*/
-                        attrs[key] = value;
-                    //}
+                    attrs[key] = value;
                 });
                 // write output
-                if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
-                //@TODO create method to output struct escaping quotes if value has 'this.'
-                resp.open += `let ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
+                if (resp.state.from_extender) {
+                    resp.open = context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`");
+                } else {
+                    if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
+                    resp.open += `let ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
+                }
                 return resp;
             }
         },
@@ -2854,8 +2850,10 @@ export default async function(context) {
                     state
                 });
                 // create obj from current node as js obj
-                let extend_node = {...node, ...{ text:`struct, n${node.id}` }};
-                resp = await context.x_commands['def_struct'].func(extend_node, state);
+                let extend_node = {...node, ...{ text:`struct, virtualnode`, text_note:'' }};
+                resp = await context.x_commands['def_struct'].func(extend_node, { ...state, ...{
+                    from_extender:true
+                }});
                 // get var name
                 let tmp = {};
                 tmp.var = context.dsl_parser.findVariables({
@@ -2863,20 +2861,19 @@ export default async function(context) {
                     symbol: '"',
                     symbol_closing: '"'
                 }).trim();
+                // clean given varname $variables, etc.
                 if (resp.state.from_server) { //if (context.hasParentID(node.id, 'def_event_server')==true) {
                     tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
-                        .replaceAll('$vars.', 'resp.')
-                        .replaceAll('$params.', 'resp.');
+                                     .replaceAll('$vars.', 'resp.').replaceAll('$params.', 'resp.');
                     tmp.var = (tmp.var == 'resp.') ? 'resp' : tmp.var;
-                    tmp.parent_server = true;
                 } else {
-                    tmp.var = tmp.var.replaceAll('$variables.', 'this.')
-                        .replaceAll('store.', 'this.$store.state.');
+                    tmp.var = tmp.var.replaceAll('$variables.', 'this.').replaceAll('store.', 'this.$store.state.');
                     tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
                 }
-                // clean given varname $variables, etc.
-                // extend given var with 'extend_node' content                
-                resp.open += `${tmp.var} = {...${tmp.var},...n${node.id}};\n`;
+                // extend given var with 'extend_node' content
+                tmp.nobj = resp.open;
+                if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
+                resp.open = `${tmp.var} = {...${tmp.var},...${tmp.nobj}};\n`;
                 return resp;
             }
         },
