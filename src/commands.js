@@ -2356,6 +2356,26 @@ export default async function(context) {
             }
         },
 
+        'def_event_server': {
+            x_icons: 'help',
+            x_level: 3,
+            x_text_contains: ':server',
+            hint: 'Evento especial :server en pagina vue',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let params = aliases2params('def_event_server',node);
+                resp.open = context.tagParams('server_asyncdata', {}, false);
+                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (!params.return) resp.open += `let resp={};`;
+                resp.close = '</server_asyncdata>';
+                resp.state.from_server=true;
+                return resp;
+            }
+        },
+
         //def_script
         //def_event_server
         //*def_event_mounted
@@ -2718,8 +2738,7 @@ export default async function(context) {
         //..scripts..
         'def_responder': {
             x_icons: 'desktop_new',
-            x_text_contains: 'responder',
-            x_not_text_contains: 'traducir,struct,extender',
+            x_text_pattern: `responder "*"`,
             x_all_hasparent: 'def_variables',
             x_level: '>3',
             hint: 'Emite una respuesta para la variable de tipo funcion',
@@ -2771,56 +2790,86 @@ export default async function(context) {
                     state
                 });
                 let tmp = {};
-                //if (node.text.contains(',')) {
-                    // parse output var
-                    tmp.var = node.text.split(',').pop(); //last comma element
-                    if (context.hasParentID(node.id, 'def_event_server')==true) {
-                        tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
-                            .replaceAll('$vars.', 'resp.')
-                            .replaceAll('$params.', 'resp.');
-                        tmp.var = (tmp.var == 'resp.') ? 'resp' : tmp.var;
-                        tmp.parent_server = true;
-                    } else {
-                        tmp.var = tmp.var.replaceAll('$variables.', 'this.')
-                            .replaceAll('store.', 'this.$store.state.');
-                        tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
-                    }
-                    // process attributes
-                    let attrs = {...node.attributes
-                    };
-                    Object.keys(node.attributes).map(function(key) {
-                        let keytest = key.toLowerCase().trim();
-                        let value = node.attributes[key].trim();
-                        if (node.icons.includes('bell')) {
-                            value = getTranslatedTextVar(value);
-                        } else if (value.contains('assets:')) {
-                            value = context.getAsset(value, 'js');
-                        } else {
-                            // normalize vue type vars
-                            if (tmp.parent_server==true) {
-                                value = value.replaceAll('$variables.', 'resp.')
-                                    .replaceAll('$vars.', 'resp.')
-                                    .replaceAll('$params.', 'resp.');
-                            } else {
-                                value = value.replaceAll('$variables.', 'this.')
-                                    .replaceAll('$vars.', 'this.')
-                                    .replaceAll('$params.', 'this.')
-                                    .replaceAll('$store.', 'this.$store.state.');
-                            }
-                        }
-                        // modify values to copy
-                        attrs[key] = value;
-                    });
-                    // write output
-                    if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
-                    let util = require('util');
-                    //resp.open += `var ${tmp.var.trim()} = ${JSON.stringify(attrs)};\n`;
-                    //@TODO create method to output struct escaping quotes if value has 'this.'
-                    resp.open += `var ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
-                    /*
+                // parse output var
+                tmp.var = node.text.split(',').pop(); //last comma element
+                if (resp.state.from_server) { // if (context.hasParentID(node.id, 'def_event_server')==true) {
+                    tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
+                        .replaceAll('$vars.', 'resp.')
+                        .replaceAll('$params.', 'resp.');
+                    tmp.var = (tmp.var == 'resp.') ? 'resp' : tmp.var;
+                    tmp.parent_server = true;
                 } else {
-                    resp.valid = false;
-                }*/
+                    tmp.var = tmp.var.replaceAll('$variables.', 'this.')
+                        .replaceAll('store.', 'this.$store.state.');
+                    tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
+                }
+                // process attributes
+                let attrs = {...node.attributes
+                };
+                Object.keys(node.attributes).map(function(key) {
+                    let keytest = key.toLowerCase().trim();
+                    let value = node.attributes[key].trim();
+                    if (node.icons.includes('bell')) {
+                        value = getTranslatedTextVar(value);
+                    } else if (value.contains('assets:')) {
+                        value = context.getAsset(value, 'js');
+                    } else {
+                        // normalize vue type vars
+                        if (tmp.parent_server==true) {
+                            value = value.replaceAll('$variables.', 'resp.')
+                                .replaceAll('$vars.', 'resp.')
+                                .replaceAll('$params.', 'resp.');
+                        } else {
+                            value = value.replaceAll('$variables.', 'this.')
+                                .replaceAll('$vars.', 'this.')
+                                .replaceAll('$params.', 'this.')
+                                .replaceAll('$store.', 'this.$store.state.');
+                        }
+                    }
+                    // modify values to copy
+                    attrs[key] = value;
+                });
+                // write output
+                if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
+                //@TODO create method to output struct escaping quotes if value has 'this.'
+                resp.open += `let ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
+                return resp;
+            }
+        },
+
+        'def_extender': {
+            x_level: '>3',
+            x_text_pattern: `extender "*"`,
+            x_icons: 'desktop_new',
+            hint: 'Extiende los atributos de un objeto con los datos dados en los atributos.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                // create obj from current node as js obj
+                let extend_node = {...node, ...{ text:`struct, n${node.id}` }};
+                resp = await context.x_commands['def_struct'].func(extend_node, state);
+                // get var name
+                let tmp = {};
+                tmp.var = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: '"',
+                    symbol_closing: '"'
+                }).trim();
+                if (resp.state.from_server) { //if (context.hasParentID(node.id, 'def_event_server')==true) {
+                    tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
+                        .replaceAll('$vars.', 'resp.')
+                        .replaceAll('$params.', 'resp.');
+                    tmp.var = (tmp.var == 'resp.') ? 'resp' : tmp.var;
+                    tmp.parent_server = true;
+                } else {
+                    tmp.var = tmp.var.replaceAll('$variables.', 'this.')
+                        .replaceAll('store.', 'this.$store.state.');
+                    tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
+                }
+                // clean given varname $variables, etc.
+                // extend given var with 'extend_node' content                
+                resp.open += `${tmp.var} = {...${tmp.var},...n${node.id}};\n`;
                 return resp;
             }
         },
@@ -2930,7 +2979,7 @@ export default async function(context) {
 
         'def_npm_instalar': {
             x_icons: 'desktop_new',
-            x_text_contains: 'npm:install|npm:instalar',
+            x_text_pattern: `npm:+(install|instalar) "*"`,
             x_level: '>2',
             hint: 'Instala el paquete npm indicado entrecomillas y lo instancia en la página (import:true) o función actual, o lo asigna a la variable indicada luego de la coma.',
             func: async function(node, state) {
@@ -2992,13 +3041,60 @@ export default async function(context) {
                 });
                 let time = context.dsl_parser.findVariables({
                     text: node.text,
-                    symbol: '"',
-                    symbol_closing: '"'
+                    symbol: `"`,
+                    symbol_closing: `"`
                 }).trim();
                 //code
+                let amount = node.text.split(' ').pop();
+                if (amount=='minutos') time += `*60`;
+                if (amount=='horas') time += `*60*60`;
                 if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
                 resp.open += `setTimeout(function q() {\n`;
                 resp.close = `}.bind(this), 1000*${time});\n`;
+                return resp;
+            }
+        },
+
+        'def_probar': {
+            x_icons: 'broken-line',
+            x_text_exact: 'probar',
+            x_level: '>2',
+            hint: 'Encapsula sus hijos en un try/catch.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                //test if there is an error node child
+                let subnodes = await node.getNodes();
+                let has_error = false;
+                subnodes.map(async function(item) {
+                    if (item.text=='error' && item.icons.includes('help')) has_error=true;
+                }.bind(this));
+                //code
+                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                resp.open += 'try {\n';
+                if (has_error==false) {
+                    resp.close += `} catch(e${node.id}) {\n console.log('error en comando probar: recuerda usar evento ?error como hijo para controlarlo.');\n`;
+                }
+                resp.close += '}';
+                return resp;
+            }
+        },
+
+        'def_probar_error': {
+            x_icons: 'help',
+            x_text_exact: 'error',
+            x_all_hasparent: 'def_probar',
+            x_level: '>2',
+            hint: 'Ejecuta sus hijos si ocurre un error en el nodo padre.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                //code
+                resp.open += `} catch(e${node.id}) {\n`;
+                resp.open += `let error = e${node.id};\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
                 return resp;
             }
         },
@@ -3013,7 +3109,7 @@ export default async function(context) {
         //def_consultar_web_download
         //*def_aftertime
         //*def_struct
-        //def_extender
+        //*def_extender
         //*def_npm_instalar
         //def_agregar_campos
         //def_preguntar
@@ -3022,8 +3118,8 @@ export default async function(context) {
         //def_imagen_exif
         //def_var_clonar
         //def_modificar
-        //def_probar
-        //def_event_try (def_probar_try)
+        //*def_probar
+        //*def_probar_error (ex.def_event_try)
         //*def_literal_js
         //def_guardar_nota
         //*def_console
