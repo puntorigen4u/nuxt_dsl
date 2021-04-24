@@ -1020,15 +1020,17 @@ ${cur.attr('name')}: {
                         }
                         //
                     }
-                    /* @TODO check if this is needed/used: was on original CFC code, but it seems it just overwrites previous things
-                    if (evt.attr('link_id')) { 	
-                    	origin.attr(`v-on:${event}`,`${link}_${evt.attr('link_id')}($event)`);
-                    }
-                    */
+                    // @TODO check if this is needed/used: was on original CFC code, but it seems it just overwrites previous things
+                    //if (evt.attr('link_id')) { 	
+                    //	origin.attr(`v-on:${event}`,`${link}_${evt.attr('link_id')}($event)`);
+                    //}
+                    //
                 } else {
                     // create method function and script
                     let tmp = '';
-                    let method_name = event.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
+                    let method_name = event;
+                    method_name += `${evt.attr('event_suffix')}`;
+                    method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
                     let method_code = evt.text();
                     if (event == 'click-outside') {
                         origin.attr(`v-click-outside`, method_name);
@@ -1122,16 +1124,19 @@ ${cur.attr('name')}: {
         // call after processInternalTags
         if (page.mixins && Object.keys(page.mixins).length > 0) {
             this.debug('post-processing mixins');
-            if (vue.first) vue.script += ',\n';
+            let close = '';
+            if (vue.first) close += ',\n';
             vue.first = true;
-            vue.script += `mixins: [${Object.keys(page.mixins).join(',')}]`;
+            close += `mixins: [${Object.keys(page.mixins).join(',')}]`;
             let mixins = [];
             for (let key in page.mixins) {
                 mixins.push(`import ${key} from '${page.mixins[key]}';`);
             }
-            vue.script = vue.script.replaceAll('{concepto:import:mixins}', mixins.join(';'));
+            vue.script = vue.script.replaceAll('{concepto:mixins:import}', mixins.join(';'));
+            vue.script = vue.script.replaceAll('{concepto:mixins:array}', close);
         } else {
-            vue.script = vue.script.replaceAll('{concepto:import:mixins}', '');
+            vue.script = vue.script.replaceAll('{concepto:mixins:import}', '')
+                                   .replaceAll('{concepto:mixins:array}','');
         }
         return vue;
     }
@@ -2006,10 +2011,11 @@ ${cur.attr('name')}: {
                     } //);
                 }
                 // export default
-                vue.script = `{concepto:import:mixins}
+                vue.script = `{concepto:mixins:import}
 				${script_imports}
 				export default {
 					${vue.script}
+                    {concepto:mixins:array}
 				}`
                 // **** **** end script wrap **** **** 
                 // process Mixins
@@ -2495,8 +2501,11 @@ ${cur.attr('name')}: {
         let isNumeric = function(n) {
             return !isNaN(parseFloat(n)) && isFinite(n);
         };
-        let escape = function(ob) {
-            let nuevo = '';
+        let escape = function(obi) {
+            let nuevo = '', ob = obi;
+            //special escapes first
+            if (typeof ob === 'string') ob = ob.replaceAll('{now}','new Date()');
+            //
             if (typeof ob === 'number') {
                 nuevo += ob;
             } else if (typeof ob === 'boolean') {

@@ -972,6 +972,7 @@ export default async function(context) {
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note.trim()} -->\n`;
                 resp.open += context.tagParams(tag_name, params, false) + '\n';
                 resp.close = `</${tag_name}>\n`;
+                resp.state.from_componente=true;
                 return resp;
             }
         },
@@ -2083,6 +2084,7 @@ export default async function(context) {
                 // write tag
                 resp.open += context.tagParams('v-btn', params, false) + text + '\n';
                 resp.close += `</v-btn>\n`;
+                resp.state.events_suffix = text;
                 return resp;
             }
         },
@@ -2377,10 +2379,111 @@ export default async function(context) {
             }
         },
 
+        'def_event_method': {
+            x_icons: 'help',
+            x_level: 3,
+            x_not_text_contains: ':',
+            attributes_aliases: {
+                'm_params':     ':params,params',
+                'timer_time':   'timer:time,interval,intervalo,repetir',
+                'async':        ':async,async'
+            },
+            hint: 'Funcion tipo evento en pagina vue',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let params = aliases2params('def_event_method',node);
+                params.type='async';
+                params.name=node.text.trim();
+                if (params.async && params.async=='false') params.type='sync';
+                if (params.async) delete params.async;
+                //code
+                resp.open = context.tagParams('vue_event_method', params, false);
+                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                resp.close = '</vue_event_method>';
+                return resp;
+            }
+        },
+
+        'def_event_element': {
+            x_icons: 'help',
+            x_level: '>2',
+            x_not_text_contains: ':server,:mounted,condicion si,otra condicion, ',
+            hint:  `Evento de un elemento visual (ej. imagen->?click).
+                    Se puede enlazar a otro evento de la misma página, en cuyo caso sus atributos se traspasan como parametros.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                //get variables etc from node
+                let attrs = aliases2params('def_event_element',node);
+                let tmp = { event_test:node.text.trim() };
+                let params = { n_params:[], v_params:[], event:node.text.trim() };
+                let isNumeric = function(n) {
+                    return !isNaN(parseFloat(n)) && isFinite(n);
+                };
+                //get parent node id
+                let parent_node = await context.dsl_parser.getParentNode({ id: node.id });
+                params.parent_id = parent_node.id;
+                params.event_suffix = "";
+                if (!state.from_componente) {
+                    if (state.events_suffix) {
+                        params.event_suffix = state.events_suffix;
+                    } else {
+                        params.event_suffix = parent_node.text.replaceAll(' ','_');
+                    }
+                }
+                delete attrs.refx;
+                //convert keys to params n_params, and values to v_params
+                for (let key in attrs) {
+                    params.n_params.push(key);
+                    if (isNumeric(attrs[key])) {
+                        params.v_params.push(attrs[key]);
+                    } else if  (attrs[key]=='') {
+                        params.v_params.push('$event');
+                    } else if  (attrs[key].contains('this.') || attrs[key].contains('$event')) {
+                        params.v_params.push(attrs[key]);
+                    } else {
+                        params.v_params.push(`'${attrs[key]}'`);
+                    }
+                }
+                //add event name aliases if not son of def_componente_view
+                if (!state.from_componente) {
+                    if (['post:icon:click','post:icon'].includes(tmp.event_test)==true) params.event = 'click:append';
+                    if (['pre:icon:click','pre:icon'].includes(tmp.event_test)==true) params.event = 'click:prepend'; 
+                }
+                //add npm packages when needed
+                if (tmp.event_test=='visibility') {
+                    context.x_state.npm['vue-observe-visibility'] = '*';
+                    context.x_state.nuxt_config.head_script['polyfill_visibility'] = { src:'https://polyfill.io/v3/polyfill.min.js?features=IntersectionObserver' };
+                    context.x_state.pages[state.current_page].imports['vue-observe-visibility'] = `{ ObserveVisibility }`;
+                    context.x_state.pages[state.current_page].directives['observe-visibility'] = 'ObserveVisibility';
+                }
+                //has link? ex. img @event='othermethod'
+                if (node.link!='' && node.link.contains('ID_')) {
+                    tmp.target_node = await context.dsl_parser.getParentNode({
+                        id: node.link
+                    });
+                    params.link = tmp.target_node.text.replaceAll('-','_');
+                    params.link_id = tmp.target_node.id;
+                }
+                //code
+                params.n_params = params.n_params.join(',');
+                params.v_params = params.v_params.join(',');
+                resp.open = context.tagParams('vue_event_element', params, false);
+                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                resp.close = '</vue_event_element>';
+                return resp;
+            }
+        },
+        
         //def_script
-        //def_event_server
+        //*def_event_server
         //*def_event_mounted
-        //def_event_method
+        //*def_event_method
         //def_event_element
 
         //def_condicion_view
@@ -2810,7 +2913,7 @@ export default async function(context) {
                 Object.keys(node.attributes).map(function(key) {
                     let keytest = key.toLowerCase().trim();
                     let value = node.attributes[key].trim();
-                    if (node.icons.includes('bell')) {
+                    if (node.icons.includes('bell') && value.contains('**')) {
                         value = getTranslatedTextVar(value,true);
                     } else if (value.contains('assets:')) {
                         value = context.getAsset(value, 'js');
@@ -2827,11 +2930,12 @@ export default async function(context) {
                                 .replaceAll('$store.', 'this.$store.state.');
                         }
                     }
-                    attrs[key] = value;
+                    attrs[key] = value; //.replaceAll('{now}','new Date()');
                 });
                 // write output
-                if (resp.state.from_extender) {
+                if (resp.state.as_object) {
                     resp.open = context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`");
+                    delete resp.state.as_object;
                 } else {
                     if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
                     resp.open += `let ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
@@ -2850,10 +2954,10 @@ export default async function(context) {
                     state
                 });
                 // create obj from current node as js obj
-                let extend_node = {...node, ...{ text:`struct, virtualnode`, text_note:'' }};
-                resp = await context.x_commands['def_struct'].func(extend_node, { ...state, ...{
-                    from_extender:true
+                resp = await context.x_commands['def_struct'].func(node, { ...state, ...{
+                    as_object:true
                 }});
+                delete resp.state.as_object;
                 // get var name
                 let tmp = {};
                 tmp.var = context.dsl_parser.findVariables({
@@ -3104,8 +3208,36 @@ export default async function(context) {
             }
         },
 
+        'def_insertar_modelo': {
+            x_icons: 'desktop_new',
+            x_text_pattern: `insertar modelo "*"`,
+            x_level: '>2',
+            hint:  `Inserta los atributos (campos) y sus valores en el modelo indicado entrecomillas. 
+                    Si especifica una variable luego de la coma, asigna el resultado de la nueva insercion en esa variable.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { var:'', data:{}, model:'' };
+                if (node.text.contains(',')) tmp.var=node.text.split(',').pop();
+                tmp.model = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                }).trim();
+                //get attributes and values as struct
+                tmp.data = (await context.x_commands['def_struct'].func(node, { ...state, ...{
+                    as_object:true
+                }})).open;
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                resp.open += `this.alasql('INSERT INTO ${tmp.model} VALUES ?', [${tmp.data}]);\n`;
+                return resp;
+            }
+        },
+
         //*def_responder (@todo i18n)
-        //def_insertar_modelo
+        //**def_insertar_modelo (@todo test it after adding support for events)
         //def_consultar_modelo
         //def_modificar_modelo
         //def_eliminar_modelo
