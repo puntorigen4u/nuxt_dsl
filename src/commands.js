@@ -2493,11 +2493,36 @@ export default async function(context) {
             }
         },
         
-        //def_script
+        'def_script': {
+            x_icons: 'desktop_new',
+            x_level: '>2',
+            x_text_exact: 'script',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            hint:   `Representa un tag script inyectado en el lugar indicado. Permite escribir y ejecutar código en la posición definida.
+                     Si se define un link, el link se especifica con atributo src y en sus hijos el script se ejecuta luego de cargarlo.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                let params = aliases2params('def_script',node);
+                if (node.link!='') params.src = node.link;
+                //add packages
+                context.x_state.npm['vue-script2'] = '*';
+                context.x_state.plugins['vue-script2'] = { global:true, npm: { 'vue-script2':'*' }};
+                //code
+                resp.open = context.tagParams('script2', params, false);
+                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                resp.close = '</script2>';
+                return resp;
+            }
+        },
+
+        //*def_script
         //*def_event_server
         //*def_event_mounted
         //*def_event_method
-        //def_event_element
+        //*def_event_element
 
         //def_condicion_view
         //def_otra_condicion_view
