@@ -601,6 +601,7 @@ export default async function(context) {
                         styles: {},
                         script: {},
                         mixins: {},
+                        track_events: {},
                         path: '/' + resp.state.current_page
                     };
                 }
@@ -1269,6 +1270,8 @@ export default async function(context) {
                     resp.open += context.tagParams('v-text-field', tmp, false) + '\n';
                     resp.close += `</v-text-field>\n`;
                 }
+                //event friendly name
+                if (params.label) resp.state.friendly_name = params.label;
                 // return
                 return resp;
             }
@@ -2084,7 +2087,8 @@ export default async function(context) {
                 // write tag
                 resp.open += context.tagParams('v-btn', params, false) + text + '\n';
                 resp.close += `</v-btn>\n`;
-                resp.state.events_suffix = text;
+                //event friendly name
+                resp.state.friendly_name = text;
                 return resp;
             }
         },
@@ -2421,21 +2425,43 @@ export default async function(context) {
                 //get variables etc from node
                 let attrs = aliases2params('def_event_element',node);
                 let tmp = { event_test:node.text.trim() };
-                let params = { n_params:[], v_params:[], event:node.text.trim() };
+                let params = { n_params:[], v_params:[], event:node.text.trim(), id:node.id };
                 let isNumeric = function(n) {
                     return !isNaN(parseFloat(n)) && isFinite(n);
                 };
+                //add event name aliases if not son of def_componente_view
+                if (!state.from_componente) {
+                    if (['post:icon:click','post:icon'].includes(tmp.event_test)==true) params.event = 'click:append';
+                    if (['pre:icon:click','pre:icon'].includes(tmp.event_test)==true) params.event = 'click:prepend'; 
+                }
                 //get parent node id
                 let parent_node = await context.dsl_parser.getParentNode({ id: node.id });
                 params.parent_id = parent_node.id;
-                params.event_suffix = "";
+                params.friendly_name = "";
                 if (!state.from_componente) {
-                    if (state.events_suffix) {
-                        params.event_suffix = state.events_suffix;
+                    let normal = require('url-record'), ccase = require('fast-case');
+                    if (state.friendly_name && state.friendly_name!='') {
+                        params.friendly_name = normal(state.friendly_name).split('-')[0];
+                        //delete resp.state.friendly_name;
                     } else {
-                        params.event_suffix = parent_node.text.replaceAll(' ','_');
+                        params.friendly_name = normal(parent_node.text).split('-')[0];
                     }
+                    params.friendly_name = ccase.camelize(`${params.event.split(':')[0]}_`+params.friendly_name);
+                    if (params.friendly_name in context.x_state.pages[state.current_page].track_events) {
+                        context.x_state.pages[resp.state.current_page].track_events[params.friendly_name].count += 1;
+                        params.friendly_name = params.friendly_name+context.x_state.pages[state.current_page].track_events[params.friendly_name].count;
+                    } else {
+                        context.x_state.pages[state.current_page].track_events[params.friendly_name] = { count:1 };
+                    }
+                    resp.state.friendly_name = params.friendly_name;
                 }
+                //has link? ex. img @event='othermethod'
+                if (node.link!='' && node.link.contains('ID_')) {
+                    // get event friendly name
+                    params.link = 'x';
+                    params.link_id = node.link;
+                }
+                //
                 delete attrs.refx;
                 //convert keys to params n_params, and values to v_params
                 for (let key in attrs) {
@@ -2450,25 +2476,12 @@ export default async function(context) {
                         params.v_params.push(`'${attrs[key]}'`);
                     }
                 }
-                //add event name aliases if not son of def_componente_view
-                if (!state.from_componente) {
-                    if (['post:icon:click','post:icon'].includes(tmp.event_test)==true) params.event = 'click:append';
-                    if (['pre:icon:click','pre:icon'].includes(tmp.event_test)==true) params.event = 'click:prepend'; 
-                }
                 //add npm packages when needed
                 if (tmp.event_test=='visibility') {
                     context.x_state.npm['vue-observe-visibility'] = '*';
                     context.x_state.nuxt_config.head_script['polyfill_visibility'] = { src:'https://polyfill.io/v3/polyfill.min.js?features=IntersectionObserver' };
                     context.x_state.pages[state.current_page].imports['vue-observe-visibility'] = `{ ObserveVisibility }`;
                     context.x_state.pages[state.current_page].directives['observe-visibility'] = 'ObserveVisibility';
-                }
-                //has link? ex. img @event='othermethod'
-                if (node.link!='' && node.link.contains('ID_')) {
-                    tmp.target_node = await context.dsl_parser.getParentNode({
-                        id: node.link
-                    });
-                    params.link = tmp.target_node.text.replaceAll('-','_');
-                    params.link_id = tmp.target_node.id;
                 }
                 //code
                 params.n_params = params.n_params.join(',');

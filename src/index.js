@@ -992,30 +992,37 @@ ${cur.attr('name')}: {
                 if (evt.attr('link')) {
                     // event linked to another node; usually another existing method func
                     let link = evt.attr('link');
+                    let method_name = link;
+                    if (evt.attr('link_id')) {
+                        let target = $(`vue_event_element[id="${evt.attr('link_id')}"]`).toArray();
+                        if (target.length>0) {
+                            let the_node = $(target[0]);
+                            method_name = the_node.attr('friendly_name');
+                        } else {
+                            console.log('target node ID (events) not found');
+                        }
+                        method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
+                    }
                     // plugin related events
                     if (event == 'click-outside') {
-                        origin.attr('v-click-outside', link);
+                        origin.attr('v-click-outside', method_name);
                     } else if (event == 'visibility') {
-                        origin.attr('v-observe-visibility', link);
+                        origin.attr('v-observe-visibility', method_name);
                     } else if (event == ':rules') {
-                        origin.attr(':rules', `[${link}]`);
+                        origin.attr(':rules', `[${method_name}]`);
                     } else if (event == 'resize') {
-                        origin.attr('v-resize', link);
+                        origin.attr('v-resize', method_name);
                     } else {
                         // custom defined methods
                         if (evt.attr('v_params')) {
                             // v-on with params
-                            if (evt.attr('link_id')) {
-                                origin.attr(`v-on:${event}`, `${link}_${evt.attr('link_id')}(${evt.attr('v_params')})`);
-                            } else {
-                                origin.attr(`v-on:${event}`, `${link}(${evt.attr('v_params')})`);
-                            }
+                            origin.attr(`v-on:${event}`,`${method_name}(${evt.attr('v_params')})`);
                         } else {
                             // without params
                             if (evt.attr('link_id')) {
-                                origin.attr(`v-on:${event}`, `${link}_${evt.attr('link_id')}`);
+                                origin.attr(`v-on:${event}`, `${method_name}($event)`);
                             } else {
-                                origin.attr(`v-on:${event}`, link);
+                                origin.attr(`v-on:${event}`, method_name);
                             }
                         }
                         //
@@ -1029,7 +1036,7 @@ ${cur.attr('name')}: {
                     // create method function and script
                     let tmp = '';
                     let method_name = event;
-                    method_name += `${evt.attr('event_suffix')}`;
+                    if (evt.attr('friendly_name')!='') method_name = `${evt.attr('friendly_name')}`; //event_suffix
                     method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
                     let method_code = evt.text();
                     if (event == 'click-outside') {
@@ -1072,7 +1079,11 @@ ${cur.attr('name')}: {
                     methods.push(tmp);
                 }
                 // remove original event tag node
-                evt.remove();
+                // ** evt.remove();
+            });
+            //remove vue_event_element tags
+            on_events.map(function(elem) {
+                let evt = $(elem).remove();
             });
             // apply methods and changes
             vue.script += `methods: {
