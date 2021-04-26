@@ -1963,6 +1963,7 @@ ${cur.attr('name')}: {
             resp = prettier.format(resp, { parser: 'json' });
         } else if (ext=='vue') {
             //resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{});
+            try {
             resp = prettier.format(resp.replaceAll(`="xpropx"`,''), { 
                 parser: 'vue',
                 htmlWhitespaceSensitivity: 'ignore',
@@ -1972,6 +1973,9 @@ ${cur.attr('name')}: {
                 singleQuote: true,
                 trailingComma: 'none'
             });
+            } catch(ee) {
+                this.debug(`error: could not posible format the vue file; omitting`);
+            }
 
         } else if (ext=='css') {
             resp = prettier.format(resp, { parser: 'css' });
@@ -2498,9 +2502,9 @@ ${cur.attr('name')}: {
             if (value == null) {
                 //needed cause cheerio assigns empty values to props, and vue props don't have values
                 //little hack that works together with writeFile method
-                resp.push(`${key}='xpropx'`); 
+                resp.push(`${key}="xpropx"`); 
             } else if (typeof value !== 'object' && typeof value !== 'function' && typeof value !== 'undefined') {
-                resp.push(`${key}='${value}'`);
+                resp.push(`${key}="${value}"`);
             }
         }
         return resp.join(' ');

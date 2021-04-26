@@ -2548,21 +2548,21 @@ export default async function(context) {
                 if (resp.state.from_script) return {...resp,...{ valid:false }};
                 // detect which pattern did the match
                 let match = require('minimatch');
-                let which = 0;
+                let which = -1;
                 for (let x of context.x_commands['def_condicion_view'].x_text_pattern) {
+                    which+=1;
                     let test = match(node.text,x);
                     if (test==true) break;
-                    which+=1;
                 };
                 // extract the values
                 let extract = require('extractjs')();
                 let defaults = { variable:'', operator:'es', value:'' };
                 let patterns = [
                     `condicion si "{variable}" {operator} "{value}"`,
-                    `condicion si "{variable}" es {value}`,
-                    `condicion si "{variable}" es {value}`,
-                    `condicion si "{variable}" es {value}`,
-                    `condicion si "{variable}" es {value}`,
+                    `condicion si "{variable}" {operator}`,
+                    `condicion si "{variable}" {operator}`,
+                    `condicion si "{variable}" {operator}`,
+                    `condicion si "{variable}" {operator}`,
                     `condicion si "{variable} esta entre "{value}" inclusive`
                 ];
                 let elements = {...defaults,...extract(patterns[which],node.text)};
@@ -2594,7 +2594,7 @@ export default async function(context) {
                     operador: elements.operator,
                     valor: elements.value
                 }};
-                if (node.nodes_raw.length==1) params.target=node.nodes_raw[0].id; 
+                if (node.nodes_raw.length==1) params.target=node.nodes_raw[0].ID; 
                 if (params.individual && params.individual==true) {
                     params.tipo = 'v-if'; elements.type = 'v-if';
                     delete params.individual;
@@ -2603,18 +2603,122 @@ export default async function(context) {
                 if (elements.operator=='idioma es') {
                     params.expresion = `this.$i18n && this.$i18n.locale=='${elements.variable}'`;
                 } else if (['es','=','eq'].includes(elements.operator)) {
+                    if (elements.value==true && elements.value!=1) {
+                        params.expresion = elements.variable;
+                    } else if (elements.value==false && elements.value!=0) {
+                        params.expresion = '!'+elements.variable;
+                    } else if (typeof elements.value === 'string' && (
+                        elements.value.contains('$variables.') || 
+                        elements.value.contains('$vars.') ||
+                        elements.value.contains('$params.') ||
+                        elements.value.contains('$store.')
+                    )) {
+                        params.expresion = `${elements.variable} == ${elements.value}`;
+                    } else if (typeof elements.value === 'number') {
+                        params.expresion = `${elements.variable} == ${elements.value}`;
+                    } else if (typeof elements.value === 'string' &&
+                                elements.value.charAt(0)=='(' && elements.value.right(1)==')') {
+                        let temp = elements.value.substr(1,elements.value.length-2);
+                        params.expresion = `${elements.variable} == ${temp}`;
+                    } else if (typeof elements.value === 'string' &&
+                        elements.value.charAt(0)=='$' && elements.value.contains(`$t('`)==false) {
+                        let temp = elements.value.right(elements.value.length-1);
+                        params.expresion = `${elements.variable} == ${temp}`;
+                    } else {
+                        params.expresion = `${elements.variable} == '${elements.value}'`;
+                    }
+
+                } else if ('es string,es texto,string,texto'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isString(${elements.variable})`;
+
+                } else if ('es numero,es int,numero,int'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isNumber(${elements.variable})`;
+
+                } else if ('es boolean,es boleano,es booleano,booleano,boleano,boolean'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isBoolean(${elements.variable})`;
                 
-                } else if (elements.operator=='idioma es') {
-                } else if (elements.operator=='idioma es') {
+                } else if ('es fecha,es date,fecha,date'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isDate(${elements.variable})`;
+                
+                } else if ('es entero,es int,entero,int'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isFinite(${elements.variable})`;
+                
+                } else if ('es array,array'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isArray(${elements.variable})`;
+
+                } else if ('es struct,struct'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isObject(${elements.variable}) && !_.isArray(${elements.variable}) && !_.isFunction(${elements.variable})`;
+
+                } else if ('es objeto,objeto'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isObject(${elements.variable})`;
+                
+                } else if ('es correo,es email,email,correo'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isString(${elements.variable}) && /\S+@\S+\.\S+/.test(${elements.variable})`;
+
+                } else if ('no es correo,no es email'.split(',').includes(elements.operator)) {
+                    params.expresion = `!(_.isString(${elements.variable}) && /\S+@\S+\.\S+/.test(${elements.variable}))`;
+
+                //numeric testings
+                } else if ('es menor o igual a,es menor o igual que'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} <= ${elements.value}`;
+                
+                } else if ('es menor a,es menor que'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} < ${elements.value}`;
+
+                } else if ('es mayor o igual a,es mayor o igual que'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} > ${elements.value}`;
+
+                } else if ('esta entre'==elements.operator && elements.value.contains(',')) {
+                    let from = elements.value.split(',')[0];
+                    let until = elements.value.split(',').pop();
+                    params.expresion = `${elements.variable} >= ${from} && ${elements.variable} <= ${until}`;
+
+                //@todo create strings/other testings (in progress)
+                } else if ('no esta vacio,not empty'.split(',').includes(elements.operator)) {
+                    params.expresion = `(_.isObject(${elements.variable}) || (_.isString(${elements.variable})) &&  !_.isEmpty(${elements.variable})) || _.isNumber(${elements.variable}) || _.isBoolean(${elements.variable})`;
+
                 }
-                // code
-                console.log('(after) pattern match es '+which,{ elements,params });
-                resp.open = 'AQUI VA LA CONDICION VISTA';
+
+                //comments?
+                if (node.text_note != '') resp.open += `<!--${node.text_note}-->\n`;
+                // prepare virtual vars for underscore support
+                if (params.expresion && params.expresion.contains('_.')) {
+                    context.x_state.pages[state.current_page].imports['underscore'] = '_';
+                    //create virtual var 'computed'
+                    resp.open += context.tagParams('vue_computed', {
+                        name: `${node.id}_if`,
+                        type: 'computed'
+                    }, false);
+                    params.expresion = params.expresion. replaceAll('$variables.','this.')
+                    .replaceAll('$vars.','this.')                                   
+                    .replaceAll('$params.','this.')
+                    .replaceAll('$store.','this.$store.state.');
+                    resp.open += `return (${params.expresion});`;
+                    resp.open += `</vue_computed>`;
+                    //@todo seems the expresion should be the new var here... (was not on the cfc)
+                    params.expresion = `${node.id}_if`;
+                }
+                //create vue_if or template tag code (in tags, this. don't go)
+                params.expresion = params.expresion. replaceAll('$variables.','')
+                                                    .replaceAll('$vars.','')                                   
+                                                    .replaceAll('$params.','')
+                                                    .replaceAll('$store.','$store.state.');
+                if (params.target=='template') {
+                    // code
+                    resp.open += context.tagParams('template', {
+                        [params.tipo]: params.expresion
+                    }, false);
+                    resp.close = `</template>`;
+                } else {
+                    // code
+                    resp.open += context.tagParams('vue_if', params, false);
+                    resp.close = `</vue_if>`;
+                }
                 return resp;
             }
         },
 
-        //def_condicion_view
+        //**def_condicion_view (almost done, some if expressions missing)
         //def_otra_condicion_view
         //def_condicion (def_script_condicion)
         //def_otra_condicion (def_script_otra_condicion)
@@ -2958,6 +3062,7 @@ export default async function(context) {
                     if (node.text_note != '') resp.open += `//${node.text_note}\n`;
                     resp.close = '</vue_computed>\n';
                 }
+                resp.state.from_script=true;
                 // return
                 return resp;
             }
