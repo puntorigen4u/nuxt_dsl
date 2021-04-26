@@ -1,15 +1,12 @@
 <map version="1.1.2">
 <!-- Diagrama de Concepto DSL. Para ver este archivo use Creador Concepto DSL de http://www.creador.cl -->
-<node CREATED="1593364757441" ID="ID_754025712" MODIFIED="1597067993359" TEXT="testchico">
+<node CREATED="1593364757441" ID="ID_754025712" MODIFIED="1619016577370" TEXT="testchico">
 <attribute_layout NAME_WIDTH="83" VALUE_WIDTH="161"/>
-<attribute NAME="deploy" VALUE="local"/>
+<attribute NAME="deployb" VALUE="eb:test2"/>
+<attribute NAME="deploy" VALUE="false"/>
+<attribute NAME="debug" VALUE="false"/>
 <node CREATED="1552681609586" ID="ID_861168397" MODIFIED="1597108994794" POSITION="left" TEXT="config">
 <icon BUILTIN="desktop_new"/>
-<node CREATED="1552681609586" ID="ID_900432032" MODIFIED="1597202084211" TEXT="aws">
-<attribute_layout NAME_WIDTH="91" VALUE_WIDTH="291"/>
-<attribute NAME="access" VALUE="PLACE_YOUR_AWS_IAM_ACCESS_ID_HERE"/>
-<attribute NAME="secret" VALUE="pLace_yOur_Aws_SecreT_key_here"/>
-</node>
 <node CREATED="1567095818640" ID="ID_521087574" MODIFIED="1597068150647" TEXT="axios">
 <attribute_layout NAME_WIDTH="65" VALUE_WIDTH="183"/>
 <attribute NAME="local" VALUE="http://127.0.0.1:8081"/>
@@ -20,7 +17,7 @@
 <node CREATED="1594052492512" ID="ID_780662534" MODIFIED="1597068137427" TEXT="DSL de muestra"/>
 </node>
 </node>
-<node CREATED="1593365109324" FOLDED="true" ID="ID_1679802330" MODIFIED="1597072625073" POSITION="left" TEXT="store">
+<node CREATED="1593365109324" FOLDED="true" ID="ID_1679802330" MODIFIED="1618877576820" POSITION="left" TEXT="store">
 <icon BUILTIN="desktop_new"/>
 <icon BUILTIN="button_cancel"/>
 <node CREATED="1552681609587" FOLDED="true" HGAP="19" ID="ID_135262242" MODIFIED="1597068611221" TEXT="auth" VSHIFT="-26">
@@ -98,7 +95,7 @@
 <icon BUILTIN="gohome"/>
 <attribute_layout NAME_WIDTH="60" VALUE_WIDTH="100"/>
 <attribute NAME="class" VALUE="black"/>
-<node CREATED="1594004763661" ID="ID_1790231652" MODIFIED="1597068073332" TEXT="margen">
+<node CREATED="1594004763661" ID="ID_1790231652" MODIFIED="1619300414227" TEXT="margen">
 <icon BUILTIN="idea"/>
 <node CREATED="1594004675044" ID="ID_1557458253" MODIFIED="1597103311883" TEXT="centrar">
 <icon BUILTIN="idea"/>
@@ -111,8 +108,17 @@
 </node>
 </node>
 <node CREATED="1597178594790" ID="ID_543459642" MODIFIED="1597178599072" TEXT="..lorem..:10"/>
+<node CREATED="1619300319926" ID="ID_47634573" MODIFIED="1619300322990" TEXT="boton:hola">
+<icon BUILTIN="idea"/>
+<node CREATED="1619300323461" ID="ID_61573150" MODIFIED="1619300324899" TEXT="click">
+<icon BUILTIN="help"/>
+<node CREATED="1619300325237" ID="ID_1537353345" MODIFIED="1619300330106" TEXT="hola a todos!">
+<icon BUILTIN="clanbomber"/>
 </node>
-<node CREATED="1593383033359" ID="ID_1933537114" MODIFIED="1597095302715" TEXT="html:v-footer">
+</node>
+</node>
+</node>
+<node CREATED="1593383033359" ID="ID_1933537114" MODIFIED="1619028959163" TEXT="html:v-footer">
 <icon BUILTIN="idea"/>
 <attribute_layout NAME_WIDTH="74" VALUE_WIDTH="100"/>
 <attribute NAME=":style" VALUE="$variables.fondo"/>
@@ -138,15 +144,30 @@
 <icon BUILTIN="idea"/>
 </node>
 </node>
-<node CREATED="1594004881822" ID="ID_1586770012" MODIFIED="1597442914731" TEXT="variables">
+<node CREATED="1594004881822" ID="ID_1586770012" MODIFIED="1619028963938" TEXT="variables">
 <icon BUILTIN="xmag"/>
-<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1615306450337" TEXT="fondo">
+<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1619134601582" TEXT="fondo">
 <icon BUILTIN="help"/>
 <attribute NAME=":async" VALUE="false"/>
 <node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1597686805394" TEXT="struct, respuesta">
 <icon BUILTIN="desktop_new"/>
 <attribute_layout NAME_WIDTH="133" VALUE_WIDTH="113"/>
 <attribute NAME="backgroundColor" VALUE="#00D95A"/>
+</node>
+<node CREATED="1619134601988" ID="ID_444199158" MODIFIED="1619134608645" TEXT="probar">
+<icon BUILTIN="broken-line"/>
+<node CREATED="1619028968233" ID="ID_1682320463" MODIFIED="1619028997033" TEXT="fondo consultado">
+<icon BUILTIN="clanbomber"/>
+<icon BUILTIN="bell"/>
+<attribute NAME="respuesta" VALUE="**respuesta**"/>
+</node>
+<node CREATED="1619134675554" FOLDED="true" ID="ID_659253080" MODIFIED="1619136109438" TEXT="error">
+<icon BUILTIN="help"/>
+<icon BUILTIN="button_cancel"/>
+<node CREATED="1619028968233" ID="ID_1064770368" MODIFIED="1619134693182" TEXT="ocurrio un error en el probar previo">
+<icon BUILTIN="clanbomber"/>
+</node>
+</node>
 </node>
 <node CREATED="1553565000664" ID="ID_678355206" MODIFIED="1597639670325" TEXT="responder &quot;**respuesta**&quot;">
 <icon BUILTIN="desktop_new"/>
@@ -160,6 +181,14 @@
 <icon BUILTIN="desktop_new"/>
 <attribute_layout NAME_WIDTH="133" VALUE_WIDTH="113"/>
 <attribute NAME="backgroundColor" VALUE="#00D95A"/>
+</node>
+<node CREATED="1619028968233" ID="ID_611278748" MODIFIED="1619136104903" TEXT="fondo2 consultado">
+<icon BUILTIN="clanbomber"/>
+<icon BUILTIN="bell"/>
+<attribute_layout NAME_WIDTH="94" VALUE_WIDTH="88"/>
+<attribute NAME="respuesta" VALUE="**respuesta**"/>
+<attribute NAME="nombre" VALUE="Pablo"/>
+<attribute NAME="info" VALUE="$variables.info"/>
 </node>
 <node CREATED="1553565000664" ID="ID_327872258" MODIFIED="1597639670325" TEXT="responder &quot;**respuesta**&quot;">
 <icon BUILTIN="desktop_new"/>

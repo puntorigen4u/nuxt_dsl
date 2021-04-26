@@ -2359,6 +2359,7 @@ export default async function(context) {
                 resp.open = context.tagParams('vue_mounted', {}, false);
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
                 resp.close = '</vue_mounted>';
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -2379,6 +2380,7 @@ export default async function(context) {
                 if (!params.return) resp.open += `let resp={};`;
                 resp.close = '</server_asyncdata>';
                 resp.state.from_server=true;
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -2407,6 +2409,7 @@ export default async function(context) {
                 resp.open = context.tagParams('vue_event_method', params, false);
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
                 resp.close = '</vue_event_method>';
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -2489,6 +2492,7 @@ export default async function(context) {
                 resp.open = context.tagParams('vue_event_element', params, false);
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
                 resp.close = '</vue_event_element>';
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -2514,6 +2518,7 @@ export default async function(context) {
                 resp.open = context.tagParams('script2', params, false);
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
                 resp.close = '</script2>';
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -2523,6 +2528,91 @@ export default async function(context) {
         //*def_event_mounted
         //*def_event_method
         //*def_event_element
+
+        'def_condicion_view': {
+            x_icons: 'help',
+            x_level: '>2',
+            x_text_pattern: [`condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro) "*"`,
+                             `condicion si "*" es +(objeto|array|struct|string|texto)`,
+                             `condicion si "*" es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
+                             `condicion si "*" es +(no esta vacio|esta vacio|existe|esta definida|no es nula|es nula)`,
+                             `condicion si "*" es +(no contiene registros|contiene registros)`,
+                             `condicion si "*" esta entre "*" inclusive`],
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            hint:   `Declara que la/s vista/s hija/s deben cumplir la condicion indicada para ser visibles.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                if (resp.state.from_script) return {...resp,...{ valid:false }};
+                // detect which pattern did the match
+                let match = require('minimatch');
+                let which = 0;
+                for (let x of context.x_commands['def_condicion_view'].x_text_pattern) {
+                    let test = match(node.text,x);
+                    if (test==true) break;
+                    which+=1;
+                };
+                // extract the values
+                let extract = require('extractjs')();
+                let defaults = { variable:'', operator:'es', value:'' };
+                let patterns = [
+                    `condicion si "{variable}" {operator} "{value}"`,
+                    `condicion si "{variable}" es {value}`,
+                    `condicion si "{variable}" es {value}`,
+                    `condicion si "{variable}" es {value}`,
+                    `condicion si "{variable}" es {value}`,
+                    `condicion si "{variable} esta entre "{value}" inclusive`
+                ];
+                let elements = {...defaults,...extract(patterns[which],node.text)};
+                // pre-process elements
+                if (typeof elements.variable === 'string' && elements.variable.contains('**') && node.icons.includes('bell')) elements.variable = getTranslatedTextVar(elements.variable);
+                if (typeof elements.value === 'string' && elements.value.contains('**') && node.icons.includes('bell')) elements.value = getTranslatedTextVar(elements.value);
+                if (typeof elements.variable === 'string' && (elements.variable.contains('$variables.') || 
+                    elements.variable.contains('$vars.') ||
+                    elements.variable.contains('$params.') ||
+                    elements.variable.contains('$store.') ||
+                    elements.variable.contains('$route.'))
+                    ) {
+                } else if (typeof elements.variable === 'string' && elements.variable.contains('$')) {
+                    elements.variable = elements.variable.right(elements.variable.length-1);
+                }
+                // test for siblings conditions
+                elements.type = 'v-if';
+                let before_me = await context.dsl_parser.getBrotherNodesIDs({ id:node.id, before:true, after:false, array:true });
+                if (before_me.length>0) {
+                    if (before_me[0].TEXT && before_me[0].TEXT.contains('condicion si')) {
+                        elements.type = 'v-else-if'
+                    }
+                }
+                // tag params
+                let params = aliases2params('def_condicion_view',node);
+                params = {...params, ...{
+                    target: 'template',
+                    tipo: elements.type,
+                    operador: elements.operator,
+                    valor: elements.value
+                }};
+                if (node.nodes_raw.length==1) params.target=node.nodes_raw[0].id; 
+                if (params.individual && params.individual==true) {
+                    params.tipo = 'v-if'; elements.type = 'v-if';
+                    delete params.individual;
+                }
+                // get full expression, depending on operator
+                if (elements.operator=='idioma es') {
+                    params.expresion = `this.$i18n && this.$i18n.locale=='${elements.variable}'`;
+                } else if (['es','=','eq'].includes(elements.operator)) {
+                
+                } else if (elements.operator=='idioma es') {
+                } else if (elements.operator=='idioma es') {
+                }
+                // code
+                console.log('(after) pattern match es '+which,{ elements,params });
+                resp.open = 'AQUI VA LA CONDICION VISTA';
+                return resp;
+            }
+        },
 
         //def_condicion_view
         //def_otra_condicion_view

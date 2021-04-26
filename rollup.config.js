@@ -32,7 +32,7 @@ const config = {
         'src/assets'
       ]
     }),
-    compiler()
+    //compiler()
   ]
 };
 
