@@ -2767,11 +2767,40 @@ export default async function(context) {
             }
         },
 
+        'def_otra_condicion_view': {
+            x_icons: 'help',
+            x_level: '>2',
+            x_text_exact: 'otra condicion',
+            hint:   `Visibiliza sus hijos en caso de no cumplirse la condicion anterior.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                if (resp.state.from_script && resp.state.from_script==true) return {...resp,...{ valid:false }};
+                //code
+                if (node.nodes_raw.length>1) {
+                    if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                    resp.open += context.tagParams('template', { 'v-else': null }, false);
+                } else if (node.nodes_raw.length==1) {
+                    if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                    resp.open += context.tagParams('vue_if', { 
+                        'expresion':'',
+                        'tipo':'v-else',
+                        'target': node.nodes_raw[0].attribs.ID 
+                    }, false);
+                    resp.close = `</vue_if>`;
+                } else {
+                    // dont write if we dont have children
+                }
+                return resp;
+            }
+        },
+
         'def_condicion': {
             x_icons: 'help',
             x_level: '>2',
             x_text_contains: 'condicion si',
-            //x_text_pattern: this.x_commands['def_condicion_view'].x_text_pattern,
             hint:   `Declara que los hijo/s deben cumplir la condicion indicada para ser ejecutados.`,
             func: async function(node, state) {
                 let resp = context.reply_template({
@@ -2794,10 +2823,29 @@ export default async function(context) {
             }
         },
 
+        'def_otra_condicion': {
+            x_icons: 'help',
+            x_level: '>2',
+            x_text_exact: 'otra condicion',
+            hint:   `Ejecuta sus hijos en caso de no cumplirse la condicion anterior.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                if (!resp.state.from_script || (resp.state.from_script && resp.state.from_script==false)) return {...resp,...{ valid:false }};
+                //code
+                if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                resp.open += `else {\n`;
+                resp.close = `}\n`;
+                return resp;
+            }
+        },
+
         //*def_condicion_view
-        //def_otra_condicion_view
+        //**def_otra_condicion_view
         //*def_condicion (def_script_condicion)
-        //def_otra_condicion (def_script_otra_condicion)
+        //**def_otra_condicion (def_script_otra_condicion)
 
 
         // *************
