@@ -80,6 +80,7 @@ export default async function(context) {
                 .replaceAll('$config.', 'process.env.')
                 .replaceAll('$store.', '$store.state.').trim();
             //
+            //tvalue = getTranslatedTextVar(tvalue);
             if (keytest == 'props') {
                 value.split(' ').map(x => {
                     params[x] = null
@@ -2138,6 +2139,8 @@ export default async function(context) {
                 // write tag
                 resp.open += context.tagParams('v-chip', params, false) + `${text}\n`;
                 resp.close += `</v-chip>\n`;
+                resp.state.friendly_name = text;
+                if (text.contains('{{')) resp.state.friendly_name = 'chip';
                 return resp;
             }
         },
@@ -2601,7 +2604,12 @@ export default async function(context) {
                 //if (!state.from_componente) {
                 let normal = require('url-record'), ccase = require('fast-case');
                 let short_event = params.event.split('.')[0].split(':')[0];
-                let tmp_name = short_event+'-'+parent_node.text.split('.')[0];
+                let tmp_name = '';
+                if (parent_node.text.contains('$variables')) {
+                    tmp_name = short_event;
+                } else {
+                    tmp_name = short_event+'-'+parent_node.text.split('.')[0];
+                }
                 if (state.friendly_name && state.friendly_name!='') {
                     params.friendly_name = normal(state.friendly_name).split('-')[0];
                     tmp_name = short_event+'-'+params.friendly_name.split('.')[0];
@@ -2636,6 +2644,9 @@ export default async function(context) {
                         params.v_params.push('$event');
                     } else if  (attrs[key].contains('this.') || attrs[key].contains('$event')) {
                         params.v_params.push(attrs[key]);
+                    } else if  (attrs[key].contains('**') && node.icons.includes('bell')) {
+                        let sv = getTranslatedTextVar(attrs[key]);
+                        params.v_params.push(sv);
                     } else {
                         params.v_params.push(`'${attrs[key]}'`);
                     }
