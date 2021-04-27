@@ -1349,7 +1349,7 @@ export default async function(context) {
                     params[':selectedImages'] = vmodel;
                 }
                 // add plugin
-                context.x_state.plugins['vue-picture-input'] = {
+                context.x_state.plugins['vue-select-image'] = {
                     global: true,
                     npm: {
                         'vue-select-image': '*'
@@ -1763,10 +1763,9 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let params = {
-                    refx: node.id
-                };
+                let params = aliases2params('def_html', node);
                 // parse attributes
+                /*
                 Object.keys(node.attributes).map(function(key) {
                     let value = node.attributes[key];
                     // preprocess value
@@ -1799,17 +1798,32 @@ export default async function(context) {
                     } else {
                         params[key] = value;
                     }
-                }.bind(this));
+                }.bind(this));*/
                 //
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
                 let tag = node.text.replace('html:', '');
                 if (node.nodes_raw && node.nodes_raw.length > 0) {
-                    resp.open += context.tagParams(tag, params, false) + '\n';
-                    resp.close += `</${tag}>\n`;
+                    let tmp = await node.getNodes({ recurse:false });
+                    let has_only_events = true;
+                    for (let x of tmp) {
+                        if (x.icons.includes('help')==false) {
+                            has_only_events = false;
+                            break;
+                        }
+                    }
+                    if (!has_only_events) {
+                        // this tag has real children
+                        resp.open += context.tagParams(tag, params, false) + '\n';
+                        resp.close += `</${tag}>\n`;
+                    } else {
+                        // has only ghost childs (self-close)
+                        resp.open += context.tagParams(tag, params, true)+'\n';                        
+                    }
                 } else {
                     // doesn't have children nodes (self-close)
                     resp.open += context.tagParams(tag, params, true)+'\n';
                 }
+                resp.state.friendly_name = tag;
                 return resp;
             }
         },
@@ -2584,28 +2598,32 @@ export default async function(context) {
                 let parent_node = await context.dsl_parser.getParentNode({ id: node.id });
                 params.parent_id = parent_node.id;
                 params.friendly_name = "";
-                if (!state.from_componente) {
-                    let normal = require('url-record'), ccase = require('fast-case');
-                    if (state.friendly_name && state.friendly_name!='') {
-                        params.friendly_name = normal(state.friendly_name).split('-')[0];
-                        //delete resp.state.friendly_name;
-                    } else {
-                        params.friendly_name = normal(parent_node.text).split('-')[0];
-                    }
-                    params.friendly_name = ccase.camelize(`${params.event.split(':')[0]}_`+params.friendly_name);
-                    if (params.friendly_name in context.x_state.pages[state.current_page].track_events) {
-                        context.x_state.pages[resp.state.current_page].track_events[params.friendly_name].count += 1;
-                        params.friendly_name = params.friendly_name+context.x_state.pages[state.current_page].track_events[params.friendly_name].count;
-                    } else {
-                        context.x_state.pages[state.current_page].track_events[params.friendly_name] = { count:1 };
-                    }
-                    resp.state.friendly_name = params.friendly_name;
+                //if (!state.from_componente) {
+                let normal = require('url-record'), ccase = require('fast-case');
+                let short_event = params.event.split('.')[0].split(':')[0];
+                let tmp_name = short_event+'-'+parent_node.text.split('.')[0];
+                if (state.friendly_name && state.friendly_name!='') {
+                    params.friendly_name = normal(state.friendly_name).split('-')[0];
+                    tmp_name = short_event+'-'+params.friendly_name.split('.')[0];
+                }
+                params.friendly_name = tmp_name;
+                //params.friendly_name = normal(tmp_name); //.split('-')[0];
+                params.friendly_name = ccase.camelize(params.friendly_name); //`${params.event.split('.')[0]}_`+
+                if (params.friendly_name in context.x_state.pages[state.current_page].track_events) {
+                    context.x_state.pages[state.current_page].track_events[params.friendly_name].count += 1;
+                    params.friendly_name = params.friendly_name+context.x_state.pages[state.current_page].track_events[params.friendly_name].count;
+                } else {
+                    context.x_state.pages[state.current_page].track_events[params.friendly_name] = { count:1 };
                 }
                 //has link? ex. img @event='othermethod'
                 if (node.link!='' && node.link.contains('ID_')) {
-                    // get event friendly name
+                    // get event friendly name - @todo check when target is a declared method and not an event - checked and ready!
                     params.link = 'x';
                     params.link_id = node.link;
+                    let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
+                    if (link_node && link_node.valid==true) {
+                        params.link = link_node.text;
+                    }
                 }
                 //
                 delete attrs.refx;

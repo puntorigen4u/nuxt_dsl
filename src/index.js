@@ -1000,6 +1000,7 @@ ${cur.attr('name')}: {
                             method_name = the_node.attr('friendly_name');
                         } else {
                             console.log('target node ID (events) not found');
+                            //@todo maybe its a method function and not an event
                         }
                         method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
                     }
@@ -1984,7 +1985,10 @@ ${cur.attr('name')}: {
                 trailingComma: 'none'
             });
             } catch(ee) {
-                this.debug(`error: could not format the vue file; omitting formatting`);
+                this.debug(`error: could not format the vue file; trying vue-beautify`);
+                let beautify = require('js-beautify');
+                let beautify_vue = beautify.html;
+                resp = beautify_vue(resp,{});
             }
 
         } else if (ext=='css') {
