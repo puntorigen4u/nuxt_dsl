@@ -2304,19 +2304,121 @@ export default async function(context) {
             }
         },
 
+        'def_layout_custom': {
+        	x_level: '>3',
+        	x_empty: 'idea',
+            x_text_contains: 'layout',
+            x_not_text_contains: ':',
+        	hint: 'Layout (custom)',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_layout_custom', node);
+                resp.open += context.tagParams('v-layout',params,true);
+                return resp;
+            }
+        },
+
+        'def_divider': {
+        	x_level: '>2',
+        	x_empty: 'idea',
+            x_text_contains: '---',
+        	hint: 'Divisor, separador visual',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_divider', node);
+                resp.open += context.tagParams('v-divider',params,true);
+                return resp;
+            }
+        },
+
+        'def_slot': {
+        	x_level: '>2',
+        	x_empty: 'list',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+        	hint: 'Template slot; nombre o nombre=valor',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_slot', node);
+                if (node.text.contains('=')) {
+                    let extract = require('extractjs')();
+                    let elements = extract(`{name}={value}`,node.text);
+                    //@todo test this after def_datatable exists
+                    if (context.hasParentID(node.id, 'def_datatable')==true) {
+                        if (elements.name=='items') {
+                            elements.name = 'item';
+                        } else if (elements.name=='headers') {
+                            elements.name = 'header';
+                        } else if (elements.name=='expand') {
+                            elements.name = 'expanded-item';
+                        }
+                    }
+                    params[`v-slot:${elements.name}`] = elements.value;
+                } else {
+                    params[`v-slot:${node.text.trim()}`] = null;
+                }
+                resp.open += context.tagParams('template',params,false)+'\n';
+                resp.close = '</template>\n';
+                return resp;
+            }
+        },
+
+        'def_div': {
+        	x_level: '>2',
+        	x_empty: 'idea',
+            x_text_exact: 'div',
+        	hint: 'HTML div/bloque',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_div', node);
+                resp.open += context.tagParams('div',params,false)+'\n';
+                resp.close = '</div>';
+                return resp;
+            }
+        },
+
+        'def_agrupar': {
+        	x_level: '>2',
+        	x_empty: 'idea',
+            x_text_exact: 'agrupar',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+        	hint: 'Agrupa elementos flex hijos horizontalmente',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_agrupar', node);
+                if (params.centrar && params.centrar==true) {
+                    params['justify-center'] = null;
+                    params['align-center'] = null;
+                    delete params.centrar;
+                }
+                resp.open += context.tagParams('v-row',params,false)+'\n';
+                resp.close = '</v-row>';
+                return resp;
+            }
+        },
+
         //*def_contenido
         //*def_toolbar
         //*def_toolbar_title
-        //def_layout_custom
-        //def_divider
-        //def_slot
-        //def_div
-        //def_agrupar
+        //**def_layout_custom - @todo needs testing
+        //**def_divider
+        //**def_slot
+        //**def_div
+        //**def_agrupar
         //def_bloque
         //def_hover
         //def_tooltip
 
-        //def_datatable
+        //def_datatable (@todo re-test def_slot after this one is done)
         //def_datatable_col
         //def_datatable_fila
         //def_datatable_headers
@@ -2843,9 +2945,9 @@ export default async function(context) {
         },
 
         //*def_condicion_view
-        //**def_otra_condicion_view
+        //*def_otra_condicion_view
         //*def_condicion (def_script_condicion)
-        //**def_otra_condicion (def_script_otra_condicion)
+        //*def_otra_condicion (def_script_otra_condicion)
 
 
         // *************
