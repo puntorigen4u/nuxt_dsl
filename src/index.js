@@ -1463,7 +1463,10 @@ ${cur.attr('name')}: {
                         if (style.file.contains('/')==false) {
                             let target = path.join(this.x_state.dirs.css, style.file);
                             await this.writeFile(target, style.content);
-                            resp.css_files.push(style);
+                            resp.css_files.push({
+                                src: `~/assets/css/${style.file}`,
+                                lang: style.lang
+                            });
                         }
                     }
                 }
@@ -1958,7 +1961,14 @@ ${cur.attr('name')}: {
         let beautify_css = beautify.css;*/
         let resp = content;
         if (ext=='js') {
-            resp = prettier.format(resp, { parser: 'babel', useTabs:true, singleQuote:true });
+            try {
+                resp = prettier.format(resp, { parser: 'babel', useTabs:true, singleQuote:true });
+            } catch(ee) {
+                this.debug(`error: could not format the JS file; trying js-beautify`);
+                let beautify = require('js-beautify');
+                let beautify_js = beautify.js;
+                resp = beautify_js(resp,{});
+            }
         } else if (ext=='json') {
             resp = prettier.format(resp, { parser: 'json' });
         } else if (ext=='vue') {
@@ -1974,7 +1984,7 @@ ${cur.attr('name')}: {
                 trailingComma: 'none'
             });
             } catch(ee) {
-                this.debug(`error: could not posible format the vue file; omitting`);
+                this.debug(`error: could not format the vue file; omitting formatting`);
             }
 
         } else if (ext=='css') {

@@ -97,7 +97,8 @@ export default async function(context) {
             } else {
                 // this is an attribute key that is not mapped
                 if (value != tvalue || value[0]=="$" || value[0]=="!" ) {
-                    params[`:${key_use}`] = tvalue.replaceAll('{{','').replaceAll('}}','');
+                    //if (tvalue.contains('{{') && tvalue.contains('}}')) tvalue = tvalue.replaceAll('{{','').replaceAll('}}','');
+                    params[`:${key_use}`] = tvalue;
                 } else {
                     params[key_use] = tvalue;
                 }
@@ -2369,7 +2370,7 @@ export default async function(context) {
         },
 
         'def_div': {
-        	x_level: '>1',
+        	x_level: '>2',
         	x_icons: 'idea',
             x_text_exact: 'div',
             x_or_hasparent: 'def_page,def_componente,def_layout',
@@ -2430,6 +2431,22 @@ export default async function(context) {
             }
         },
 
+        'def_hover': {
+        	x_level: '>2',
+        	x_icons: 'idea',
+            x_text_exact: 'hover',
+            hint: 'Crea variable $hover con true si usuario posa mouse sobre su hijo',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                let params = aliases2params('def_hover', node);
+                resp.open += context.tagParams('v-hover',params,false)+'\n';
+                resp.close = '</v-hover>';
+                return resp;
+            }
+        },
+
         //*def_contenido
         //*def_toolbar
         //*def_toolbar_title
@@ -2439,7 +2456,7 @@ export default async function(context) {
         //**def_div
         //**def_agrupar
         //**def_bloque
-        //def_hover
+        //**def_hover
         //def_tooltip
 
         //def_datatable (@todo re-test def_slot after this one is done)
