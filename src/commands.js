@@ -97,7 +97,7 @@ export default async function(context) {
             } else {
                 // this is an attribute key that is not mapped
                 if (value != tvalue || value[0]=="$" || value[0]=="!" ) {
-                    params[`:${key_use}`] = tvalue;
+                    params[`:${key_use}`] = tvalue.replaceAll('{{','').replaceAll('}}','');
                 } else {
                     params[key_use] = tvalue;
                 }
@@ -775,7 +775,7 @@ export default async function(context) {
                     resp.open = `${node.text.trim()} {\n`;
                 }
                 // output attributes
-                // @TODO improved this; I believe this could behave more like def_variables_field instead, and so support nested styles.
+                // @TODO improve this; I believe this could behave more like def_variables_field instead, and so support nested styles.
                 // currently this works as it was in the CFC
                 Object.keys(node.attributes).map(function(key) {
                     let value = node.attributes[key];
@@ -2306,7 +2306,7 @@ export default async function(context) {
 
         'def_layout_custom': {
         	x_level: '>3',
-        	x_empty: 'idea',
+        	x_icons: 'idea',
             x_text_contains: 'layout',
             x_not_text_contains: ':',
         	hint: 'Layout (custom)',
@@ -2322,7 +2322,7 @@ export default async function(context) {
 
         'def_divider': {
         	x_level: '>2',
-        	x_empty: 'idea',
+        	x_icons: 'idea',
             x_text_contains: '---',
         	hint: 'Divisor, separador visual',
         	func: async function(node, state) {
@@ -2337,7 +2337,7 @@ export default async function(context) {
 
         'def_slot': {
         	x_level: '>2',
-        	x_empty: 'list',
+        	x_icons: 'list',
             x_or_hasparent: 'def_page,def_componente,def_layout',
         	hint: 'Template slot; nombre o nombre=valor',
         	func: async function(node, state) {
@@ -2369,9 +2369,10 @@ export default async function(context) {
         },
 
         'def_div': {
-        	x_level: '>2',
-        	x_empty: 'idea',
+        	x_level: '>1',
+        	x_icons: 'idea',
             x_text_exact: 'div',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
         	hint: 'HTML div/bloque',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
@@ -2386,7 +2387,7 @@ export default async function(context) {
 
         'def_agrupar': {
         	x_level: '>2',
-        	x_empty: 'idea',
+        	x_icons: 'idea',
             x_text_exact: 'agrupar',
             x_or_hasparent: 'def_page,def_componente,def_layout',
         	hint: 'Agrupa elementos flex hijos horizontalmente',
@@ -2406,6 +2407,29 @@ export default async function(context) {
             }
         },
 
+        'def_bloque': {
+        	x_level: '>2',
+        	x_icons: 'idea',
+            x_text_exact: 'bloque',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+        	hint: 'Bloque; una fila de algo en bloque completo',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                //code
+                let params = aliases2params('def_bloque', node);
+                params.column = null;
+                if (params.centrar && params.centrar==true) {
+                    params['justify-center'] = null;
+                    params['align-center'] = null;
+                    delete params.centrar;
+                }
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-layout',params,false)+'\n';
+                resp.close = '</v-layout>';
+                return resp;
+            }
+        },
+
         //*def_contenido
         //*def_toolbar
         //*def_toolbar_title
@@ -2414,7 +2438,7 @@ export default async function(context) {
         //**def_slot
         //**def_div
         //**def_agrupar
-        //def_bloque
+        //**def_bloque
         //def_hover
         //def_tooltip
 
