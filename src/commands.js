@@ -2532,12 +2532,16 @@ export default async function(context) {
         'def_condicion_view': {
             x_icons: 'help',
             x_level: '>2',
-            x_text_pattern: [`condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro) "*"`,
-                             `condicion si "*" es +(objeto|array|struct|string|texto)`,
-                             `condicion si "*" es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
-                             `condicion si "*" es +(no esta vacio|esta vacio|existe|esta definida|no es nula|es nula)`,
-                             `condicion si "*" es +(no contiene registros|contiene registros)`,
-                             `condicion si "*" esta entre "*" inclusive`],
+            x_text_contains: 'condicion si',
+            x_text_pattern: [
+            `condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro) "*"`,
+            `condicion si "*" es +(objeto|array|struct|string|texto)`,
+            `condicion si "*" es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
+            `condicion si "*" no es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
+            `condicion si "*" +(esta vacia|esta vacio|is empty|existe|exists|no es indefinido|no es indefinida|esta definida|no esta vacio|existe|esta definida|no es nula|no es nulo|es nula|not empty)`,
+            `condicion si "*" +(no contiene registros|contiene registros)`,
+            `condicion si "*" esta entre "*" inclusive`
+            ],
             x_or_hasparent: 'def_page,def_componente,def_layout',
             hint:   `Declara que la/s vista/s hija/s deben cumplir la condicion indicada para ser visibles.`,
             func: async function(node, state) {
@@ -2545,7 +2549,7 @@ export default async function(context) {
                     state,
                     hasChildren: true
                 });
-                if (resp.state.from_script) return {...resp,...{ valid:false }};
+                if (resp.state.from_script && resp.state.from_script==true) return {...resp,...{ valid:false }};
                 // detect which pattern did the match
                 let match = require('minimatch');
                 let which = -1;
@@ -2563,6 +2567,7 @@ export default async function(context) {
                     `condicion si "{variable}" {operator}`,
                     `condicion si "{variable}" {operator}`,
                     `condicion si "{variable}" {operator}`,
+                    `condicion si "{variable}" {operator}`,
                     `condicion si "{variable} esta entre "{value}" inclusive`
                 ];
                 let elements = {...defaults,...extract(patterns[which],node.text)};
@@ -2575,7 +2580,7 @@ export default async function(context) {
                     elements.variable.contains('$store.') ||
                     elements.variable.contains('$route.'))
                     ) {
-                } else if (typeof elements.variable === 'string' && elements.variable.contains('$')) {
+                } else if (typeof elements.variable === 'string' && elements.variable.charAt(0)=='$') {
                     elements.variable = elements.variable.right(elements.variable.length-1);
                 }
                 // test for siblings conditions
@@ -2594,7 +2599,7 @@ export default async function(context) {
                     operador: elements.operator,
                     valor: elements.value
                 }};
-                if (node.nodes_raw.length==1) params.target=node.nodes_raw[0].ID; 
+                if (node.nodes_raw.length==1) params.target=node.nodes_raw[0].attribs.ID; //.id
                 if (params.individual && params.individual==true) {
                     params.tipo = 'v-if'; elements.type = 'v-if';
                     delete params.individual;
@@ -2666,6 +2671,9 @@ export default async function(context) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} < ${elements.value}`;
 
                 } else if ('es mayor o igual a,es mayor o igual que'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} >= ${elements.value}`;
+
+                } else if ('es mayor a,es mayor que'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} > ${elements.value}`;
 
                 } else if ('esta entre'==elements.operator && elements.value.contains(',')) {
@@ -2673,14 +2681,62 @@ export default async function(context) {
                     let until = elements.value.split(',').pop();
                     params.expresion = `${elements.variable} >= ${from} && ${elements.variable} <= ${until}`;
 
-                //@todo create strings/other testings (in progress)
+                // strings
                 } else if ('no esta vacio,not empty'.split(',').includes(elements.operator)) {
                     params.expresion = `(_.isObject(${elements.variable}) || (_.isString(${elements.variable})) &&  !_.isEmpty(${elements.variable})) || _.isNumber(${elements.variable}) || _.isBoolean(${elements.variable})`;
 
+                } else if ('esta vacio,is empty,esta vacia'.split(',').includes(elements.operator)) {
+                    params.expresion = `(_.isObject(${elements.variable}) ||_.isString(${elements.variable})) &&  _.isEmpty(${elements.variable})`;
+
+                // other types
+                } else if ('existe,exists,no es indefinido,no es indefinida,esta definida'.split(',').includes(elements.operator)) {
+                    params.expresion = `!_.isUndefined(${elements.variable})`;
+
+                } else if ('no existe,doesnt exists,es indefinido,es indefinida,no esta definida'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isUndefined(${elements.variable})`;
+
+                } else if ('no es nula,no es nulo'.split(',').includes(elements.operator)) {
+                    params.expresion = `!_.isNull(${elements.variable})`;
+
+                } else if ('es nula,es nulo'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isNull(${elements.variable})`;
+
+                } else if ('no es,!=,neq'.split(',').includes(elements.operator)) {
+                    //@todo check if value is string - pendieng testing
+                    params.expresion = `${elements.variable}!=${elements.value}`;
+
+                // records
+                } else if ('no contiene registros,contains no records'.split(',').includes(elements.operator)) {
+                    params.expresion = `${elements.variable} && ${elements.variable}.length==0`;
+
+                } else if ('contiene registros,contains records'.split(',').includes(elements.operator)) {
+                    params.expresion = `${elements.variable} && ${elements.variable}.length`; //@todo check if this needs to be .length>0
+
+                } else if ('contiene registro,contiene item'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.contains(${elements.variable},'${elements.value}')`;
+
+                } else if ('contiene,contains'.split(',').includes(elements.operator)) {
+                    params.expresion = `${elements.variable}.toLowerCase().indexOf(${elements.value}.toLowerCase())!=-1`;
+
+                } else {
+                    //operator not defined
+                    context.x_console.outT({ message:`Operator (${elements.operator}) not defined in 'condicion si' x_command`, color:'red', data:{elements,params,which} });
+                    throw `Operator ${elements.operator} not defined in '${node.text}'`;
+                    //params.expresion = `(AQUI VAMOS: ${node.text})`;
                 }
 
                 //comments?
                 if (node.text_note != '') resp.open += `<!--${node.text_note}-->\n`;
+                // prepare expressions
+                let expresion_js = params.expresion. replaceAll('$variables.','this.')
+                                                    .replaceAll('$vars.','this.')                                   
+                                                    .replaceAll('$params.','this.')
+                                                    .replaceAll('$store.','this.$store.state.');
+                let expresion_view = params.expresion.   replaceAll('$variables.','')
+                                                        .replaceAll('$vars.','')
+                                                        .replaceAll('$params.','')
+                                                        .replaceAll('$store.','$store.state.');
+                resp.state.meta = { if_js:expresion_js, if_view:expresion_view, params, elements };
                 // prepare virtual vars for underscore support
                 if (params.expresion && params.expresion.contains('_.')) {
                     context.x_state.pages[state.current_page].imports['underscore'] = '_';
@@ -2689,20 +2745,13 @@ export default async function(context) {
                         name: `${node.id}_if`,
                         type: 'computed'
                     }, false);
-                    params.expresion = params.expresion. replaceAll('$variables.','this.')
-                    .replaceAll('$vars.','this.')                                   
-                    .replaceAll('$params.','this.')
-                    .replaceAll('$store.','this.$store.state.');
-                    resp.open += `return (${params.expresion});`;
+                    resp.open += `return (${expresion_js});`;
                     resp.open += `</vue_computed>`;
                     //@todo seems the expresion should be the new var here... (was not on the cfc)
                     params.expresion = `${node.id}_if`;
                 }
                 //create vue_if or template tag code (in tags, this. don't go)
-                params.expresion = params.expresion. replaceAll('$variables.','')
-                                                    .replaceAll('$vars.','')                                   
-                                                    .replaceAll('$params.','')
-                                                    .replaceAll('$store.','$store.state.');
+                if (!(params.expresion.contains('_if'))) params.expresion = expresion_view;
                 if (params.target=='template') {
                     // code
                     resp.open += context.tagParams('template', {
@@ -2718,9 +2767,36 @@ export default async function(context) {
             }
         },
 
-        //**def_condicion_view (almost done, some if expressions missing)
+        'def_condicion': {
+            x_icons: 'help',
+            x_level: '>2',
+            x_text_contains: 'condicion si',
+            //x_text_pattern: this.x_commands['def_condicion_view'].x_text_pattern,
+            hint:   `Declara que los hijo/s deben cumplir la condicion indicada para ser ejecutados.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                if (!resp.state.from_script || (resp.state.from_script && resp.state.from_script==false)) return {...resp,...{ valid:false }};
+                let condicion = await context.x_commands['def_condicion_view'].func(node, { ...state, ...{
+                    from_script:false
+                }});
+                //code
+                if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                if (condicion.state.meta.params.tipo=='v-if') {
+                    resp.open += `if (${condicion.state.meta.if_js}) {\n`;
+                } else {
+                    resp.open += `else if (${condicion.state.meta.if_js}) {\n`;
+                }
+                resp.close = `}\n`;
+                return resp;
+            }
+        },
+
+        //*def_condicion_view
         //def_otra_condicion_view
-        //def_condicion (def_script_condicion)
+        //*def_condicion (def_script_condicion)
         //def_otra_condicion (def_script_otra_condicion)
 
 
