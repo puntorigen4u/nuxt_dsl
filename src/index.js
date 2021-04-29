@@ -999,7 +999,7 @@ ${cur.attr('name')}: {
                             let the_node = $(target[0]);
                             method_name = the_node.attr('friendly_name');
                         } else {
-                            console.log('target node ID (events) not found');
+                            //console.log('target node ID (events) not found');
                             //@todo maybe its a method function and not an event
                         }
                         method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
