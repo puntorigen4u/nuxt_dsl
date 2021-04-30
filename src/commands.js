@@ -55,7 +55,7 @@ export default async function(context) {
         }
     };
     // process our own attributes_aliases to normalize node attributes
-    const aliases2params = function(x_id, node) {
+    const aliases2params = function(x_id, node, escape_vars) {
         let params = {
                 refx: node.id
             },
@@ -98,7 +98,9 @@ export default async function(context) {
             } else {
                 // this is an attribute key that is not mapped
                 if (value != tvalue || value[0]=="$" || value[0]=="!" ) {
-                    //if (tvalue.contains('{{') && tvalue.contains('}}')) tvalue = tvalue.replaceAll('{{','').replaceAll('}}','');
+                    if (escape_vars && escape_vars==true) {
+                        tvalue = tvalue.replaceAll('{{','').replaceAll('}}','');
+                    }
                     params[`:${key_use}`] = tvalue;
                 } else {
                     params[key_use] = tvalue;
@@ -1852,6 +1854,8 @@ export default async function(context) {
                 // some extra validation
                 if (await context.hasParentID(node.id, 'def_toolbar') == true && await context.hasParentID(node.id, 'def_slot') == false) {
                     resp.valid = false;
+                } else if (await context.hasParentID(node.id, 'def_datatable_headers') == true) {
+                    resp.valid = false;
                 } else if (await context.hasParentID(node.id, 'def_variables') == true) {
                     resp.valid = false;
                 } else if (await context.hasParentID(node.id, 'def_page_estilos') == true) {
@@ -2464,6 +2468,188 @@ export default async function(context) {
             }
         },
 
+        'def_tooltip': {
+        	x_level: '>2',
+        	x_icons: 'idea',
+            x_text_exact: 'tooltip',
+            attributes_aliases: {
+                'texto':        'texto,text,:text,:texto',
+                'class':        'class,:class'
+            },
+            hint: 'Muestra el mensaje definido cuando se detecta mouse sobre sus hijos',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_tooltip', node);
+                let tmp = { text:'', params_span:{} };
+                if (params.texto) {
+                    tmp.text = `{{ ${params.texto} }}`;
+                    delete params.texto;
+                }
+                if (params.class) {
+                    tmp.params_span.class = params.class;
+                    delete params.class;
+                } else if (params[':class']) {
+                    tmp.params_span[':class'] = params.class;
+                    delete params[':class'];
+                }
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-tooltip',params,false)+'\n';
+                resp.open += context.tagParams('template',{ 'v-slot:activator':'{ on }' },false)+'\n';
+                resp.close = '</template>';
+                resp.close += context.tagParams('span',tmp.params_span,false) + tmp.text + '</span>\n';
+                resp.close += '</v-tooltip>';
+                return resp;
+            }
+        },
+
+        'def_datatable': {
+        	x_level: '>2',
+        	x_icons: 'idea',
+            x_text_exact: 'tabla',
+            attributes_aliases: {
+                'drag':                 'draggable,:draggable,sort,:sort,drag,:drag,manilla,:manilla',
+                'class':                'class,:class',
+                'width':                'width,ancho',
+                'height':               'height,alto',
+                'items-per-page-text':  'rows-per-page-text'
+            },
+            hint: 'Dibuja una tabla con datos.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_datatable', node);
+                if (params.drag && params[':items']) {
+                    //install sortablejs plugin
+                    params.ref=node.id;
+                    context.x_state.pages[state.current_page].imports.sortablejs = 'Sortable';
+                    resp.open += `<vue_mounted>
+                    let tabla_${node.id} = this.$refs.${node.id}.$el.getElementsByTagName('tbody')[0];
+                    const _self = this;
+                    Sortable.create(tabla_${node.id}, {
+                        handle: '.${params.drag}',
+                        onEnd({ newIndex, oldIndex }) {
+                            const rowSelected = _self.${params[':items']}.splice(oldIndex,1)[0];
+                            _self.${params[':items']}.splice(newIndex,0,rowSelected);
+                        }
+                    });
+                    </vue_mounted>`;
+                    delete params.drag;
+                }
+                //pass header name/id for headers future var
+                resp.state.datatable_id = node.id + '_headers';
+                params[':headers'] = resp.state.datatable_id;
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-data-table',params,false)+'\n';
+                resp.close = '</v-data-table>';
+                return resp;
+            }
+        },
+
+        'def_datatable_headers': {
+        	x_level: '>3',
+        	x_icons: 'edit',
+            x_text_exact: 'headers',
+            x_all_hasparent: 'def_datatable',
+            hint: 'Define los titulos de las columnas de la tabla padre y sus propiedades.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                context.x_state.pages[state.current_page].variables[resp.state.datatable_id] = [];
+                context.x_state.pages[state.current_page].var_types[resp.state.datatable_id] = 'array';
+                return resp;
+            }
+        },
+
+        'def_datatable_headers_title': {
+        	x_level: '>4',
+            x_empty: 'icons',
+            x_all_hasparent: 'def_datatable_headers',
+            attributes_aliases: {
+                'value':                'value,campo',
+                'sortable':             'orden,ordenable,sortable',
+                'ucase':                'ucase,mayusculas,mayuscula',
+                'capital':              'capitales,capitalize,capital',
+                'lcase':                'lcase,minusculas,minuscula',
+                'nowrap':               'no-wrap',
+                'weight':               'weight,peso,grosor',
+                'fontsize':             'font,size'                
+            },
+            hint: 'Define las propiedades del titulo de una columna de la tabla padre.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_datatable_headers_title', node);
+                let item = { class:[], text:node.text.trim() };
+                if (params.class) item.class = params.class.split(' ');
+                if (node.font.size<=10) item.class.push('caption');
+                if (node.font.bold==true) item.class.push('font-weight-bold');
+                if (node.font.italic==true) item.class.push('font-italic');
+                if (params.value) item.value = params.value;
+                if (params.sortable) item.sortable = params.sortable;
+                if (params.ucase && params.ucase==true) item.class.push('text-uppercase');
+                if (params.capital && params.capital==true) item.class.push('text-capitalize');
+                if (params.lcase && params.lcase==true) item.class.push('text-lowercase');
+                if (params.truncate && params.truncate==true) item.class.push('text-truncate');
+                if (params.nowrap && params.nowrap==true) item.class.push('text-no-wrap');
+                if (params.fontsize) item.class.push(params.fontsize);
+                if (params.weight) {
+                    if ('thin,fina,100'.includes(params.weight)) item.class.push('font-weight-thin');
+                    if ('light,300'.includes(params.weight)) item.class.push('font-weight-light');
+                    if ('regular,400'.includes(params.weight)) item.class.push('font-weight-regular');
+                    if ('medium,500'.includes(params.weight)) item.class.push('font-weight-medium');
+                    if ('bold,700'.includes(params.weight)) item.class.push('font-weight-bold');
+                    if ('black,gruesa,900'.includes(params.weight)) item.class.push('font-weight-black');
+                }
+                //
+                delete params.class;    delete params.refx;
+                delete params.value;    delete params.sortable; delete params.ucase;
+                delete params.capital;  delete params.lcase;    delete params.truncate;
+                delete params.nowrap;   delete params.weight;   delete params.fontsize;
+                item = {...item, ...params};
+                item.class = item.class.join(' ');
+                if (item.class.trim()=='') delete item.class;
+                //assign struct to datatable header var
+                if (resp.state.datatable_id) {
+                    context.x_state.pages[state.current_page].variables[resp.state.datatable_id].push(item);
+                    context.x_state.pages[state.current_page].var_types[`${resp.state.datatable_id}[${context.x_state.pages[state.current_page].variables[resp.state.datatable_id].length-1}]`] = typeof item;
+                }
+                return resp;
+            }
+        },
+
+        'def_datatable_fila': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'fila',
+            x_all_hasparent: 'def_datatable',
+            hint: 'Crea una nueva fila en la tabla padre.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_datatable_fila', node, true);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('tr',params,false)+'\n';
+                resp.close = '</tr>';
+                return resp;
+            }
+        },
+
+        'def_datatable_col': {
+        	x_level: '>4',
+        	x_icons: 'idea',
+            x_text_exact: 'columna',
+            x_all_hasparent: 'def_datatable_fila',
+            hint: 'Agrupa sus hijos en una columna de una tabla.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_datatable_col', node, true);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('td',params,false)+'\n';
+                resp.close = '</td>';
+                return resp;
+            }
+        },
+
         //*def_contenido
         //*def_toolbar
         //*def_toolbar_title
@@ -2474,12 +2660,19 @@ export default async function(context) {
         //**def_agrupar
         //**def_bloque
         //**def_hover
-        //def_tooltip
+        //**def_tooltip - @todo re-test after def_datatable and def_datatable_col is done
 
-        //def_datatable (@todo re-test def_slot after this one is done)
-        //def_datatable_col
-        //def_datatable_fila
-        //def_datatable_headers
+        //**def_datatable (@todo re-test def_slot after this one is done)
+                                //28abr going to need this ref for _headers
+                                //context.x_state.pages[state.current_page].var_types[tmp.field] = tmp.type;
+                                //context.x_state.pages[state.current_page].variables[tmp.field] = params.value;
+
+        //**def_datatable_headers
+        //**def_datatable_headers_title
+        //**def_datatable_fila
+        //**def_datatable_col
+
+
         //def_paginador	
 
         //def_sparkline
@@ -2637,18 +2830,27 @@ export default async function(context) {
                 delete attrs.refx;
                 //convert keys to params n_params, and values to v_params
                 for (let key in attrs) {
-                    params.n_params.push(key);
-                    if (isNumeric(attrs[key])) {
-                        params.v_params.push(attrs[key]);
-                    } else if  (attrs[key]=='') {
-                        params.v_params.push('$event');
-                    } else if  (attrs[key].contains('this.') || attrs[key].contains('$event')) {
-                        params.v_params.push(attrs[key]);
-                    } else if  (attrs[key].contains('**') && node.icons.includes('bell')) {
-                        let sv = getTranslatedTextVar(attrs[key]);
-                        params.v_params.push(sv);
+                    if (key.charAt(0)==':') {
+                        params.n_params.push(key.right(key.length-1));
+                        let val_tmp = attrs[key];
+                        if (attrs[key].charAt(0)=='$') {
+                            val_tmp = val_tmp.right(val_tmp.length-1);
+                        }
+                        params.v_params.push(val_tmp);
                     } else {
-                        params.v_params.push(`'${attrs[key]}'`);
+                        params.n_params.push(key);                    
+                        if (isNumeric(attrs[key])) {
+                            params.v_params.push(attrs[key]);
+                        } else if  (attrs[key]=='') {
+                            params.v_params.push('$event');
+                        } else if  (attrs[key].contains('this.') || attrs[key].contains('$event')) {
+                            params.v_params.push(attrs[key]);
+                        } else if  (attrs[key].contains('**') && node.icons.includes('bell')) {
+                            let sv = getTranslatedTextVar(attrs[key]);
+                            params.v_params.push(sv);
+                        } else {
+                            params.v_params.push(`'${attrs[key]}'`);
+                        }
                     }
                 }
                 //add npm packages when needed
