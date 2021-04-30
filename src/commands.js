@@ -2727,11 +2727,86 @@ export default async function(context) {
             }
         },
 
+        'def_highcharts': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'highcharts',
+            x_or_hasparent: 'def_page,def_layout,def_componente',
+            attributes_aliases: {
+                'type':             'type,tipo',
+                'title':            'title,titulo',
+                'data':             'data,series'
+            },
+            hint: 'Crea un grafico Highchart avanzado, manipulable con sus parametros.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let config = {...{ chartOptions:{} },...aliases2params('def_highcharts', node, true)};
+                if (config.type) {
+                    config.chartType = config.type;
+                    config.chartOptions.chart = { type:config.type };
+                    delete config.type;
+                }
+                if (config.title) {
+                    config.chartOptions.title = { text:config.title };
+                    delete config.title;
+                }
+                if (config.data) {
+                    config.chartOptions.series = [{ data:config.data }];
+                    delete config.data;
+                }
+                //install plugin
+                context.x_state.plugins['highcharts-vue'] = {
+                    global:true,
+                    npm: { 'highcharts-vue':'*' },
+                    tag: 'highcharts'
+                };
+                //create variable for options
+                let options_var = `options_${node.id}`;
+                context.x_state.pages[state.current_page].variables[options_var] = config;
+                context.x_state.pages[state.current_page].var_types[options_var] = typeof config;
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('highcharts',{ ':options':options_var },false)+'\n';
+                resp.close = '</highcharts>';
+                resp.state.friendly_name = 'highchart';
+                return resp;
+            }
+        },
+
+        'def_trend': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'trend',
+            x_or_hasparent: 'def_page,def_layout,def_componente',
+            hint: 'Crea un grafico de tendencias simple, manipulable con sus parametros.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_trend', node, true);
+                if (params.centrar && params.centrar==true) {
+                    params['justify-center']=null;
+                    params['align-center']=null;
+                    delete params.centrar;
+                }
+                //install plugin
+                context.x_state.plugins['pure-vue-chart'] = {
+                    global:true,
+                    npm: { 'pure-vue-chart':'*' },
+                    tag: 'pure-vue-chart'
+                };
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('pure-vue-chart',params,false)+'\n';
+                resp.close = '</pure-vue-chart>';
+                resp.state.friendly_name = 'trend';
+                return resp;
+            }
+        },
+
         //**def_paginador	
 
         //**def_sparkline
-        //def_highcharts
-        //def_trend
+        //**def_highcharts -- needs testing (no map available at hand)
+        //**def_trend
 
         //def_listado
         //def_listado_grupo
