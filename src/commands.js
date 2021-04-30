@@ -97,7 +97,7 @@ export default async function(context) {
                 params[attr_map[keytest]] = tvalue;
             } else {
                 // this is an attribute key that is not mapped
-                if (value != tvalue || value[0]=="$" || value[0]=="!" ) {
+                if (value != tvalue || value[0]=="$" || value[0]=="!" || key.charAt(0)==':' ) {
                     if (escape_vars && escape_vars==true) {
                         tvalue = tvalue.replaceAll('{{','').replaceAll('}}','');
                     }
@@ -2542,6 +2542,7 @@ export default async function(context) {
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
                 resp.open += context.tagParams('v-data-table',params,false)+'\n';
                 resp.close = '</v-data-table>';
+                resp.state.friendly_name = 'table';
                 return resp;
             }
         },
@@ -2629,6 +2630,7 @@ export default async function(context) {
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
                 resp.open += context.tagParams('tr',params,false)+'\n';
                 resp.close = '</tr>';
+                resp.state.friendly_name = 'row';
                 return resp;
             }
         },
@@ -2646,6 +2648,7 @@ export default async function(context) {
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
                 resp.open += context.tagParams('td',params,false)+'\n';
                 resp.close = '</td>';
+                resp.state.friendly_name = 'column';
                 return resp;
             }
         },
@@ -2660,22 +2663,73 @@ export default async function(context) {
         //**def_agrupar
         //**def_bloque
         //**def_hover
-        //**def_tooltip - @todo re-test after def_datatable and def_datatable_col is done
-
-        //**def_datatable (@todo re-test def_slot after this one is done)
-                                //28abr going to need this ref for _headers
-                                //context.x_state.pages[state.current_page].var_types[tmp.field] = tmp.type;
-                                //context.x_state.pages[state.current_page].variables[tmp.field] = params.value;
-
+        //**def_tooltip
+        //**def_datatable 
         //**def_datatable_headers
         //**def_datatable_headers_title
         //**def_datatable_fila
         //**def_datatable_col
 
+        'def_paginador': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_contains: 'paginador,,',
+            x_or_hasparent: 'def_page,def_layout,def_componente',
+            attributes_aliases: {
+                'length':               'largo,length,cantidad,paginas,items'
+            },
+            hint: 'Crea un paginador visual en donde asigna el item pagina actual a la variable indicada luego de su coma.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_paginador', node);
+                if (node.text.contains(',')) {
+                    params['v-model']=node.text.split(',').slice(-1)[0].trim();
+                    params['v-model'] = params['v-model'].replaceAll('$variables.','')
+                                                         .replaceAll('$vars.','')
+                                                         .replaceAll('$params.','')
+                                                         .replaceAll('$store.','$store.state.');
+                }
+                if (params[':length'] && !params[':total-visible']) {
+                    params[':total-visible'] = params[':length'];
+                }
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-pagination',params,false)+'\n';
+                resp.close = '</v-pagination>';
+                return resp;
+            }
+        },
 
-        //def_paginador	
+        'def_sparkline': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'sparkline',
+            x_or_hasparent: 'def_page,def_layout,def_componente',
+            hint: 'Crea un grafico lineal simple, manipulable con sus parametros.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_sparkline', node, true);
+                if (params.centrar && params.centrar==true) {
+                    params['justify-center']=null;
+                    params['align-center']=null;
+                    delete params.centrar;
+                }
+                if (params.colores) {
+                    params[':gradient'] = JSON.serialize(params.colores.split(','));
+                    delete params.colores;
+                }
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-sparkline',params,false)+'\n';
+                resp.close = '</v-sparkline>';
+                resp.state.friendly_name = 'spark';
+                return resp;
+            }
+        },
 
-        //def_sparkline
+        //**def_paginador	
+
+        //**def_sparkline
         //def_highcharts
         //def_trend
 
