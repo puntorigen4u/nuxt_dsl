@@ -896,18 +896,18 @@ ${cur.attr('name')}: {
         nodes.map(function(elem) {
             let cur = $(elem);
             let iterator = cur.attr('iterator')
-                .replaceAll('$variables', '')
-                .replaceAll('$vars', '')
+                .replaceAll('$variables.', '')
+                .replaceAll('$vars.', '')
                 .replaceAll('$params.', '')
-                .replaceAll('$store', '$store.state.');
-            if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') != '0') {
+                .replaceAll('$store.', '$store.state.');
+            if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') != 0) {
                 iterator = `(${cur.attr('item')}, ${cur.attr('key')}) in ${iterator}`;
-            } else if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') == '0') {
+            } else if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') == 0) {
                 iterator = `${cur.attr('item')} in ${iterator}`;
-            } else if (cur.attr('key') && cur.attr('key') != '0' && cur.attr('use_index') != 'false') {
+            } else if (cur.attr('key') && cur.attr('key') != 0 && cur.attr('use_index') != 'false') {
                 iterator = `(${cur.attr('item')}, ${cur.attr('key')}, ${cur.attr('use_index')}) in ${iterator}`;
             } else {
-                iterator = `(${cur.attr('item')}, ${cur.attr('use_index')})`;
+                iterator = `(${cur.attr('item')}, ${cur.attr('use_index')}) in ${iterator}`;
             }
             if (cur.attr('target') != 'template') {
                 //search refx ID tag
@@ -915,7 +915,7 @@ ${cur.attr('name')}: {
                 if (target.length > 0) {
                     let target_node = $(target[0]);
                     target_node.attr('v-for', iterator);
-                    if (cur.attr('unique') != 0) target_node.attr(':key', cur.attr('unique'));
+                    if (cur.attr('unique')!=0) target_node.attr(':key', cur.attr('unique'));
                     //cur.remove(); -remove only if target is found..
                 }
                 cur.remove(); // remove also if target node is not found
