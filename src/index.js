@@ -728,8 +728,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 
     async processInternalTags(vue, page) {
         let cheerio = require('cheerio');
-        let $ = cheerio.load(vue.template, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
-
+        let $ = cheerio.load(vue.template, { ignoreWhitespace: true, xmlMode: true, decodeEntities: false });
+        
         let nodes = $(`server_asyncdata`).toArray();
         if (nodes.length > 0) this.debug('post-processing server_asyncdata tag');
         if (nodes.length > 0 && vue.first) vue.script += ',\n';
@@ -869,7 +869,7 @@ ${cur.attr('name')}: {
         vue.script += watched.join(',');
         if (nodes.length > 0) vue.script += `}\n`;
         // process vue_if tags -- @TODO double-check when vue_if command exists (13-mar-21)
-        nodes = $('vue_if').toArray();
+        nodes = $('vue\_if').toArray();
         if (nodes.length > 0) this.debug('post-processing vue_if tag');
         nodes.map(function(elem) {
             let cur = $(elem);
@@ -885,14 +885,19 @@ ${cur.attr('name')}: {
                     } else {
                         target_node.attr(if_type, if_test);
                     }
+                    //erase if tag
+                    cur.parent().replaceWith(cur.html());
                 }
-                cur.remove();
+                //console.log('vue_dsl PABLO debug if',cur.parent().html());
+                //**cur.remove();
+                //**cur.parent().replaceWith(cur.html());
             }
         });
         vue.template = $.html();
         // process vue_for tags -- @TODO double-check when vue_for command exists (13-mar-21)
         nodes = $('vue_for').toArray();
         if (nodes.length > 0) this.debug('post-processing vue_for tag');
+        let self = this;
         nodes.map(function(elem) {
             let cur = $(elem);
             let iterator = cur.attr('iterator')
@@ -916,18 +921,18 @@ ${cur.attr('name')}: {
                     let target_node = $(target[0]);
                     target_node.attr('v-for', iterator);
                     if (cur.attr('unique')!=0) target_node.attr(':key', cur.attr('unique'));
-                    //cur.remove(); -remove only if target is found..
+                    cur.replaceWith(cur.html());
                 }
-                cur.remove(); // remove also if target node is not found
+                //cur.replaceWith(cur.html()); // remove also if target node is not found
             } else {
                 // transform <v_for>x</v_for> -> <template v-for='iterator'>x</template>
                 // lookAt x=v_for_selector.html() and selector.replaceWith('<template v-for>'+x+'</template>')
-                let inner = cur.html();
-                cur.replaceWith(`<template v-for="${iterator}">${inner}</template>`);
+                cur.replaceWith(`<template v-for="${iterator}">${cur.html()}</template>`);
             }
         });
+        //
         vue.template = $.html();
-        // process vue_for tags -- @TODO double-check when vue_for command exists (13-mar-21)
+        // process vue_event tags
         let common_methods = $('vue_event_method').toArray();
         let on_events = $('vue_event_element').toArray();
         if (common_methods.length > 0 || on_events.length > 0) {
@@ -1975,15 +1980,15 @@ ${cur.attr('name')}: {
         } else if (ext=='vue') {
             //resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{});
             try {
-            resp = prettier.format(resp.replaceAll(`="xpropx"`,''), { 
-                parser: 'vue',
-                htmlWhitespaceSensitivity: 'ignore',
-                useTabs: true,
-                printWidth: 2000,
-                embeddedLanguageFormatting: 'auto',
-                singleQuote: true,
-                trailingComma: 'none'
-            });
+                resp = prettier.format(resp.replaceAll(`="xpropx"`,''), { 
+                    parser: 'vue',
+                    htmlWhitespaceSensitivity: 'ignore',
+                    useTabs: true,
+                    printWidth: 2000,
+                    embeddedLanguageFormatting: 'auto',
+                    singleQuote: true,
+                    trailingComma: 'none'
+                });
             } catch(ee) {
                 this.debug(`error: could not format the vue file; trying vue-beautify`);
                 let beautify = require('js-beautify');
@@ -2519,6 +2524,9 @@ ${cur.attr('name')}: {
                 resp.push(`${key}="xpropx"`); 
             } else if (typeof value !== 'object' && typeof value !== 'function' && typeof value !== 'undefined') {
                 resp.push(`${key}="${value}"`);
+            } else if (typeof value === 'object') {
+                //serialize value
+                resp.push(`${key}="${this.jsDump(value)}"`);
             }
         }
         return resp.join(' ');

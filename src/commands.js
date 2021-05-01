@@ -2816,7 +2816,7 @@ export default async function(context) {
             hint: 'Crea un listado con filas y datos.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
-                let params = aliases2params('def_listado', node, true);
+                let params = aliases2params('def_listado', node);
                 if (params.lineas) {
                     if (params.lineas==2) params['two-line']=null;
                     if (params.lineas==3) params['three-line']=null;
@@ -2842,12 +2842,81 @@ export default async function(context) {
             }
         },
 
+        'def_listado_grupo': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'listado:grupo',
+            x_or_hasparent: 'def_page,def_layout,def_componente',
+            attributes_aliases: {
+                'value':          'value,activo,active,model,v-model'
+            },
+            hint: 'Permite agrupar filas de forma colapsable segun propiedades.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_grupo', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-list-group',params,false)+'\n';
+                resp.close = '</v-list-group>';
+                resp.state.friendly_name = 'grupo';
+                return resp;
+            }
+        },
         
+        'def_listado_fila': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_pattern: '+(listado:fila|fila)',
+            x_or_hasparent: 'def_listado,def_listado_dummy',
+            //x_or_hasparent: 'def_page,def_layout,def_componente',
+            hint: 'Permite agrupar filas de forma colapsable segun propiedades.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_fila', node, true);
+                let tmp = { subheader:null };
+                //params
+                if (params.lineas) {
+                    if (params.lineas==2) params['two-line']=null;
+                    if (params.lineas==3) params['three-line']=null;
+                }
+                if (params.subheader) {
+                    tmp.subheader=params.subheader;
+                    params.subheader=null;
+                }
+                if (params.scrollto) {
+                    context.x_state.plugins['vue-scrollto'] = {
+                        global:true,
+                        npm: { 'vue-scrollto':'*' }
+                    };
+                    params['v-scroll-to'] = { cancelable:false, element:params.scrollto };
+                    if (params.scrollto.contains(',')) {
+                        params['v-scroll-to'].element = params.scrollto.split(',')[0];
+                        params['v-scroll-to'].offset = params.scrollto.split(',').splice(-1)[0];
+                    }
+                    delete params.scrollto;
+                }
+                if (node.link!='' && node.link.contains('ID_')) {
+                    let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
+                    if (link_node && link_node.valid==true) {
+                        params.to = `{vuepath:${link_node.text}}`;
+                    }
+                }
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-list-item',params,false)+'\n';
+                if (params.subheader) {
+                    resp.open += context.tagParams('v-subheader',params,false)+tmp.subheader+'</v-subheader>\n';
+                }
+                resp.close = '</v-list-item>';
+                resp.state.friendly_name = 'fila';
+                return resp;
+            }
+        },
 
         //**def_listado
-        //def_listado_grupo
-        //def_listado_dummy
-        //def_listado_fila
+        //**def_listado_grupo
+        //?def_listado_dummy (@todo check what is this for)
+        //**def_listado_fila
         //def_listado_fila_accion
         //def_listado_fila_contenido
         //def_listado_fila_titulo
@@ -2883,13 +2952,13 @@ export default async function(context) {
                 }
                 let params = (await context.x_commands['def_xcada_registro'].func(node, {...state,...{ get_params:true } })).state.params;
                 //code
-                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
-                resp.open = context.tagParams('vue_for', params, false) + '\n';
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.trim()} -->\n`;
+                resp.open += context.tagParams('vue_for', params, false) + '\n';
                 resp.close = '</vue_for>';
                 return resp;
             }
         },
-        
+
         //**def_xcada_registro_view
 
         'def_event_mounted': {
@@ -3102,7 +3171,7 @@ export default async function(context) {
             x_level: '>2',
             x_text_contains: 'condicion si',
             x_text_pattern: [
-            `condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro) "*"`,
+            `condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro|contiene) "*"`,
             `condicion si "*" es +(objeto|array|struct|string|texto)`,
             `condicion si "*" es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
             `condicion si "*" no es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
@@ -3167,7 +3236,8 @@ export default async function(context) {
                     operador: elements.operator,
                     valor: elements.value
                 }};
-                if (node.nodes_raw.length==1) params.target=node.nodes_raw[0].attribs.ID; //.id
+                let sons = await node.getNodes();
+                if (sons.length==1) params.target=sons[0].id; //.id
                 if (params.individual && params.individual==true) {
                     params.tipo = 'v-if'; elements.type = 'v-if';
                     delete params.individual;
@@ -3284,7 +3354,7 @@ export default async function(context) {
                     params.expresion = `_.contains(${elements.variable},'${elements.value}')`;
 
                 } else if ('contiene,contains'.split(',').includes(elements.operator)) {
-                    params.expresion = `${elements.variable}.toLowerCase().indexOf(${elements.value}.toLowerCase())!=-1`;
+                    params.expresion = `${elements.variable}.toLowerCase().indexOf('${elements.value}'.toLowerCase())!=-1`;
 
                 } else {
                     //operator not defined
@@ -3347,15 +3417,16 @@ export default async function(context) {
                 });
                 if (resp.state.from_script && resp.state.from_script==true) return {...resp,...{ valid:false }};
                 //code
-                if (node.nodes_raw.length>1) {
+                let sons = await node.getNodes();
+                if (sons.length>1) {
                     if (node.text_note != '') resp.open = `//${node.text_note}\n`;
                     resp.open += context.tagParams('template', { 'v-else': null }, false);
-                } else if (node.nodes_raw.length==1) {
+                } else if (sons.length==1) {
                     if (node.text_note != '') resp.open = `//${node.text_note}\n`;
                     resp.open += context.tagParams('vue_if', { 
                         'expresion':'',
                         'tipo':'v-else',
-                        'target': node.nodes_raw[0].attribs.ID 
+                        'target': sons[0].id 
                     }, false);
                     resp.close = `</vue_if>`;
                 } else {
@@ -4193,9 +4264,10 @@ export default async function(context) {
                     !tmp.iterator.contains('$route.')) {
                     tmp.iterator = tmp.iterator.right(tmp.iterator.length-1);
                 }
-                if (node.nodes_raw.length==1) {
-                    tmp.target = node.nodes_raw[0].attribs.ID;
-                } else if (node.nodes_raw.length>1) {
+                let sons = await node.getNodes();
+                if (sons.length==1) {
+                    tmp.target = sons[0].id;
+                } else if (sons.length>1) {
                     tmp.target = 'template';
                 }
                 let attrs = aliases2params('def_xcada_registro',node);
@@ -4221,9 +4293,8 @@ export default async function(context) {
                                                     .replaceAll('$store.','this.$store.state.');
                 context.x_state.pages[state.current_page].imports['underscore'] = '_';
                 //search consultar web nodes
-                if (!params[':each'] && node.nodes_raw.length>0) {
-                    let child_nodes = node.getNodes();
-                    for (let x in child_nodes) {
+                if (!params[':each'] && sons.length>0) {
+                    for (let x of sons) {
                         if (x.text.contains('consultar web')) {
                             tmp.has_await = true;
                         }
