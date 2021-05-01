@@ -2808,7 +2808,41 @@ export default async function(context) {
         //**def_highcharts -- needs testing (no map available at hand)
         //**def_trend
 
-        //def_listado
+        'def_listado': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'listado',
+            x_or_hasparent: 'def_page,def_layout,def_componente',
+            hint: 'Crea un listado con filas y datos.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado', node, true);
+                if (params.lineas) {
+                    if (params.lineas==2) params['two-line']=null;
+                    if (params.lineas==3) params['three-line']=null;
+                }
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (params.layout && params.layout==true) {
+                    params.tag = 'v-list'; delete params.layout;
+                    resp.open += context.tagParams('v-layout',params,false)+'\n';
+                    if (params.subheader) {
+                        resp.open += context.tagParams('v-subheader',{...params,...{ subheader:null }},false)+params.subheader+'</v-subheader>\n';
+                    }
+                    resp.close = '</v-layout>';
+                } else {
+                    resp.open += context.tagParams('v-list',params,false)+'\n';
+                    if (params.subheader) {
+                        resp.open += context.tagParams('v-subheader',{...params,...{ subheader:null }},false)+params.subheader+'</v-subheader>\n';
+                    }
+                    resp.close = '</v-list>';
+                }
+                resp.state.friendly_name = 'listado';
+                return resp;
+            }
+        },
+
+        //**def_listado
         //def_listado_grupo
         //def_listado_dummy
         //def_listado_fila
@@ -4079,7 +4113,7 @@ export default async function(context) {
                     state
                 });
                 let tmp = { var:'', data:{}, model:'' };
-                if (node.text.contains(',')) tmp.var=node.text.split(',').pop();
+                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0];
                 tmp.model = context.dsl_parser.findVariables({
                     text: node.text,
                     symbol: `"`,
@@ -4092,6 +4126,86 @@ export default async function(context) {
                 //code
                 if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
                 resp.open += `this.alasql('INSERT INTO ${tmp.model} VALUES ?', [${tmp.data}]);\n`;
+                return resp;
+            }
+        },
+
+        'def_xcada_registro': {
+            x_icons: 'penguin',
+            x_text_pattern: `por cada registro en "*",`,
+            x_level: '>2',
+            attributes_aliases: {
+                'use_index':        'index',
+                'unique':           'unique,id',
+                'target':           'template,target'
+            },
+            hint:  `Repite sus hijos por cada elemento entrecomillas, dejando el item en curso en la variable luego de la coma.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let tmp = { key:'', has_await:false, query:node.text, target:'' };
+                if (tmp.query.contains('$store.')) tmp.query = tmp.query.replaceAll('$store.','$store.state.');
+                if (tmp.query.contains(',')) tmp.key=tmp.query.split(',').splice(-1)[0];
+                tmp.iterator = context.dsl_parser.findVariables({
+                    text: tmp.query,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                }).trim();
+                if (tmp.iterator.charAt(0)=='$' &&
+                    !tmp.iterator.contains('$variables.') &&
+                    !tmp.iterator.contains('$vars.') &&
+                    !tmp.iterator.contains('$store.') &&
+                    !tmp.iterator.contains('$params.') &&
+                    !tmp.iterator.contains('$route.')) {
+                    tmp.iterator = tmp.iterator.right(tmp.iterator.length-1);
+                }
+                if (node.nodes_raw.length==1) {
+                    tmp.target = node.nodes_raw[0].attribs.ID;
+                } else if (node.nodes_raw.length>1) {
+                    tmp.target = 'template';
+                }
+                let attrs = aliases2params('def_xcada_registro',node);
+                let params = { unique:0, iterator:tmp.iterator, target:tmp.target, item:tmp.key, use_index:`${tmp.key}_index` };
+                if (params[':template']) {
+                    params.target = 'template';
+                    delete params[':template']; delete params['template'];
+                }
+                params = {...params,...attrs};
+                if (params.unique==0) params.unique = params.use_index;
+                //code
+                if (state.from_script) {
+                    if (node.icons.includes('bell') && params.iterator.contains('**')) {
+                        params.iterator = getTranslatedTextVar(params.iterator);
+                    }
+                    params.iterator = params.iterator   .replaceAll('$variables.','this.')
+                                                        .replaceAll('$vars.','this.')
+                                                        .replaceAll('$params.','this.')
+                                                        .replaceAll('$store.','this.$store.state.');
+                    context.x_state.pages[state.current_page].imports['underscore'] = '_';
+                    //search consultar web nodes
+                    if (!params[':each'] && node.nodes_raw.length>0) {
+                        let child_nodes = node.getNodes();
+                        for (let x of child_nodes) {
+                            if (x.text.contains('consultar web')) {
+                                tmp.has_await = true;
+                            }
+                        }
+                    }
+                    //write code
+                    if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                    if (tmp.has_await==true) {
+                        resp.open += `_.each(${params.iterator}, async function(${params.item},${params.use_index}) {`;
+                        resp.close = `}, this);`;
+                    } else {
+                        resp.open += `for (let ${params.use_index}=0;${params.use_index}<${params.iterator}.length;${params.use_index}++) {`;
+                        resp.open += `let ${params.item} = ${params.iterator}[${params.use_index}];\n`;
+                        resp.close = `}\n`;
+                    }
+                    //
+                } else {
+                    if (node.text_note != '') resp.open += `<!-- ${node.text_note.trim()} -->\n`;
+                    resp.open += context.tagParams('vue_for', params, false)+'\n';
+                    resp.close = '</vue_for>';
+                }
                 return resp;
             }
         },
@@ -4120,7 +4234,7 @@ export default async function(context) {
         //*def_literal_js
         //def_guardar_nota
         //*def_console
-        //def_xcada_registro
+        //**def_xcada_registro - @todo requires testing
         //*def_crear_id_unico
         //def_enviarpantalla
 
