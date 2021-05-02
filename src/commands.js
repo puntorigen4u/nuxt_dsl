@@ -856,10 +856,10 @@ export default async function(context) {
                     if (tmp.params.center && tmp.params.center == 'true') {
                         //resp.open += `<v-container fill-height='xpropx'>\n`;
                         resp.open += context.tagParams('v-container', { 'fill-height':null }, false) + '\n';
-                        resp.open += context.tagParams('v-row', { 'align-center':null }, false) + '\n';
+                        resp.open += context.tagParams('v-row', { 'align-center':null, refx:node.id }, false) + '\n';
                     } else {
                         if (tmp.tipo == 'flex') {
-                            resp.open += `<v-container>\n`;
+                            resp.open += context.tagParams('v-container', {}, false) + '\n';
                             params.row = null;
                             resp.open += context.tagParams('v-layout', params, false) + '\n';
                         } else if (tmp.tipo == 'wrap') {
@@ -895,7 +895,7 @@ export default async function(context) {
                             resp.open += context.tagParams('v-layout', params, false) + '\n';
                         }
                     } else {
-                        resp.open += context.tagParams('v-layout', { wrap:null }, false)+'\n';
+                        resp.open += context.tagParams('v-layout', { wrap:null, refx:node.id }, false)+'\n';
                     }
                     // part flex
                     if (tmp.tipo == 'flex' && tmp.params.center && tmp.params.center == 'true') {
@@ -1842,6 +1842,7 @@ export default async function(context) {
                         state
                     }),
                     params = {
+                        refx: node.id,
                         class: []
                     },
                     tmp = {};
@@ -2276,6 +2277,7 @@ export default async function(context) {
                     resp.open += `<v-toolbar-side-icon></<v-toolbar-side-icon>\n`;
                 }
                 resp.close = `</v-toolbar>\n`;
+                resp.state.from_toolbar=true;
                 return resp;
             }
         },
@@ -2283,6 +2285,9 @@ export default async function(context) {
         	x_level: '>3',
         	x_empty: 'icons',
         	x_all_hasparent: 'def_toolbar',
+            attributes_aliases:{
+                'grosor':   'weight,peso,grosor'
+            },
         	hint: 'Titulo para nodo toolbar',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
@@ -2301,6 +2306,26 @@ export default async function(context) {
                 	}
                 	params.class = tmp.join(' ');
                 	delete params.color;
+                }
+                if (params.grosor) {
+                    if (params.class) params.class=params.class.split(' ');
+                    if (!params.class) params.class=[];
+                    let valuetest = params.grosor.toLowerCase();
+                    if ('thin,fina,100'.split(',').includes(valuetest)) {
+                        params.class.push('font-weight-thin');
+                    } else if ('light,300'.split(',').includes(valuetest)) {
+                        params.class.push('font-weight-light');
+                    } else if ('regular,400'.split(',').includes(valuetest)) {
+                        params.class.push('font-weight-light');
+                    } else if ('medium,500'.split(',').includes(valuetest)) {
+                        params.class.push('font-weight-medium');
+                    } else if ('bold,700'.split(',').includes(valuetest)) {
+                        params.class.push('font-weight-bold');
+                    } else if ('black,gruesa,900'.split(',').includes(valuetest)) {
+                        params.class.push('font-weight-black');
+                    }
+                    params.class = params.class.join(' ');
+                	delete params.grosor;
                 }
                 // process title (node.text)
                 let text = node.text.trim();
@@ -2386,6 +2411,7 @@ export default async function(context) {
                 }
                 resp.open += context.tagParams('template',params,false)+'\n';
                 resp.close = '</template>\n';
+                resp.state.from_slot=true;
                 return resp;
             }
         },
@@ -2522,7 +2548,7 @@ export default async function(context) {
                     //install sortablejs plugin
                     params.ref=node.id;
                     context.x_state.pages[state.current_page].imports.sortablejs = 'Sortable';
-                    resp.open += `<vue_mounted>
+                    resp.open += `<vue_mounted><!--
                     let tabla_${node.id} = this.$refs.${node.id}.$el.getElementsByTagName('tbody')[0];
                     const _self = this;
                     Sortable.create(tabla_${node.id}, {
@@ -2532,7 +2558,7 @@ export default async function(context) {
                             _self.${params[':items']}.splice(newIndex,0,rowSelected);
                         }
                     });
-                    </vue_mounted>`;
+                    --></vue_mounted>`;
                     delete params.drag;
                 }
                 //pass header name/id for headers future var
@@ -2913,18 +2939,211 @@ export default async function(context) {
             }
         },
 
+        'def_listado_fila_accion': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_pattern: '+(listado:fila:accion|fila:accion|accion)',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            hint: 'Define la accion de una fila de un listado.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_fila_accion', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-list-item-action',params,false)+'\n';
+                resp.close = '</v-list-item-action>';
+                resp.state.friendly_name = 'accion_fila';
+                return resp;
+            }
+        },
+
+        'def_listado_fila_contenido': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_pattern: '+(listado:fila:contenido|fila:contenido|contenido)',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            hint: 'Define el contenido de una fila de un listado.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_fila_contenido', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-list-item-content',params,false)+'\n';
+                resp.close = '</v-list-item-content>';
+                resp.state.friendly_name = 'contenido_fila';
+                return resp;
+            }
+        },
+
+        'def_listado_fila_titulo': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_pattern: '+(listado:fila:titulo|fila:titulo|titulo)',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            hint: 'Define el titulo de una fila de un listado.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_fila_titulo', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (params['v-text'] || params[':v-text']) {
+                    resp.open += context.tagParams('v-list-item-title',params,true)+'\n';
+                } else {
+                    resp.open += context.tagParams('v-list-item-title',params,false)+'\n';
+                    resp.close = '</v-list-item-title>';
+                }
+                resp.state.friendly_name = 'titulo_fila';
+                return resp;
+            }
+        },
+
+        'def_listado_fila_subtitulo': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_pattern: '+(listado:fila:subtitulo|fila:subtitulo|subtitulo)',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            hint: 'Define el subtitulo de una fila de un listado.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_fila_subtitulo', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('v-list-item-subtitle',params,false)+'\n';
+                resp.close = '</v-list-item-subtitle>';
+                resp.state.friendly_name = 'subtitulo_fila';
+                return resp;
+            }
+        },
+
+        'def_listado_fila_avatar': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_pattern: '+(listado:fila:avatar|fila:avatar|avatar)',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            hint: 'Define el avatar de una fila de un listado.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_listado_fila_avatar', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (state.from_slot) {
+                    resp.open += context.tagParams('v-list-item-avatar',params,false)+'\n';
+                    resp.close = '</v-list-item-avatar>';
+                } else {
+                    resp.open += context.tagParams('v-list-avatar',params,false)+'\n';
+                    resp.close = '</v-list-avatar>';
+                }
+                resp.state.friendly_name = 'avatar';
+                return resp;
+            }
+        },
         //**def_listado
         //**def_listado_grupo
         //?def_listado_dummy (@todo check what is this for)
-        //**def_listado_fila
-        //def_listado_fila_accion
-        //def_listado_fila_contenido
-        //def_listado_fila_titulo
-        //def_listado_fila_subtitulo
-        //def_listado_fila_avatar
-        //def_icono
-        //def_animar
-        //def_imagen
+        //*def_listado_fila
+        //**def_listado_fila_accion
+        //**def_listado_fila_contenido
+        //**def_listado_fila_titulo
+        //**def_listado_fila_subtitulo
+        //**def_listado_fila_avatar
+
+        'def_icono': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'icono',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            attributes_aliases: {
+                'icon':          'icon,icono'
+            },
+            hint: 'Agrega el icono definido en el lugar.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_icono', node);
+                let tmp={};
+                //params
+                if (params.icon) {
+                    tmp.icon = params.icon;
+                    if (tmp.icon.charAt(0)=='$') {
+                        tmp.icon = tmp.icon.right(tmp.icon.length-1);
+                        tmp.icon = `{{ ${tmp.icon} }}`;
+                    } else {
+                        resp.state.friendly_name = tmp.icon.replaceAll(' ','');
+                    }
+                    delete params.icon;
+                }
+                if (params.class) params.class=params.class.split(' ');
+                if (params.color) {
+                    if (params.color.contains('#')) {
+                        if (params.style) params.style=params.style.split(';');
+                        if (!params.style) params.style=[];
+                        params.style.push(`color:${params.color}`);
+                    } else {
+                        if (!params.class) params.class=[];
+                        if (params.color.contains(' ')) {
+                            let name = params.color.split(' ')[0];
+                            let tint = params.color.split(' ').splice(-1)[0];
+                            params.class.push(`${name}--text text--${tint}`);
+                        } else {
+                            params.class.push(`${params.color.trim()}--text`);
+                        }
+                    }
+                }
+                //code
+                if (params.style) params.style = params.style.join(';');
+                if (params.class) params.class = params.class.join(' ');
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (tmp.icono) {
+                    if (state.from_toolbar) {
+                        resp.open += context.tagParams('v-btn',{ 'icon':null },false);
+                        resp.open += context.tagParams('v-icon',params,false);
+                        resp.open += tmp.icono;
+                        resp.open += '</v-icon>';
+                        resp.open += '</v-btn>';
+                    } else {
+                        resp.open += context.tagParams('v-icon',params,false)+tmp.icono+'</v-icon>';
+                        resp.open += '</v-icon>';
+                    }
+                } else {
+                    if (state.from_toolbar) {
+                        resp.open += context.tagParams('v-app-bar-nav-icon',params,true);
+                    } else {
+                        //icon must be a child node
+                        resp.open += context.tagParams('v-icon',params,false)+'\n';
+                        resp.close += '</v-icon>';
+                    }
+                }
+                return resp;
+            }
+        },
+
+        'def_imagen': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'imagen',
+            //x_not_empty: 'attributes[:src]',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            hint: 'Agrega la imagen indicada en el lugar.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = {...{ alt:'' },...aliases2params('def_imagen', node)};
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                //translate asset if defined
+                for (let x in params) {
+                    if (params[x] && params[x].contains('assets:')) {
+                        params[x] = context.getAsset(params[x], 'js');
+                    }
+                }
+                resp.open += context.tagParams('v-img',params,false)+'\n';
+                resp.close = '</v-img>';
+                resp.state.friendly_name = 'imagen';
+                return resp;
+            }
+        },
+
+        //**def_icono
+        //def_animar -- @todo re-think its usage (not currently in use anywhere)
+        //**def_imagen
         //def_qrcode
         //def_analytics_evento
         //def_medianet_ad
@@ -2972,9 +3191,9 @@ export default async function(context) {
                     hasChildren: true
                 });
                 let params = {};
-                resp.open = context.tagParams('vue_mounted', {}, false);
+                resp.open = context.tagParams('vue_mounted', {}, false)+'<!--';
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
-                resp.close = '</vue_mounted>';
+                resp.close = '--></vue_mounted>';
                 resp.state.from_script=true;
                 return resp;
             }
@@ -2991,10 +3210,10 @@ export default async function(context) {
                     hasChildren: true
                 });
                 let params = aliases2params('def_event_server',node);
-                resp.open = context.tagParams('server_asyncdata', {}, false);
+                resp.open = context.tagParams('server_asyncdata', {}, false)+'<!--';
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
                 if (!params.return) resp.open += `let resp={};`;
-                resp.close = '</server_asyncdata>';
+                resp.close = '--></server_asyncdata>';
                 resp.state.from_server=true;
                 resp.state.from_script=true;
                 return resp;
@@ -3022,9 +3241,9 @@ export default async function(context) {
                 if (params.async && params.async=='false') params.type='sync';
                 if (params.async) delete params.async;
                 //code
-                resp.open = context.tagParams('vue_event_method', params, false);
+                resp.open = context.tagParams('vue_event_method', params, false)+'<!--';
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
-                resp.close = '</vue_event_method>';
+                resp.close = '--></vue_event_method>';
                 resp.state.from_script=true;
                 return resp;
             }
@@ -3126,9 +3345,9 @@ export default async function(context) {
                 //code
                 params.n_params = params.n_params.join(',');
                 params.v_params = params.v_params.join(',');
-                resp.open = context.tagParams('vue_event_element', params, false);
+                resp.open = context.tagParams('vue_event_element', params, false)+'<!--';
                 if (node.text_note != '') resp.open += `//${node.text_note}\n`;
-                resp.close = '</vue_event_element>';
+                resp.close = '--></vue_event_element>';
                 resp.state.from_script=true;
                 return resp;
             }
@@ -3267,6 +3486,8 @@ export default async function(context) {
                         elements.value.charAt(0)=='$' && elements.value.contains(`$t('`)==false) {
                         let temp = elements.value.right(elements.value.length-1);
                         params.expresion = `${elements.variable} == ${temp}`;
+                    } else if (typeof elements.value === 'string' && (elements.value=='true' || elements.value=='false')) {
+                        params.expresion = `${elements.variable} == ${elements.value}`;
                     } else {
                         params.expresion = `${elements.variable} == '${elements.value}'`;
                     }
@@ -3382,9 +3603,9 @@ export default async function(context) {
                     resp.open += context.tagParams('vue_computed', {
                         name: `${node.id}_if`,
                         type: 'computed'
-                    }, false);
+                    }, false)+'<!--';
                     resp.open += `return (${expresion_js});`;
-                    resp.open += `</vue_computed>`;
+                    resp.open += `--></vue_computed>`;
                     //@todo seems the expresion should be the new var here... (was not on the cfc)
                     params.expresion = `${node.id}_if`;
                 }
@@ -3817,13 +4038,13 @@ export default async function(context) {
                             'vue-async-computed': '*'
                         }
                     };
-                    resp.open = context.tagParams('vue_async_computed', params, false);
+                    resp.open = context.tagParams('vue_async_computed', params, false)+'<!--\n';
                     if (node.text_note != '') resp.open += `//${node.text_note}\n`;
-                    resp.close = '</vue_async_computed>\n';
+                    resp.close = '--></vue_async_computed>\n';
                 } else {
-                    resp.open = context.tagParams('vue_computed', params, false);
+                    resp.open = context.tagParams('vue_computed', params, false)+'<!--\n';
                     if (node.text_note != '') resp.open += `//${node.text_note}\n`;
-                    resp.close = '</vue_computed>\n';
+                    resp.close = '--></vue_computed>\n';
                 }
                 resp.state.from_script=true;
                 // return

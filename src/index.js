@@ -728,8 +728,11 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
 
     async processInternalTags(vue, page) {
         let cheerio = require('cheerio');
-        let $ = cheerio.load(vue.template, { ignoreWhitespace: true, xmlMode: true, decodeEntities: false });
-        
+        //console.log('PABLO beforeInteralTags:',{ template:vue.template, script:vue.script });
+        let $ = cheerio.load(vue.template, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
+        //console.log('PABLO after:',$.html()); 
+        //return vue;
+        //
         let nodes = $(`server_asyncdata`).toArray();
         if (nodes.length > 0) this.debug('post-processing server_asyncdata tag');
         if (nodes.length > 0 && vue.first) vue.script += ',\n';
@@ -739,7 +742,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             let name = cur.attr('return') ? cur.attr('return') : '';
             vue.script += `async asyncData({ req, res, params }) {\n`;
             vue.script += ` if (!process.server) { const req={}, res={}; }\n`;
-            vue.script += ` ${cur.text()}`;
+            //vue.script += ` ${cur.text()}`;
+            vue.script += ` ${elem.children[0].data}`;
             vue.script += ` return ${name};\n`;
             vue.script += `}\n`;
             cur.remove();
@@ -747,20 +751,21 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         vue.template = $.html();
         if (nodes.length > 0) vue.script += `}\n`;
         // process ?mounted event
-        nodes = $(`vue_mounted`).toArray();
+        nodes = $(`vue\_mounted`).toArray();
         if (nodes.length > 0) this.debug('post-processing vue_mounted tag');
         if (nodes.length > 0 && vue.first) vue.script += ',\n';
         vue.first = true;
         if (nodes.length > 0) vue.script += `async mounted() {\n`;
         nodes.map(function(elem) {
             let cur = $(elem);
-            vue.script += cur.text();
+            //console.log('valor vue_mounted',elem.children[0].data);
+            vue.script += elem.children[0].data; //cur.text();
             cur.remove();
         });
         vue.template = $.html();
         if (nodes.length > 0) vue.script += `}\n`;
         // process ?var (vue_computed)
-        nodes = $('vue_computed').toArray();
+        nodes = $('vue\_computed').toArray();
         //this.debug('nodes',nodes);
         if (nodes.length > 0) this.debug('post-processing vue_computed tag');
         if (nodes.length > 0 && vue.first) vue.script += ',\n';
@@ -770,7 +775,8 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         nodes.map(function(elem) {
             let cur = $(elem);
             let name = cur.attr('name');
-            let code = cur.html();
+            let code = elem.children[0].data; //cur.html();
+            //console.log('PABLO debug code computed:',code);
             computed.push(`${name}() {${code}}`);
             cur.remove();
             //return elem;
@@ -787,7 +793,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         let async_computed = [];
         nodes.map(function(elem) {
             let cur = $(elem);
-            let code = cur.text();
+            let code = elem.children[0].data; //cur.text();
             if (cur.attr('valor') || cur.attr('watch')) {
                 let lazy = '';
                 if (cur.attr('lazy')) lazy += `,lazy: ${cur.attr('lazy')}`;
@@ -844,7 +850,7 @@ ${cur.attr('name')}: {
         let watched = [];
         nodes.map(function(elem) {
             let cur = $(elem);
-            let code = cur.text();
+            let code = elem.children[0].data; //cur.text();
             if (cur.attr('deep')) {
                 watched.push(`
 				'${cur.attr('flat')}': {
@@ -881,12 +887,12 @@ ${cur.attr('name')}: {
                 if (target.length > 0) {
                     let target_node = $(target[0]);
                     if (if_type == 'v-else') {
-                        target_node.attr(if_type, '');
+                        target_node.attr(if_type, 'xpropx');
                     } else {
                         target_node.attr(if_type, if_test);
                     }
                     //erase if tag
-                    cur.parent().replaceWith(cur.html());
+                    cur.replaceWith(cur.html());
                 }
                 //console.log('vue_dsl PABLO debug if',cur.parent().html());
                 //**cur.remove();
@@ -944,7 +950,7 @@ ${cur.attr('name')}: {
             // event_methods
             common_methods.map(function(elem) {
                 let cur = $(elem);
-                let code = cur.text();
+                let code = elem.children[0].data; //cur.text();
                 let tmp = '';
                 if (cur.attr('timer_time')) {
                     self.x_state.npm['vue-interval'] = '*';
@@ -1044,7 +1050,7 @@ ${cur.attr('name')}: {
                     let method_name = event;
                     if (evt.attr('friendly_name')!='') method_name = `${evt.attr('friendly_name')}`; //event_suffix
                     method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
-                    let method_code = evt.text();
+                    let method_code = elem.children[0].data; //evt.text();
                     if (event == 'click-outside') {
                         origin.attr(`v-click-outside`, method_name);
                         tmp = `${method_name}: async function() {
@@ -1978,7 +1984,10 @@ ${cur.attr('name')}: {
         } else if (ext=='json') {
             resp = prettier.format(resp, { parser: 'json' });
         } else if (ext=='vue') {
-            //resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{});
+            /*
+            let beautify = require('js-beautify');
+            let beautify_vue = beautify.html;
+            resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{});*/
             try {
                 resp = prettier.format(resp.replaceAll(`="xpropx"`,''), { 
                     parser: 'vue',
