@@ -874,68 +874,80 @@ ${cur.attr('name')}: {
         vue.template = $.html();
         vue.script += watched.join(',');
         if (nodes.length > 0) vue.script += `}\n`;
-        // process vue_if tags -- @TODO double-check when vue_if command exists (13-mar-21)
-        nodes = $('vue\_if').toArray();
-        if (nodes.length > 0) this.debug('post-processing vue_if tag');
-        nodes.map(function(elem) {
-            let cur = $(elem);
-            let if_type = cur.attr('tipo');
-            let if_test = cur.attr('expresion');
-            if (cur.attr('target') != 'template') {
-                //search refx ID tag
-                let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
-                if (target.length > 0) {
-                    let target_node = $(target[0]);
-                    if (if_type == 'v-else') {
-                        target_node.attr(if_type, 'xpropx');
-                    } else {
-                        target_node.attr(if_type, if_test);
+        // process vue_if tags
+        // repeat upto 5 times (@todo transform this into a self calling method)
+        for (let x of [1,2,3,4,5]) {
+            nodes = $('vue_if').toArray();
+            if (nodes.length > 0) {
+                this.debug(`post-processing vue_if tag ${x} (len:${nodes.length})`);
+                nodes.map(function(elem) {
+                    let cur = $(elem);
+                    let if_type = cur.attr('tipo');
+                    let if_test = cur.attr('expresion');
+                    if (cur.attr('target') != 'template') {
+                        //search refx ID tag
+                        let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
+                        if (target.length > 0) {
+                            let target_node = $(target[0]);
+                            if (if_type == 'v-else') {
+                                target_node.attr(if_type, 'xpropx');
+                            } else {
+                                target_node.attr(if_type, if_test);
+                            }
+                            //erase if tag
+                            cur.replaceWith(cur.html());
+                        }
                     }
-                    //erase if tag
-                    cur.replaceWith(cur.html());
-                }
-                //console.log('vue_dsl PABLO debug if',cur.parent().html());
-                //**cur.remove();
-                //**cur.parent().replaceWith(cur.html());
+                });
+            } else {
+                break;
             }
-        });
+        }
+        //
         vue.template = $.html();
-        // process vue_for tags -- @TODO double-check when vue_for command exists (13-mar-21)
-        nodes = $('vue_for').toArray();
-        if (nodes.length > 0) this.debug('post-processing vue_for tag');
-        let self = this;
-        nodes.map(function(elem) {
-            let cur = $(elem);
-            let iterator = cur.attr('iterator')
-                .replaceAll('$variables.', '')
-                .replaceAll('$vars.', '')
-                .replaceAll('$params.', '')
-                .replaceAll('$store.', '$store.state.');
-            if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') != 0) {
-                iterator = `(${cur.attr('item')}, ${cur.attr('key')}) in ${iterator}`;
-            } else if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') == 0) {
-                iterator = `${cur.attr('item')} in ${iterator}`;
-            } else if (cur.attr('key') && cur.attr('key') != 0 && cur.attr('use_index') != 'false') {
-                iterator = `(${cur.attr('item')}, ${cur.attr('key')}, ${cur.attr('use_index')}) in ${iterator}`;
+        // process vue_for tags
+        // repeat upto 5 times (@todo transform this into a self calling method)
+        for (let x of [1,2,3,4,5]) {
+            nodes = $('vue_for').toArray();
+            if (nodes.length > 0) {
+                this.debug(`post-processing vue_for tag ${x} (len:${nodes.length})`);
+                let self = this;
+                nodes.map(function(elem) {
+                    let cur = $(elem);
+                    let iterator = cur.attr('iterator')
+                        .replaceAll('$variables.', '')
+                        .replaceAll('$vars.', '')
+                        .replaceAll('$params.', '')
+                        .replaceAll('$store.', '$store.state.');
+                    if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') != 0) {
+                        iterator = `(${cur.attr('item')}, ${cur.attr('key')}) in ${iterator}`;
+                    } else if (cur.attr('use_index') && cur.attr('use_index') == 'false' && cur.attr('key') == 0) {
+                        iterator = `${cur.attr('item')} in ${iterator}`;
+                    } else if (cur.attr('key') && cur.attr('key') != 0 && cur.attr('use_index') != 'false') {
+                        iterator = `(${cur.attr('item')}, ${cur.attr('key')}, ${cur.attr('use_index')}) in ${iterator}`;
+                    } else {
+                        iterator = `(${cur.attr('item')}, ${cur.attr('use_index')}) in ${iterator}`;
+                    }
+                    if (cur.attr('target') != 'template') {
+                        //search refx ID tag
+                        let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
+                        if (target.length > 0) {
+                            let target_node = $(target[0]);
+                            target_node.attr('v-for', iterator);
+                            if (cur.attr('unique')!=0) target_node.attr(':key', cur.attr('unique'));
+                            cur.replaceWith(cur.html());
+                        }
+                        //cur.replaceWith(cur.html()); // remove also if target node is not found
+                    } else {
+                        // transform <v_for>x</v_for> -> <template v-for='iterator'>x</template>
+                        // lookAt x=v_for_selector.html() and selector.replaceWith('<template v-for>'+x+'</template>')
+                        cur.replaceWith(`<template v-for="${iterator}">${cur.html()}</template>`);
+                    }
+                });
             } else {
-                iterator = `(${cur.attr('item')}, ${cur.attr('use_index')}) in ${iterator}`;
+                break;
             }
-            if (cur.attr('target') != 'template') {
-                //search refx ID tag
-                let target = $(`*[refx="${cur.attr('target')}"]`).toArray();
-                if (target.length > 0) {
-                    let target_node = $(target[0]);
-                    target_node.attr('v-for', iterator);
-                    if (cur.attr('unique')!=0) target_node.attr(':key', cur.attr('unique'));
-                    cur.replaceWith(cur.html());
-                }
-                //cur.replaceWith(cur.html()); // remove also if target node is not found
-            } else {
-                // transform <v_for>x</v_for> -> <template v-for='iterator'>x</template>
-                // lookAt x=v_for_selector.html() and selector.replaceWith('<template v-for>'+x+'</template>')
-                cur.replaceWith(`<template v-for="${iterator}">${cur.html()}</template>`);
-            }
-        });
+        }
         //
         vue.template = $.html();
         // process vue_event tags

@@ -1321,6 +1321,11 @@ export default async function(context) {
                 // write output
                 resp.open += context.tagParams('picture-input', params, false) + '\n';
                 resp.close = `</picture-input>\n`;
+                if (params.placeholder) {
+                    resp.state.friendly_name = params.placeholder;
+                } else if (params.ref && params.ref.contains('ID_')==false) {
+                    resp.state.friendly_name = params.ref;
+                }
                 return resp;
             }
         },
@@ -1504,26 +1509,9 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                // parse attributes
-                let params = {};
-                Object.keys(node.attributes).map(function(key) {
-                    let value = node.attributes[key];
-                    // preprocess value
-                    value = value.replaceAll('$variables.', '')
-                        .replaceAll('$vars.', '')
-                        .replaceAll('$params.', '')
-                        .replaceAll('$config.', 'process.env')
-                        .replaceAll('$store.', '$store.state.');
-                    // query attributes
-                    if (key.toLowerCase() == 'props') {
-                        for (let i of value.split(' ')) {
-                            params[i] = null;
-                        }
-                    } else {
-                        params[key] = value;
-                    }
-                });
-                //
+                let params = aliases2params('def_margen', node);
+                // code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->\n`;
                 resp.open += context.tagParams('v-container', params, false) + '\n';
                 resp.close += '</v-container>\n';
                 //
@@ -1540,31 +1528,8 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let params = {
-                    refx: node.id
-                };
-                // process attributes
-                Object.keys(node.attributes).map(function(key) {
-                    let value = node.attributes[key];
-                    let keytest = key.toLowerCase().trim();
-                    let tvalue = value.toString().replaceAll('$variables', '')
-                        .replaceAll('$vars.', '')
-                        .replaceAll('$params.', '')
-                        .replaceAll('$env.', 'process.env.')
-                        .replaceAll('$store.', '$store.state.').trim();
-                    if (keytest == 'props') {
-                        for (let i of tvalue.split(' ')) {
-                            params[i] = null;
-                        }
-                    } else {
-                        if (keytest.charAt(0) != ':' && value != '' && value != tvalue) {
-                            params[':' + key.trim()] = tvalue;
-                        } else {
-                            params[key.trim()] = tvalue;
-                        }
-                    }
-                }.bind(this));
-                // write response
+                let params = aliases2params('def_contenedor', node);
+                // code
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->\n`;
                 resp.open += context.tagParams('v-container', params, false) + '\n';
                 resp.close = '</v-container>\n';
