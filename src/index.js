@@ -2572,6 +2572,7 @@ ${cur.attr('name')}: {
                 ob.substr(0,2)=='**' && ob.substr(ob.length-2)=='**') {
                 nuevo += ob.replaceAll('**',''); //escape single ** vars 21-abr-21
             } else if ((typeof ob === 'string') && (
+                ob.charAt(0)=='!' || 
                 ob.indexOf('this.')!=-1 || 
                 ob.indexOf('new ')!=-1 || 
                 ob.indexOf(`'`)!=-1 || 
