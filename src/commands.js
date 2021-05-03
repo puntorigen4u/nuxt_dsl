@@ -4259,6 +4259,7 @@ export default async function(context) {
                             value = value.replaceAll('$variables.', 'this.')
                                 .replaceAll('$vars.', 'this.')
                                 .replaceAll('$params.', 'this.')
+                                .replaceAll('$config.', 'process.env.')
                                 .replaceAll('$store.', 'this.$store.state.');
                         }
                     }
@@ -4568,6 +4569,45 @@ export default async function(context) {
             }
         },
 
+        'def_consultar_modelo': {
+            x_icons: 'desktop_new',
+            x_text_pattern: `consultar modelo "*"`,
+            x_level: '>2',
+            hint:  `Realiza una consulta a una base de datos virtual (en memoria).
+                    Sus atributos corresponden a los campos y datos a filtrar.
+                    Se asigna el resultado a la variable luego de la coma.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { var:'', data:{}, model:'' };
+                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0];
+                tmp.model = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                }).trim();
+                //get attributes and values as struct
+                tmp.data = (await context.x_commands['def_struct'].func(node, { ...state, ...{
+                    as_object:true
+                }})).open;
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                if (Object.keys(tmp.data)!='') {
+                    resp.open += `let ${node.id} = { keys:[], vals:[], where:${context.jsDump(tmp.data)} };
+                    for (let ${node.id}_k in ${node.id}.where) {
+                        ${node.id}.keys.push(${node.id}_k + '=?');
+                        ${node.id}.vals.push(${node.id}.where[${node.id}_k]);
+                    }
+                    let ${tmp.var} = this.alasql(\`SELECT * FROM \${tmp.model} WHERE \${${node.id}.keys.join(' AND ')}\`,${node.id}.vals);\n`;
+                } else {
+                    resp.open += `let ${tmp.var} = this.alasql('SELECT * FROM ${tmp.model}', []);\n`;
+                    resp.open += `let ${node.id} = { where:{} };`;
+                }
+                return resp;
+            }
+        },
+
         'def_xcada_registro': {
             x_icons: 'penguin',
             x_text_contains: `por cada registro en`,
@@ -4653,7 +4693,7 @@ export default async function(context) {
 
         //*def_responder (@todo i18n)
         //**def_insertar_modelo (@todo test it after adding support for events)
-        //def_consultar_modelo
+        //**def_consultar_modelo
         //def_modificar_modelo
         //def_eliminar_modelo
         //def_consultar_web

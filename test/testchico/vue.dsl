@@ -95,7 +95,7 @@
 <icon BUILTIN="gohome"/>
 <attribute_layout NAME_WIDTH="60" VALUE_WIDTH="100"/>
 <attribute NAME="class" VALUE="black"/>
-<node CREATED="1594004763661" ID="ID_1790231652" MODIFIED="1619300414227" TEXT="margen">
+<node CREATED="1594004763661" FOLDED="true" ID="ID_1790231652" MODIFIED="1619992099452" TEXT="margen">
 <icon BUILTIN="idea"/>
 <node CREATED="1594004675044" ID="ID_1557458253" MODIFIED="1597103311883" TEXT="centrar">
 <icon BUILTIN="idea"/>
@@ -116,6 +116,11 @@
 <icon BUILTIN="clanbomber"/>
 </node>
 </node>
+</node>
+<node CREATED="1619992085756" ID="ID_85572493" MODIFIED="1619992098857" TEXT="qrcode">
+<icon BUILTIN="idea"/>
+<attribute_layout NAME_WIDTH="56" VALUE_WIDTH="76"/>
+<attribute NAME="value" VALUE="Hola a todos"/>
 </node>
 </node>
 <node CREATED="1593383033359" ID="ID_1933537114" MODIFIED="1619028959163" TEXT="html:v-footer">
