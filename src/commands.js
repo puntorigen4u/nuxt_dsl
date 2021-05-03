@@ -3205,15 +3205,66 @@ export default async function(context) {
             }
         },
 
+        'def_youtube_playlist': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'youtube:playlist',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            hint: 'Agrega un reproductor de playlists de YouTube.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_youtube_playlist', node);
+                //plugin
+                context.x_state.plugins['vue-youtube-playlist'] = {
+                    global:true,
+                    npm: { 'vue-youtube-playlist':'*' },
+                    tag: 'youtube-playlist'
+                };
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('youtube-playlist',params,false)+'\n';
+                resp.close = '</youtube-playlist>';
+                resp.state.friendly_name = 'youtube';
+                return resp;
+            }
+        },
+
+        'def_youtube': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'youtube',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            attributes_aliases: {
+                'player-vars':  'autoplay,player-vars'
+            },
+            hint: 'Agrega un reproductor de videos de YouTube.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = aliases2params('def_youtube', node);
+                //plugin
+                context.x_state.plugins['vue-youtube-embed'] = {
+                    global:true,
+                    npm: { 'vue-youtube-embed':'*' },
+                    tag: 'youtube',
+                    config: '{ global:true }'
+                };
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('youtube',params,false)+'\n';
+                resp.close = '</youtube>';
+                resp.state.friendly_name = 'youtube';
+                return resp;
+            }
+        },
+
         //**def_icono
         //def_animar -- @todo re-think its usage (not currently in use anywhere)
         //**def_imagen
         //**def_qrcode
         
-        //def_medianet_ad
         //**def_mapa
-        //def_youtube_playlist
-        //def_youtube
+        //**def_youtube_playlist
+        //**def_youtube
 
         'def_xcada_registro_view': {
             x_icons: 'penguin',
@@ -4678,7 +4729,8 @@ export default async function(context) {
             }
         },
     
-        //**def_analytics_evento - @todo test    
+        //**def_analytics_evento - @todo test
+        //def_medianet_ad - @todo think about the script2 code issue with cheerio
 
         // OTHER node types
         /*'def_imagen': {
