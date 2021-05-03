@@ -4608,6 +4608,59 @@ export default async function(context) {
             }
         },
 
+        'def_modificar_modelo': {
+            x_icons: 'desktop_new',
+            x_text_exact: `modificar modelo`,
+            x_not_empty: 'link',
+            x_level: '>2',
+            hint:  `Modifica los datos de la consulta de modelo enlazada, aplicando los datos definidos en sus atributos.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { var:'', data:{}, model:'' };
+                //if (node.link=='') return {...resp,...{ valid:false }};
+                //get target node
+                let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
+                if (link_node && link_node.valid==true) {
+                    if (link_node.text.contains('consultar modelo')==false) {
+                        throw 'modificar modelo requires an arrow pointing to a consultar modelo node'
+                    } else {
+                        //get linked info
+                        tmp.model = context.dsl_parser.findVariables({
+                            text: link_node.text,
+                            symbol: `"`,
+                            symbol_closing: `"`
+                        }).trim();
+                        tmp.model_where = link_node.id + '.where';
+                        //get attributes and new values as struct
+                        tmp.data = (await context.x_commands['def_struct'].func(node, { ...state, ...{
+                            as_object:true
+                        }})).open;
+                        //code
+                        if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                        //write update statement
+                        resp.open += `let ${node.id} = { keys:[], vals:[], from:[], data:${context.jsDump(tmp.data)} };\n`;
+                        resp.open += `for (let ${node.id}_k in ${node.id}.data) {
+                            ${node.id}.keys.push(${node.id}_k+'=?');
+                            ${node.id}.vals.push(${node.id}.data[${node.id}_k]);
+                        }\n`;
+                        //write where requirements
+                        resp.open += `for (let ${node.id}_k in ${tmp.model_where}) {
+                            ${node.id}.from.push(${node.id}_k+'=?');
+                            ${node.id}.vals.push(${tmp.model_where}[${node.id}_k]);
+                        }\n`;
+                        //statement
+                        resp.open += `this.alasql(\`UPDATE ${tmp.model} SET \${${node.id}.keys.join(',')} WHERE \${${node.id}.from.join(' AND ')}\`,${node.id}.vals);\n`;
+                    }
+                } else {
+                    throw 'modificar modelo requires an arrow pointing to an active consultar modelo node (cannot be cancelled)'
+                }            
+                //
+                return resp;
+            }
+        },
+
         'def_xcada_registro': {
             x_icons: 'penguin',
             x_text_contains: `por cada registro en`,
@@ -4694,7 +4747,7 @@ export default async function(context) {
         //*def_responder (@todo i18n)
         //**def_insertar_modelo (@todo test it after adding support for events)
         //**def_consultar_modelo
-        //def_modificar_modelo
+        //**def_modificar_modelo
         //def_eliminar_modelo
         //def_consultar_web
         //def_consultar_web_upload
