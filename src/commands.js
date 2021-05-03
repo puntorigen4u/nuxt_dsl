@@ -55,7 +55,7 @@ export default async function(context) {
         }
     };
     // process our own attributes_aliases to normalize node attributes
-    const aliases2params = function(x_id, node, escape_vars) {
+    const aliases2params = function(x_id, node, escape_vars, variables_to='') {
         let params = {
                 refx: node.id
             },
@@ -74,9 +74,9 @@ export default async function(context) {
             let value = node.attributes[key];
             let key_use = key.trim().replace(':', '');
             let keytest = key_use.toLowerCase();
-            let tvalue = value.toString().replaceAll('$variables.', '')
-                .replaceAll('$vars.', '')
-                .replaceAll('$params.', '')
+            let tvalue = value.toString().replaceAll('$variables.', variables_to)
+                .replaceAll('$vars.', variables_to)
+                .replaceAll('$params.', variables_to)
                 .replaceAll('$config.', 'process.env.')
                 .replaceAll('$store.', '$store.state.').trim();
             //
@@ -3106,13 +3106,112 @@ export default async function(context) {
             }
         },
 
+        'def_qrcode': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'qrcode',
+            //x_not_empty: 'attributes[:src]',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            hint: 'Agrega un codigo QR en el lugar.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let options = aliases2params('def_imagen', node);
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                //translate asset if defined
+                for (let x in options) {
+                    if (options[x] && options[x].contains('assets:')) {
+                        options[x] = context.getAsset(options[x], 'js');
+                    }
+                }
+                let params = {};
+                if (options.value) params.value = options.value;
+                if (options[':value']) params[':value'] = options.value;
+                delete options.value; delete options[':value'];
+                delete options.refx;
+                params[':options'] = options;
+                // install plugin
+                context.x_state.plugins['@chenfengyuan/vue-qrcode'] = {
+                    global:true,
+                    npm: { '@chenfengyuan/vue-qrcode':'*' },
+                    tag: 'qrcode'
+                };
+                // code
+                resp.open += context.tagParams('qrcode',params,false)+'\n';
+                resp.close = '</qrcode>';
+                resp.state.friendly_name = 'qrcode';
+                return resp;
+            }
+        },
+
+        'def_mapa': {
+        	x_level: '>3',
+        	x_icons: 'idea',
+            x_text_exact: 'mapa',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            attributes_aliases: {
+                'key':          'key,llave',
+                'width':        'width,ancho',
+                'height':       'height,alto',
+                'lat':          'lat,latitude,latitud',
+                'lng':          'lon,longitude,longitud,lng'
+            },
+            hint: 'Agrega un mapa en el lugar y permite controlarlo con sus propiedades.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let params = {...{ width:'100%', height:'300px' },...aliases2params('def_mapa', node, false, 'this.')};
+                let to_map = { center:{} };
+                let config = {
+                    load: {
+                        key: '',
+                        libraries: 'places,drawing,visualization'
+                    },
+                    installComponents: true
+                };
+                //params
+                if (params.style)   params.style=params.style.split(';');
+                if (!params.style)  params.style=[];
+                if (params.key)     {   config.load.key=params.key;   delete params.key; }
+                if (params.lat)     {   to_map.center.lat=params.lat; delete params.lat; }
+                if (params.lng)     {   to_map.center.lng=params.lng; delete params.lng; }
+                if (params[':lat'])     {   to_map.center.lat=params[':lat']; delete params[':lat']; }
+                if (params[':lng'])     {   to_map.center.lng=params[':lng']; delete params[':lng']; }
+                if (params.width)   {   
+                    to_map.width=params.width;
+                    params.style.push(`width: ${to_map.width}`);
+                    delete params.width; 
+                }
+                if (params.height)  {   
+                    to_map.height=params.height; 
+                    params.style.push(`height: ${to_map.height}`);
+                    delete params.height; 
+                }
+                params.style = params.style.join(';');
+                if (!params[':center'] && to_map.center.lat!='') params[':center']=to_map.center;
+                //plugin
+                context.x_state.plugins['vue2-google-maps'] = {
+                    global:true,
+                    npm: { 'vue2-google-maps':'*' },
+                    as_star: true,
+                    tag: 'GmapMap',
+                    config: context.jsDump(config)
+                };
+                //code
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                resp.open += context.tagParams('GmapMap',params,false)+'\n';
+                resp.close = '</GmapMap>';
+                resp.state.friendly_name = 'mapa';
+                return resp;
+            }
+        },
+
         //**def_icono
         //def_animar -- @todo re-think its usage (not currently in use anywhere)
         //**def_imagen
-        //def_qrcode
+        //**def_qrcode
         //def_analytics_evento
         //def_medianet_ad
-        //def_mapa
+        //**def_mapa
         //def_youtube_playlist
         //def_youtube
 
