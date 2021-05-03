@@ -3209,7 +3209,7 @@ export default async function(context) {
         //def_animar -- @todo re-think its usage (not currently in use anywhere)
         //**def_imagen
         //**def_qrcode
-        //def_analytics_evento
+        
         //def_medianet_ad
         //**def_mapa
         //def_youtube_playlist
@@ -4600,8 +4600,6 @@ export default async function(context) {
             }
         },
 
-        
-
         //*def_responder (@todo i18n)
         //**def_insertar_modelo (@todo test it after adding support for events)
         //def_consultar_modelo
@@ -4629,6 +4627,58 @@ export default async function(context) {
         //**def_xcada_registro
         //*def_crear_id_unico
         //def_enviarpantalla
+
+        'def_analytics_evento': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_contains: 'analytics:event',
+            x_or_hasparent: 'def_page,def_componente,def_layout',
+            attributes_aliases: {
+                'event_label':      'tag,tipo,etiqueta,event_label'
+            },
+            meta_type: 'script',
+            hint: 'Envia el evento indicado al Google Analytics configurado.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //if (!context.x_state.config_node['google:analytics']) return {...resp,...{ valid:false }};
+                // params
+                let params = aliases2params('def_analytics_evento', node, false, 'this.');
+                let details = {...{
+                    event_category:state.current_page
+                },...params};
+                //event name
+                let event = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                });
+                if (event.contains('**') && node.icons.includes('bell')) {
+                    event = getTranslatedTextVar(event);
+                } else if (event.contains('$')) {
+                    event = event.replaceAll('$variables.', 'this.')
+                                 .replaceAll('$vars.', 'this.')
+                                 .replaceAll('$params.', 'this.')
+                                 .replaceAll('$config.', 'process.env.')
+                                 .replaceAll('$store.', 'this.$store.state.');
+                    event = `'${event}'`;
+                } else if (event.charAt(0) == '(' && event.slice(-1) == ')') {
+                    event = event.slice(1).slice(0, -1);
+                } else {
+                    event = `'${event}'`;
+                }
+                //code
+                if ('google:analytics' in context.x_state.config_node) {
+                    if (node.text_note != '') resp.open += `// ${node.text_note}\n`;
+                    resp.open += `this.$gtag('event', ${event}, ${context.jsDump(details)});\n`;
+                    return resp;
+                } else {
+                    throw 'analytics:event requires config->google:analytics key!'
+                }
+            }
+        },
+    
+        //**def_analytics_evento - @todo test    
 
         // OTHER node types
         /*'def_imagen': {
