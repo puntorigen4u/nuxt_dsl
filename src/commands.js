@@ -17,6 +17,13 @@ String.prototype.right = function(chars) {
     return this.substr(this.length-chars);
 };
 
+function setImmediatePromise() {
+    //for preventing freezing node thread within loops (fors)
+    return new Promise((resolve) => {
+      setImmediate(() => resolve());
+    });
+}
+
 export default async function(context) {
     // context.x_state; shareable var scope contents between commands and methods.
     let null_template = {
@@ -1733,41 +1740,6 @@ export default async function(context) {
                 });
                 let params = aliases2params('def_html', node);
                 // parse attributes
-                /*
-                Object.keys(node.attributes).map(function(key) {
-                    let value = node.attributes[key];
-                    // preprocess value
-                    value = value.replaceAll('$variables.', '')
-                        .replaceAll('$vars.', '')
-                        .replaceAll('$params.', '')
-                        .replaceAll('$config.', 'process.env')
-                        .replaceAll('$store.', '$store.state.');
-                    // query attributes
-                    if (key.toLowerCase() == 'props') {
-                        for (let i of value.split(' ')) {
-                            params[i] = null;
-                        }
-                    } else if (key.charAt(0) != ':' && value != node.attributes[key]) {
-                        params[':' + key] = value;
-                    } else if (key != 'v-model') {
-                        if (context.x_state.central_config.idiomas.indexOf(',') != -1) {
-                            // value needs i18n keys
-                            let def_lang = context.x_state.central_config.idiomas.split(',')[0];
-                            if (!context.x_state.strings_i18n[def_lang]) {
-                                context.x_state.strings_i18n[def_lang] = {};
-                            }
-                            let crc32 = 't_' + context.hash(value);
-                            context.x_state.strings_i18n[def_lang][crc32] = value;
-                            params[':' + key] = `$t('${crc32}')`;
-                        } else {
-                            params[key] = value;
-                        }
-
-                    } else {
-                        params[key] = value;
-                    }
-                }.bind(this));*/
-                //
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
                 let tag = node.text.replace('html:', '');
                 if (node.nodes_raw && node.nodes_raw.length > 0) {
@@ -1778,6 +1750,7 @@ export default async function(context) {
                             has_only_events = false;
                             break;
                         }
+                        await setImmediatePromise(); //@improved
                     }
                     if (!has_only_events) {
                         // this tag has real children
@@ -3098,6 +3071,7 @@ export default async function(context) {
                     if (params[x] && params[x].contains('assets:')) {
                         params[x] = context.getAsset(params[x], 'js');
                     }
+                    await setImmediatePromise(); //@improved
                 }
                 resp.open += context.tagParams('v-img',params,false)+'\n';
                 resp.close = '</v-img>';
@@ -3123,6 +3097,7 @@ export default async function(context) {
                     if (options[x] && options[x].contains('assets:')) {
                         options[x] = context.getAsset(options[x], 'js');
                     }
+                    await setImmediatePromise(); //@improved
                 }
                 let params = {};
                 if (options.value) params.value = options.value;
@@ -3449,6 +3424,7 @@ export default async function(context) {
                             params.v_params.push(`'${attrs[key]}'`);
                         }
                     }
+                    await setImmediatePromise(); //@improved
                 }
                 //add npm packages when needed
                 if (tmp.event_test=='visibility') {
@@ -3520,6 +3496,9 @@ export default async function(context) {
                     state,
                     hasChildren: true
                 });
+                let isNumeric = function(n) {
+                    return !isNaN(parseFloat(n)) && isFinite(n);
+                };
                 if (resp.state.from_script && resp.state.from_script==true) return {...resp,...{ valid:false }};
                 // detect which pattern did the match
                 let match = require('minimatch');
@@ -3528,6 +3507,7 @@ export default async function(context) {
                     which+=1;
                     let test = match(node.text,x);
                     if (test==true) break;
+                    await setImmediatePromise(); //@improved
                 };
                 // extract the values
                 let extract = require('extractjs')();
@@ -3601,7 +3581,7 @@ export default async function(context) {
                         elements.value.charAt(0)=='$' && elements.value.contains(`$t('`)==false) {
                         let temp = elements.value.right(elements.value.length-1);
                         params.expresion = `${elements.variable} == ${temp}`;
-                    } else if (typeof elements.value === 'string' && (elements.value=='true' || elements.value=='false')) {
+                    } else if (typeof elements.value === 'string' && (elements.value=='true' || elements.value=='false' || isNumeric(elements.value))) {
                         params.expresion = `${elements.variable} == ${elements.value}`;
                     } else {
                         params.expresion = `${elements.variable} == '${elements.value}'`;
@@ -3884,6 +3864,7 @@ export default async function(context) {
                         if (i.icons.includes('help')) {
                             has_event = true;
                         }
+                        await setImmediatePromise(); //@improved
                     }
                     if (has_event == false) {
                         tmp.type = 'object';
@@ -4028,6 +4009,7 @@ export default async function(context) {
                             //console.log(`vars_path before pop: `,resp.state.vars_path);
                             resp.state.vars_path.pop(); // remove last field from var path
                             resp.state.vars_types.pop(); // remove last field type from vars_types
+                            await setImmediatePromise(); //@improved
                         }
                         //console.log(`vars_path AFTER pops: `,resp.state.vars_path);
                         resp.state.vars_path.push(tmp.field); // push new var to paths
@@ -4571,7 +4553,7 @@ export default async function(context) {
 
         'def_consultar_modelo': {
             x_icons: 'desktop_new',
-            x_text_pattern: `consultar modelo "*"`,
+            x_text_contains: `consultar modelo "`,
             x_level: '>2',
             hint:  `Realiza una consulta a una base de datos virtual (en memoria).
                     Sus atributos corresponden a los campos y datos a filtrar.
@@ -4594,7 +4576,7 @@ export default async function(context) {
                 //code
                 if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
                 if (Object.keys(tmp.data)!='') {
-                    resp.open += `let ${node.id} = { keys:[], vals:[], where:${context.jsDump(tmp.data)} };
+                    resp.open += `let ${node.id} = { keys:[], vals:[], where:${tmp.data} };
                     for (let ${node.id}_k in ${node.id}.where) {
                         ${node.id}.keys.push(${node.id}_k + '=?');
                         ${node.id}.vals.push(${node.id}.where[${node.id}_k]);
@@ -4618,7 +4600,7 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let tmp = { var:'', data:{}, model:'' };
+                let tmp = { data:{}, model:'' };
                 //if (node.link=='') return {...resp,...{ valid:false }};
                 //get target node
                 let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
@@ -4655,6 +4637,52 @@ export default async function(context) {
                     }
                 } else {
                     throw 'modificar modelo requires an arrow pointing to an active consultar modelo node (cannot be cancelled)'
+                }            
+                //
+                return resp;
+            }
+        },
+
+        'def_eliminar_modelo': {
+            x_icons: 'desktop_new',
+            x_text_exact: `eliminar modelo`,
+            x_not_empty: 'link',
+            x_level: '>2',
+            hint:  `Elimina los datos de la consulta de modelo enlazada.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { model:'' };
+                //if (node.link=='') return {...resp,...{ valid:false }};
+                //get target node
+                let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
+                if (link_node && link_node.valid==true) {
+                    if (link_node.text.contains('consultar modelo')==false) {
+                        throw 'eliminar modelo requires an arrow pointing to a consultar modelo node'
+                    } else {
+                        //get linked info
+                        tmp.model = context.dsl_parser.findVariables({
+                            text: link_node.text,
+                            symbol: `"`,
+                            symbol_closing: `"`
+                        }).trim();
+                        tmp.model_where = link_node.id + '.where';
+                        //code
+                        if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                        resp.open += `let ${node.id} = { keys:[], vals:[] };\n`;
+                        resp.open += `for (let ${node.id}_k in ${tmp.model_where}) {
+                            ${node.id}.keys.push(${node.id}_k+'=?');
+                            ${node.id}.vals.push(${tmp.model_where}[${node.id}_k]);
+                        }\n`;
+                        resp.open += `if (${node.id}.keys.length>0) {
+                            this.alasql(\`DELETE FROM ${tmp.model} WHERE \${${node.id}.keys.JOIN(' AND ')}\`,${node.id}.vals);
+                        } else {
+                            this.alasql(\`DELETE FROM ${tmp.model}\`,[]);
+                        }\n`;
+                    }
+                } else {
+                    throw 'eliminar modelo requires an arrow pointing to an active consultar modelo node (cannot be cancelled)'
                 }            
                 //
                 return resp;
@@ -4726,7 +4754,9 @@ export default async function(context) {
                     for (let x of sons) {
                         if (x.text.contains('consultar web')) {
                             tmp.has_await = true;
+                            break;
                         }
+                        await setImmediatePromise(); //@improved
                     }
                 }
                 //write code
@@ -4748,7 +4778,7 @@ export default async function(context) {
         //**def_insertar_modelo (@todo test it after adding support for events)
         //**def_consultar_modelo
         //**def_modificar_modelo
-        //def_eliminar_modelo
+        //**def_eliminar_modelo
         //def_consultar_web
         //def_consultar_web_upload
         //def_consultar_web_download

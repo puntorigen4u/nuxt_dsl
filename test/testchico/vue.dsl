@@ -123,7 +123,7 @@
 <attribute NAME="value" VALUE="Hola a todos"/>
 </node>
 </node>
-<node CREATED="1593383033359" ID="ID_1933537114" MODIFIED="1619028959163" TEXT="html:v-footer">
+<node CREATED="1593383033359" HGAP="-53" ID="ID_1933537114" MODIFIED="1619992100595" TEXT="html:v-footer" VSHIFT="-104">
 <icon BUILTIN="idea"/>
 <attribute_layout NAME_WIDTH="74" VALUE_WIDTH="100"/>
 <attribute NAME=":style" VALUE="$variables.fondo"/>

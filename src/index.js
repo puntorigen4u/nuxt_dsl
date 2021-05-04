@@ -902,6 +902,7 @@ ${cur.attr('name')}: {
             } else {
                 break;
             }
+            await this.setImmediatePromise(); //@improved
         }
         //
         vue.template = $.html();
@@ -947,6 +948,7 @@ ${cur.attr('name')}: {
             } else {
                 break;
             }
+            await this.setImmediatePromise(); //@improved
         }
         //
         vue.template = $.html();
@@ -1318,7 +1320,9 @@ ${cur.attr('name')}: {
             for (let x in this.x_state.functions) {
                 for (let imp in this.x_state.functions[x]) {
                     imps[imp] = this.x_state.functions[x][imp];
+                    await this.setImmediatePromise(); //@improved
                 }
+                await this.setImmediatePromise(); //@improved
             }
             //declare imports
             content += `// app declared functions imports\n`;
@@ -1374,9 +1378,11 @@ ${cur.attr('name')}: {
                             this.x_console.outT({ message:`Warning! path key doesn't exist for page ${page_name}`, color:'yellow'});
                         }
                     }
+                    await this.setImmediatePromise(); //@improved
                 }
                 //write file
                 this.writeFile(file,content);
+                await this.setImmediatePromise(); //@improved
             }
             this.x_console.outT({ message:`VueJS Middlewares ready`, color:'cyan' });
         }
@@ -2106,6 +2112,7 @@ ${cur.attr('name')}: {
                 //this.x_console.out({ message: 'vue ' + thefile.title, data: { vue, page_style: page.styles } });
             }
             //this.x_console.out({ message:'pages debug', data:this.x_state.pages });
+            await this.setImmediatePromise(); //@improved
         }
         // *************************
         // copy/write related files
@@ -2133,6 +2140,7 @@ ${cur.attr('name')}: {
                     //this.debug({ message: `Copying asset`, data:{source,target}, color:'cyan'});
                     try { await copy(source, target); } catch(e) {}
                 }
+                await this.setImmediatePromise(); //@improved
             }
             this.debug({ message:`Copying assets ready`, color:'cyan'});
         }
@@ -2221,6 +2229,7 @@ ${cur.attr('name')}: {
                     tmp.sql_fields.push(field + ' ' + fields_map[fields[field]]);
                 }
                 resp.tables[table.text].sql = `CREATE TABLE ${table.text}(${tmp.sql_fields.join(',')})`;
+                await this.setImmediatePromise(); //@improved
             }
         }
         this.debug_timeEnd({ id: 'readModelos' });
@@ -2484,6 +2493,7 @@ ${cur.attr('name')}: {
             let node = await this.dsl_parser.getNode({ id: parent_id, recurse: false });
             let command = await this.findValidCommand({ node, object: exec });
             if (command) resp.push(command);
+            await setImmediatePromise(); //@improved
         }
         return resp;
     }
@@ -2637,5 +2647,12 @@ ${cur.attr('name')}: {
         const n = process.versions.node.split('.').map(x => parseInt(x, 10));
         r = r.split('.').map(x => parseInt(x, 10));
         return n[0] > r[0] || (n[0] === r[0] && (n[1] > r[1] || (n[1] === r[1] && n[2] >= r[2])));
+    }
+
+    setImmediatePromise() {
+        //for preventing freezing node thread within loops (fors)
+        return new Promise((resolve) => {
+          setImmediate(() => resolve());
+        });
     }
 }
