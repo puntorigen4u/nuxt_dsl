@@ -5,6 +5,12 @@ String.prototype.replaceAll = function(strReplace, strWith) {
     return this.replace(reg, strWith);
 };
 
+String.prototype.cleanLines = function() {
+    var esc = '\n'.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    var reg = new RegExp(esc, 'ig');
+    return this.replace(reg, '').trim();
+};
+
 String.prototype.contains = function(test) {
     if (typeof this === 'string' && this.indexOf(test) != -1) {
         return true;
@@ -3282,7 +3288,7 @@ export default async function(context) {
                 });
                 let params = {};
                 resp.open = context.tagParams('vue_mounted', {}, false)+'<!--';
-                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 resp.close = '--></vue_mounted>';
                 resp.state.from_script=true;
                 return resp;
@@ -3301,7 +3307,7 @@ export default async function(context) {
                 });
                 let params = aliases2params('def_event_server',node);
                 resp.open = context.tagParams('server_asyncdata', {}, false)+'<!--';
-                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 if (!params.return) resp.open += `let resp={};`;
                 resp.close = '--></server_asyncdata>';
                 resp.state.from_server=true;
@@ -3332,7 +3338,7 @@ export default async function(context) {
                 if (params.async) delete params.async;
                 //code
                 resp.open = context.tagParams('vue_event_method', params, false)+'<!--';
-                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 resp.close = '--></vue_event_method>';
                 resp.state.from_script=true;
                 return resp;
@@ -3437,7 +3443,7 @@ export default async function(context) {
                 params.n_params = params.n_params.join(',');
                 params.v_params = params.v_params.join(',');
                 resp.open = context.tagParams('vue_event_element', params, false)+'<!--';
-                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 resp.close = '--></vue_event_element>';
                 resp.state.from_script=true;
                 return resp;
@@ -3463,7 +3469,7 @@ export default async function(context) {
                 context.x_state.plugins['vue-script2'] = { global:true, npm: { 'vue-script2':'*' }};
                 //code
                 resp.open = context.tagParams('script2', params, false);
-                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 resp.close = '</script2>';
                 resp.state.from_script=true;
                 return resp;
@@ -3481,7 +3487,7 @@ export default async function(context) {
             x_level: '>2',
             x_text_contains: 'condicion si',
             x_text_pattern: [
-            `condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro|contiene) "*"`,
+            `condicion si "*" +(es|no es|es menor a|es menor o igual a|es mayor a|es mayor o igual a|esta entre|contiene registro|contiene|contiene item) "*"`,
             `condicion si "*" es +(objeto|array|struct|string|texto)`,
             `condicion si "*" es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
             `condicion si "*" no es +(numero|entero|int|booleano|boleano|boolean|fecha|date|email)`,
@@ -3503,12 +3509,14 @@ export default async function(context) {
                 // detect which pattern did the match
                 let match = require('minimatch');
                 let which = -1;
+                let text_trim = node.text.trim();
                 for (let x of context.x_commands['def_condicion_view'].x_text_pattern) {
                     which+=1;
-                    let test = match(node.text,x);
+                    let test = match(text_trim,x);
                     if (test==true) break;
                     await setImmediatePromise(); //@improved
                 };
+
                 // extract the values
                 let extract = require('extractjs')();
                 let defaults = { variable:'', operator:'es', value:'' };
@@ -3521,7 +3529,8 @@ export default async function(context) {
                     `condicion si "{variable}" {operator}`,
                     `condicion si "{variable} esta entre "{value}" inclusive`
                 ];
-                let elements = {...defaults,...extract(patterns[which],node.text)};
+                
+                let elements = {...defaults,...extract(patterns[which],text_trim)};
                 // pre-process elements
                 if (typeof elements.variable === 'string' && elements.variable.contains('**') && node.icons.includes('bell')) elements.variable = getTranslatedTextVar(elements.variable);
                 if (typeof elements.value === 'string' && elements.value.contains('**') && node.icons.includes('bell')) elements.value = getTranslatedTextVar(elements.value);
@@ -3568,7 +3577,8 @@ export default async function(context) {
                         elements.value.contains('$variables.') || 
                         elements.value.contains('$vars.') ||
                         elements.value.contains('$params.') ||
-                        elements.value.contains('$store.')
+                        elements.value.contains('$store.') ||
+                        elements.value.contains('this.')
                     )) {
                         params.expresion = `${elements.variable} == ${elements.value}`;
                     } else if (typeof elements.value === 'number') {
@@ -3587,19 +3597,19 @@ export default async function(context) {
                         params.expresion = `${elements.variable} == '${elements.value}'`;
                     }
 
-                } else if ('es string,es texto,string,texto'.split(',').includes(elements.operator)) {
+                } else if ('es string,es texto,string,texto'.includes(elements.operator)) {
                     params.expresion = `_.isString(${elements.variable})`;
 
-                } else if ('es numero,es int,numero,int'.split(',').includes(elements.operator)) {
+                } else if ('es numero,es int,numero,int'.includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable})`;
 
-                } else if ('es boolean,es boleano,es booleano,booleano,boleano,boolean'.split(',').includes(elements.operator)) {
+                } else if ('es boolean,es boleano,es booleano,booleano,boleano,boolean'.includes(elements.operator)) {
                     params.expresion = `_.isBoolean(${elements.variable})`;
                 
-                } else if ('es fecha,es date,fecha,date'.split(',').includes(elements.operator)) {
+                } else if ('es fecha,es date,fecha,date'.includes(elements.operator)) {
                     params.expresion = `_.isDate(${elements.variable})`;
                 
-                } else if ('es entero,es int,entero,int'.split(',').includes(elements.operator)) {
+                } else if ('es entero,es int,entero,int'.includes(elements.operator)) {
                     params.expresion = `_.isFinite(${elements.variable})`;
                 
                 } else if ('es array,array'.split(',').includes(elements.operator)) {
@@ -3611,23 +3621,23 @@ export default async function(context) {
                 } else if ('es objeto,objeto'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isObject(${elements.variable})`;
                 
-                } else if ('es correo,es email,email,correo'.split(',').includes(elements.operator)) {
+                } else if ('es correo,es email,email,correo'.includes(elements.operator)) {
                     params.expresion = `_.isString(${elements.variable}) && /\S+@\S+\.\S+/.test(${elements.variable})`;
 
-                } else if ('no es correo,no es email'.split(',').includes(elements.operator)) {
+                } else if ('no es correo,no es email'.includes(elements.operator)) {
                     params.expresion = `!(_.isString(${elements.variable}) && /\S+@\S+\.\S+/.test(${elements.variable}))`;
 
                 //numeric testings
-                } else if ('es menor o igual a,es menor o igual que'.split(',').includes(elements.operator)) {
+                } else if ('es menor o igual a,es menor o igual que'.includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} <= ${elements.value}`;
                 
-                } else if ('es menor a,es menor que'.split(',').includes(elements.operator)) {
+                } else if ('es menor a,es menor que'.includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} < ${elements.value}`;
 
-                } else if ('es mayor o igual a,es mayor o igual que'.split(',').includes(elements.operator)) {
+                } else if ('es mayor o igual a,es mayor o igual que'.includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} >= ${elements.value}`;
 
-                } else if ('es mayor a,es mayor que'.split(',').includes(elements.operator)) {
+                } else if ('es mayor a,es mayor que'.includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} > ${elements.value}`;
 
                 } else if ('esta entre'==elements.operator && elements.value.contains(',')) {
@@ -3636,42 +3646,45 @@ export default async function(context) {
                     params.expresion = `${elements.variable} >= ${from} && ${elements.variable} <= ${until}`;
 
                 // strings
-                } else if ('no esta vacio,not empty'.split(',').includes(elements.operator)) {
+                } else if ('no esta vacio,not empty'.includes(elements.operator)) {
                     params.expresion = `(_.isObject(${elements.variable}) || (_.isString(${elements.variable})) &&  !_.isEmpty(${elements.variable})) || _.isNumber(${elements.variable}) || _.isBoolean(${elements.variable})`;
 
-                } else if ('esta vacio,is empty,esta vacia'.split(',').includes(elements.operator)) {
+                } else if ('esta vacio,is empty,esta vacia'.includes(elements.operator)) {
                     params.expresion = `(_.isObject(${elements.variable}) ||_.isString(${elements.variable})) &&  _.isEmpty(${elements.variable})`;
 
                 // other types
-                } else if ('existe,exists,no es indefinido,no es indefinida,esta definida'.split(',').includes(elements.operator)) {
+                } else if ('existe,exists,no es indefinido,no es indefinida,esta definida'.includes(elements.operator)) {
                     params.expresion = `!_.isUndefined(${elements.variable})`;
 
-                } else if ('no existe,doesnt exists,es indefinido,es indefinida,no esta definida'.split(',').includes(elements.operator)) {
+                } else if ('no existe,doesnt exists,es indefinido,es indefinida,no esta definida'.includes(elements.operator)) {
                     params.expresion = `_.isUndefined(${elements.variable})`;
 
-                } else if ('no es nula,no es nulo'.split(',').includes(elements.operator)) {
+                } else if ('no es nula,no es nulo'.includes(elements.operator)) {
                     params.expresion = `!_.isNull(${elements.variable})`;
 
-                } else if ('es nula,es nulo'.split(',').includes(elements.operator)) {
+                } else if ('es nula,es nulo'.includes(elements.operator)) {
                     params.expresion = `_.isNull(${elements.variable})`;
 
-                } else if ('no es,!=,neq'.split(',').includes(elements.operator)) {
+                } else if ('no es,!=,neq'.includes(elements.operator)) {
                     //@todo check if value is string - pendieng testing
                     params.expresion = `${elements.variable}!=${elements.value}`;
 
                 // records
-                } else if ('no contiene registros,contains no records'.split(',').includes(elements.operator)) {
+                } else if ('no contiene registros,contains no records'.includes(elements.operator)) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length==0`;
 
-                } else if ('contiene registros,contains records'.split(',').includes(elements.operator)) {
+                } else if ('contiene registros,contains records'.includes(elements.operator)) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length`; //@todo check if this needs to be .length>0
 
-                } else if ('contiene registro,contiene item'.split(',').includes(elements.operator)) {
+                } else if ('contiene registro,contiene item'.includes(elements.operator)) {
                     params.expresion = `_.contains(${elements.variable},'${elements.value}')`;
 
-                } else if ('contiene,contains'.split(',').includes(elements.operator)) {
-                    params.expresion = `${elements.variable}.toLowerCase().indexOf('${elements.value}'.toLowerCase())!=-1`;
-
+                } else if ('contiene,contains'.includes(elements.operator)) {
+                    if (elements.value.contains('this.')) {
+                        params.expresion = `${elements.variable}.toLowerCase().indexOf(${elements.value}.toLowerCase())!=-1`;
+                    } else {
+                        params.expresion = `${elements.variable}.toLowerCase().indexOf('${elements.value}'.toLowerCase())!=-1`;
+                    }
                 } else {
                     //operator not defined
                     context.x_console.outT({ message:`Operator (${elements.operator}) not defined in 'condicion si' x_command`, color:'red', data:{elements,params,which} });
@@ -3735,10 +3748,10 @@ export default async function(context) {
                 //code
                 let sons = await node.getNodes();
                 if (sons.length>1) {
-                    if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                    if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
                     resp.open += context.tagParams('template', { 'v-else': null }, false);
                 } else if (sons.length==1) {
-                    if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                    if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
                     resp.open += context.tagParams('vue_if', { 
                         'expresion':'',
                         'tipo':'v-else',
@@ -3767,7 +3780,7 @@ export default async function(context) {
                     from_script:false
                 }});
                 //code
-                if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open = `/* ${node.text_note.cleanLines()} */\n`;
                 if (condicion.state.meta.params.tipo=='v-if') {
                     resp.open += `if (${condicion.state.meta.if_js}) {\n`;
                 } else {
@@ -3790,7 +3803,7 @@ export default async function(context) {
                 });
                 if (!resp.state.from_script || (resp.state.from_script && resp.state.from_script==false)) return {...resp,...{ valid:false }};
                 //code
-                if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
                 resp.open += `else {\n`;
                 resp.close = `}\n`;
                 return resp;
@@ -4087,7 +4100,7 @@ export default async function(context) {
                 params.flat = resp.state.vars_path.join('.'); // inherit parent var from def_variables_field last state
                 // write tag
                 resp.open = context.tagParams('vue_watched_var', params, false);
-                if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 resp.close = '</vue_watched_var>';
                 return resp;
             }
@@ -4136,11 +4149,11 @@ export default async function(context) {
                         }
                     };
                     resp.open = context.tagParams('vue_async_computed', params, false)+'<!--\n';
-                    if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                    if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                     resp.close = '--></vue_async_computed>\n';
                 } else {
                     resp.open = context.tagParams('vue_computed', params, false)+'<!--\n';
-                    if (node.text_note != '') resp.open += `//${node.text_note}\n`;
+                    if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                     resp.close = '--></vue_computed>\n';
                 }
                 resp.state.from_script=true;
@@ -4164,7 +4177,7 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `//${node.text_note}\n`;
+                if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
                 let text = context.dsl_parser.findVariables({
                     text: node.text,
                     symbol: `"`,
@@ -4689,6 +4702,129 @@ export default async function(context) {
             }
         },
 
+        //def_consultar_web
+        'def_consultar_web': {
+            x_icons: 'desktop_new',
+            x_text_contains: 'consultar web,,',
+            x_level: '>3',
+            attributes_aliases: {
+                'method':       '_method,:metodo,:method,_metodo',
+                'response':     'responsetype,response,:responsetype,:response'
+            },
+            hint: 'Realiza una llamada a la url indicada enviando los datos definidos en sus atributos. Entrega resultados en variable definida luego de coma.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //prepare
+                let isProxySon = ('current_proxy' in resp.state)?true:false;
+                let isServerSon = ('current_func' in resp.state)?true:false;
+                let tmp = {
+                    var:node.id,
+                    meta:false,
+                    simple:true,
+                    proxy:isProxySon,
+                    progress:true,
+                    axios_call:(isProxySon)?'$axios':'this.$axios',
+                    config: {
+                        method:'get',
+                        url:'',
+                        data:{},
+                        headers:{},
+                        auth: {},
+                        timeout:0,
+                        response:'json',
+                        maxContentLength:5000000
+                    }
+                };
+                if (isServerSon) tmp.axios_call='axios';
+                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0];
+                //attributes
+                let attrs = aliases2params('def_consultar_web', node, false, 'this.');
+                //prepare attrs
+                for (let x in attrs) {
+                    if (x.charAt(0)==':') {
+                        if (typeof attrs[x] === 'string') {
+                            if (x!=':progress' && x!=':method' && x.contains('.')==false) {
+                                attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
+                            } else {
+                                attrs[x.right(x.length-1)] = attrs[x];
+                            }
+                        } else {
+                            attrs[x.right(x.length-1)] = attrs[x];
+                        }
+                        delete attrs[x];
+                    }
+                }
+                //
+                delete attrs.refx;
+                if (node.link!='') tmp.config.url = node.link.trim();
+                if (attrs.progress) tmp.progress=attrs.progress; delete attrs.progress;
+                if (attrs.meta) tmp.meta=true; delete attrs.meta;
+                if (attrs.url) tmp.config.url = attrs.url; delete attrs.url; 
+                for (let test of 'method,username,password,encoding,maxlength,redirects,timeout,response'.split(',')) {
+                    if (attrs[test]) {
+                        tmp.simple=false;
+                        if (test=='username' || test=='password') {
+                            tmp.config.auth[test] = attrs[test];
+                        } else if (test=='encoding') {
+                            tmp.config.responseEncoding = attrs[test];
+                        } else {
+                            tmp.config[test] = attrs[test];
+                        }
+                        delete attrs[test];
+                    }
+                }
+                //extract headers from attrs (and keep data)
+                for (let x in attrs) {
+                    if (x.length>2 && x.substr(0,3)=='x-:') {
+                        tmp.config.headers[x.right(x.length-3)] = attrs[x];
+                        delete attrs[x];
+                    } else if (x.length>2 && x.substr(0,2)=='x-') {
+                        tmp.config.headers[x] = attrs[x];
+                        delete attrs[x];
+                    }
+                }
+                tmp.config.data = {...attrs};
+                if (tmp.config.method=='get') {
+                    tmp.config.data = { params:tmp.config.data };
+                } else if (tmp.config.method=='postjson') {
+                    tmp.config.method = 'post';
+                    tmp.config.data = { params:tmp.config.data };
+                }
+                //simple or advanced?
+                if (tmp.simple) {
+                    //add comment
+                    if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                    if (tmp.meta) {
+                        resp.open += `const ${tmp.var} = await ${tmp.axios_call}.${tmp.config.method}(${tmp.config.url}, ${context.jsDump(tmp.config.data)}, { progress:${tmp.progress} });\n`;
+                    } else {
+                        resp.open += `const ${tmp.var} = (await ${tmp.axios_call}.${tmp.config.method}(${tmp.config.url}, ${context.jsDump(tmp.config.data)}, { progress:${tmp.progress} })).data;\n`;
+                    }
+                } else {
+                    //advanced?
+                    if (tmp.config.response && tmp.config.response!='json') {
+                        tmp.config.responseType = tmp.config.response;
+                    }
+                    delete tmp.config.response;
+                    //write data on close to support download/upload child events to config object
+                    resp.state.from_consultar_web = node.id + '_config';
+                    //add comment
+                    if (node.text_note != '') resp.close += `// ${node.text_note.cleanLines()}\n`;
+                    resp.close += `let ${node.id}_config = ${context.jsDump(tmp.config)};\n`;
+                    //
+                    if (tmp.meta) {
+                        resp.close += `const ${tmp.var} = await ${tmp.axios_call}.request(${node.id}_config, { progress:${tmp.progress} });\n`;
+                    } else {
+                        resp.close += `const ${tmp.var} = (await ${tmp.axios_call}.request(${node.id}_config, { progress:${tmp.progress} })).data;\n`;
+                    }
+                }
+                //return
+                return resp;
+            }
+        },
+
         'def_xcada_registro': {
             x_icons: 'penguin',
             x_text_contains: `por cada registro en`,
@@ -4818,6 +4954,7 @@ export default async function(context) {
                 //if (!context.x_state.config_node['google:analytics']) return {...resp,...{ valid:false }};
                 // params
                 let params = aliases2params('def_analytics_evento', node, false, 'this.');
+                delete params.refx;
                 let details = {...{
                     event_category:state.current_page
                 },...params};
