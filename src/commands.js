@@ -4222,7 +4222,7 @@ export default async function(context) {
                 });
                 let tmp = {};
                 // parse output var
-                tmp.var = node.text.split(',').pop(); //last comma element
+                tmp.var = node.text.split(',').pop().trim(); //last comma element
                 if (resp.state.from_server) { // if (context.hasParentID(node.id, 'def_event_server')==true) {
                     tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
                         .replaceAll('$vars.', 'resp.')
@@ -4825,6 +4825,46 @@ export default async function(context) {
             }
         },
 
+        'def_consultar_web_upload': {
+            x_icons: 'help',
+            x_text_exact: 'upload',
+            x_all_hasparent: 'def_consultar_web',
+            x_level: '>2',
+            hint: 'Evento para ver el progreso del upload de un consultar web padre (axios).',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                if (!state.from_consultar_web) return {...resp,...{ valid:false }};
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                resp.open += `${state.from_consultar_web}.onUploadProgress = function(evento) {\n`;
+                resp.close += `};\n`;
+                return resp;
+            }
+        },
+
+        'def_consultar_web_download': {
+            x_icons: 'help',
+            x_text_exact: 'download',
+            x_all_hasparent: 'def_consultar_web',
+            x_level: '>2',
+            hint: 'Evento para ver el progreso del download de un consultar web padre (axios).',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                if (!state.from_consultar_web) return {...resp,...{ valid:false }};
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                resp.open += `${state.from_consultar_web}.onDownloadProgress = function(evento) {\n`;
+                resp.close += `};\n`;
+                return resp;
+            }
+        },
+
         'def_xcada_registro': {
             x_icons: 'penguin',
             x_text_contains: `por cada registro en`,
@@ -4896,7 +4936,7 @@ export default async function(context) {
                     }
                 }
                 //write code
-                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 if (tmp.has_await==true) {
                     resp.open += `_.each(${params.iterator}, async function(${params.item},${params.use_index}) {`;
                     resp.close = `}, this);`;
@@ -4915,13 +4955,75 @@ export default async function(context) {
         //**def_consultar_modelo
         //**def_modificar_modelo
         //**def_eliminar_modelo
-        //def_consultar_web
-        //def_consultar_web_upload
-        //def_consultar_web_download
+        //**def_consultar_web
+        //**def_consultar_web_upload
+        //**def_consultar_web_download
         //*def_aftertime
         //*def_struct
         //*def_extender
         //*def_npm_instalar
+        //*def_probar
+        //*def_probar_error (ex.def_event_try)
+        //*def_literal_js
+        //*def_console
+        //**def_xcada_registro
+        //*def_crear_id_unico
+
+        'def_guardar_nota': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_contains: 'guardar nota|capturar nota|note:save|save note',
+            attributes_aliases: {
+                'strip':      'text,strip,limpio',
+                'asis':       'asis,as_it_was'
+            },
+            meta_type: 'script',
+            hint: 'Crea una variable con el contenido HTML indicado en la nota del nodo.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                // attrs
+                let attrs = {...{ html:true, asis:false },...aliases2params('def_guardar_nota', node, false, 'this.')};
+                delete attrs.refx;
+                if (attrs[':html']) attrs.html=true;
+                if (attrs[':strip']) attrs.html=false;
+                //prepare
+                let tmp = { content:node.text_note };
+                tmp.var = node.text.split(',').pop().trim();
+                if (attrs.html) {
+                    tmp.content = node.text_rich; //this has inner of body already
+                    //parse content
+                    if (!attrs[':asis'] && !attrs.asis) {
+                        //transform tags 'p' style:text-align:center to <center>x</center>
+                        //transform <p>x</p> to x<br/>
+                        let cheerio = require('cheerio');
+                        let sub = cheerio.load(tmp.content, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
+                        let paragraphs = sub('p').toArray();
+                        paragraphs.map(function(elem) {
+                            let cur = $(elem);
+                            let style = cur.attr('style');
+                            if (style && style.contains('text-align:center')) {
+                                //transform tags 'p' style:text-align:center to <center>x</center>
+                                cur.replaceWith(`<center>${cur.html()}</center>`);
+                            } else {
+                                cur.replaceWith(`${cur.html()}<br/>`);
+                            }
+                        });
+                        tmp.content = sub.html();
+                    }
+                }
+                //escape variables
+                if (node.icons.includes('bell')) {
+                    tmp.content = getTranslatedTextVar(tmp.content);
+                }
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                resp.open += `let ${tmp.var} = ${tmp.content};\n`;
+                return resp;
+            }
+        },
+
+        //**def_guardar_nota
         //def_agregar_campos
         //def_preguntar
         //def_array_transformar
@@ -4929,13 +5031,6 @@ export default async function(context) {
         //def_imagen_exif
         //def_var_clonar
         //def_modificar
-        //*def_probar
-        //*def_probar_error (ex.def_event_try)
-        //*def_literal_js
-        //def_guardar_nota
-        //*def_console
-        //**def_xcada_registro
-        //*def_crear_id_unico
         //def_enviarpantalla
 
         'def_analytics_evento': {
