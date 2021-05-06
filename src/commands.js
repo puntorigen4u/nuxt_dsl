@@ -3286,6 +3286,7 @@ export default async function(context) {
                     state,
                     hasChildren: true
                 });
+                if (node.nodes_raw.length==0) return resp;
                 let params = {};
                 resp.open = context.tagParams('vue_mounted', {}, false)+'<!--';
                 if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
@@ -3305,6 +3306,7 @@ export default async function(context) {
                     state,
                     hasChildren: true
                 });
+                if (node.nodes_raw.length==0) return resp;
                 let params = aliases2params('def_event_server',node);
                 resp.open = context.tagParams('server_asyncdata', {}, false)+'<!--';
                 if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
@@ -3331,6 +3333,7 @@ export default async function(context) {
                     state,
                     hasChildren: true
                 });
+                if (node.nodes_raw.length==0) return resp;
                 let params = aliases2params('def_event_method',node);
                 params.type='async';
                 params.name=node.text.trim();
@@ -3356,6 +3359,7 @@ export default async function(context) {
                     state,
                     hasChildren: true
                 });
+                if (node.nodes_raw.length==0) return resp;
                 //get variables etc from node
                 let attrs = aliases2params('def_event_element',node);
                 let tmp = { event_test:node.text.trim() };
@@ -4079,6 +4083,7 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
+                if (node.nodes_raw.length==0) return resp;
                 let params = {
                     name: node.text.trim(),
                     type: 'watched',
@@ -4099,9 +4104,9 @@ export default async function(context) {
                 });
                 params.flat = resp.state.vars_path.join('.'); // inherit parent var from def_variables_field last state
                 // write tag
-                resp.open = context.tagParams('vue_watched_var', params, false);
+                resp.open = context.tagParams('vue_watched_var', params, false)+'<!--';
                 if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
-                resp.close = '</vue_watched_var>';
+                resp.close = '--></vue_watched_var>';
                 return resp;
             }
         },
