@@ -2612,7 +2612,7 @@ ${cur.attr('name')}: {
                 ob.indexOf('new ')!=-1 || 
                 ob.indexOf(`'`)!=-1 || 
                 ob.indexOf('`')!=-1 ||
-                isNumeric(ob) ||
+                (ob.charAt(0)!='0' && isNumeric(ob)) ||
                 ob=='true' || ob=='false')
                 ) {
                 nuevo += ob;
