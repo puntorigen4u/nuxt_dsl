@@ -4107,6 +4107,7 @@ export default async function(context) {
                 resp.open = context.tagParams('vue_watched_var', params, false)+'<!--';
                 if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
                 resp.close = '--></vue_watched_var>';
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -4751,7 +4752,7 @@ export default async function(context) {
                 for (let x in attrs) {
                     if (x.charAt(0)==':') {
                         if (typeof attrs[x] === 'string') {
-                            if (x!=':progress' && x!=':method' && x.contains('.')==false) {
+                            if (x!=':progress' && x!=':method' && attrs[x].contains('.')==false) {
                                 attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
                             } else {
                                 attrs[x.right(x.length-1)] = attrs[x];
@@ -4822,7 +4823,9 @@ export default async function(context) {
                     if (tmp.meta) {
                         resp.close += `const ${tmp.var} = await ${tmp.axios_call}.request(${node.id}_config, { progress:${tmp.progress} });\n`;
                     } else {
-                        resp.close += `const ${tmp.var} = (await ${tmp.axios_call}.request(${node.id}_config, { progress:${tmp.progress} })).data;\n`;
+                        resp.close += `
+                        const ${tmp.var}_ = await ${tmp.axios_call}.request(${node.id}_config, { progress:${tmp.progress} });
+                        const ${tmp.var} = ${tmp.vat}_.data;\n`;
                     }
                 }
                 //return
