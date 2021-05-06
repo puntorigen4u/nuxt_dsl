@@ -5023,6 +5023,56 @@ export default async function(context) {
             }
         },
 
+        'def_agregar_campos': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_pattern: `+(agregar campos|_.assign) "*"*`,
+            meta_type: 'script',
+            hint: `Agrega los campos definidos en sus atributos (y valores) a cada uno de los registros de la variable de entrada (array de objetos).\n
+                   Si hay una variable definida, se crea una nueva instancia del array con los campos nuevos, en caso contrario se modifican los valores de la variable original.`,
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //get vars and attrs
+                let tmp = {}, attrs = {};
+                if (node.text.contains(',')) tmp.var = node.text.split(',').pop().trim();
+                tmp.original = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                });
+                if (state.from_server) {
+                    tmp.var = tmp.var.replaceAll('$variables.','resp.')
+                                     .replaceAll('$vars.','resp.')
+                                     .replaceAll('$params.','resp.');
+                    tmp.original = tmp.original.replaceAll('$variables.','resp.')
+                                     .replaceAll('$vars.','resp.')
+                                     .replaceAll('$params.','resp.');
+                    attrs = aliases2params('def_agregar_campos', node, false, 'resp.');
+                } else {
+                    tmp.var = tmp.var.replaceAll('$variables.','this.')
+                                     .replaceAll('$vars.','this.')
+                                     .replaceAll('$params.','this.')
+                                     .replaceAll('$store.','this.$store.state.');
+                    tmp.original = tmp.original.replaceAll('$variables.','this.')
+                                               .replaceAll('$vars.','this.')
+                                               .replaceAll('$params.','this.')
+                                               .replaceAll('$store.','this.$store.state.');
+                    attrs = aliases2params('def_agregar_campos', node, false, 'this.');
+                }
+                if (tmp.original.contains('**') && node.icons.includes('bell')) {
+                    tmp.original = getTranslatedTextVar(tmp.original);
+                }
+                delete attrs.refx;
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                
+
+                //code
+                return resp;
+            }
+        },
+
         //**def_guardar_nota
         //def_agregar_campos
         //def_preguntar

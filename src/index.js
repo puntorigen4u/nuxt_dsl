@@ -739,6 +739,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         vue.first = true;
         nodes.map(function(elem) {
             let cur = $(elem);
+            if (elem.children.length==0) {
+                cur.remove();
+                return false;
+            }
             let name = cur.attr('return') ? cur.attr('return') : '';
             vue.script += `async asyncData({ req, res, params }) {\n`;
             vue.script += ` if (!process.server) { const req={}, res={}; }\n`;
@@ -758,6 +762,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (nodes.length > 0) vue.script += `async mounted() {\n`;
         nodes.map(function(elem) {
             let cur = $(elem);
+            if (elem.children.length==0) {
+                cur.remove();
+                return false;
+            }
             //console.log('valor vue_mounted',elem.children[0].data);
             vue.script += elem.children[0].data; //cur.text();
             cur.remove();
@@ -773,6 +781,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (nodes.length > 0) vue.script += `computed: {\n`;
         let computed = [];
         nodes.map(function(elem) {
+            if (elem.children.length==0) {
+                cur.remove();
+                return false;
+            }
             let cur = $(elem);
             let name = cur.attr('name');
             let code = elem.children[0].data; //cur.html();
@@ -793,6 +805,10 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         let async_computed = [];
         nodes.map(function(elem) {
             let cur = $(elem);
+            if (elem.children.length==0) {
+                cur.remove();
+                return false;
+            }
             let code = elem.children[0].data; //cur.text();
             if (cur.attr('valor') || cur.attr('watch')) {
                 let lazy = '';
@@ -850,6 +866,10 @@ ${cur.attr('name')}: {
         let watched = [];
         nodes.map(function(elem) {
             let cur = $(elem);
+            if (elem.children.length==0) {
+                cur.remove();
+                return false;
+            }            
             let code = elem.children[0].data; //cur.text();
             if (cur.attr('deep')) {
                 watched.push(`
@@ -964,6 +984,10 @@ ${cur.attr('name')}: {
             // event_methods
             common_methods.map(function(elem) {
                 let cur = $(elem);
+                if (elem.children.length==0) {
+                    cur.remove();
+                    return false;
+                }
                 let code = elem.children[0].data; //cur.text();
                 let tmp = '';
                 if (cur.attr('timer_time')) {
@@ -1064,6 +1088,7 @@ ${cur.attr('name')}: {
                     let method_name = event;
                     if (evt.attr('friendly_name')!='') method_name = `${evt.attr('friendly_name')}`; //event_suffix
                     method_name = method_name.replaceAll(':', '_').replaceAll('.', '_').replaceAll('-', '_');
+                    if (elem.children.length==0) return false;
                     let method_code = elem.children[0].data; //evt.text();
                     if (event == 'click-outside') {
                         origin.attr(`v-click-outside`, method_name);
