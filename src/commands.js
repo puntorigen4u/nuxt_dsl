@@ -4546,8 +4546,8 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let tmp = { var:'', data:{}, model:'' };
-                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0];
+                let tmp = { var:node.id, data:{}, model:'' };
+                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0].trim();
                 tmp.model = context.dsl_parser.findVariables({
                     text: node.text,
                     symbol: `"`,
@@ -4575,8 +4575,8 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let tmp = { var:'', data:{}, model:'' };
-                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0];
+                let tmp = { var:node.id, data:{}, model:'' };
+                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0].trim();
                 tmp.model = context.dsl_parser.findVariables({
                     text: node.text,
                     symbol: `"`,
@@ -4739,7 +4739,7 @@ export default async function(context) {
                     }
                 };
                 if (isServerSon) tmp.axios_call='axios';
-                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0];
+                if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0].trim();
                 //attributes
                 let attrs = aliases2params('def_consultar_web', node, false, 'this.');
                 //prepare attrs
