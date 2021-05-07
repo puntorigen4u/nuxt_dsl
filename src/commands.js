@@ -4193,7 +4193,6 @@ export default async function(context) {
                     // add async plugin to app
                     context.x_state.plugins['vue-async-computed'] = {
                         global: true,
-                        mode: 'client',
                         npm: {
                             'vue-async-computed': '*'
                         }
