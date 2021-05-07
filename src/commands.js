@@ -92,6 +92,9 @@ export default async function(context) {
                 .replaceAll('$params.', variables_to)
                 .replaceAll('$config.', 'process.env.')
                 .replaceAll('$store.', '$store.state.').trim();
+            if (tvalue.charAt(0)=='$' && tvalue.contains('$store')==false) {
+                tvalue = tvalue.right(tvalue.length-1);
+            }
             //
             //tvalue = getTranslatedTextVar(tvalue);
             if (keytest == 'props') {
@@ -546,6 +549,7 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -771,6 +775,7 @@ export default async function(context) {
                 let params = {...{scoped:true}, ... aliases2params('def_page_estilos', node)};
                 resp.open = context.tagParams('page_estilos', params, false);
                 resp.close = '</page_estilos>';
+                resp.state.from_estilos=true;
                 return resp;
             }
         },
@@ -988,11 +993,11 @@ export default async function(context) {
                 // process attributes and write output
                 let params = aliases2params('def_componente_view', node);
                 // filter $x values
-                for (let key in params) {
+                /*for (let key in params) {
                     if (params[key].charAt(0)=='$' && params[key].contains('$store')==false) {
                         params[key] = params[key].right(params[key].length-1);
                     }
-                }
+                }*/
                 //
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams(tag_name, params, false) + '\n';
@@ -1087,6 +1092,7 @@ export default async function(context) {
                 let params = aliases2params('def_card_title', node);
                 resp.open += context.tagParams('v-card-title', params, false) + '\n';
                 resp.close += `</v-card-title>\n`;
+                resp.state.from_card_title=true;
                 return resp;
             }
         },
@@ -1804,15 +1810,13 @@ export default async function(context) {
                     .replaceAll('$store.', '$store.state.');
                 if (text == '') text = '&nbsp;';
                 // some extra validation
-                if (await context.hasParentID(node.id, 'def_toolbar') == true && await context.hasParentID(node.id, 'def_slot') == false) {
+                if (state.from_toolbar && !state.from_slot) {
                     resp.valid = false;
-                } else if (await context.hasParentID(node.id, 'def_datatable_headers') == true) {
+                } else if (state.from_datatable_headers) {
                     resp.valid = false;
-                } else if (await context.hasParentID(node.id, 'def_variables') == true) {
+                } else if (state.from_variables) {
                     resp.valid = false;
-                } else if (await context.hasParentID(node.id, 'def_page_estilos') == true) {
-                    resp.valid = false;
-                } else if (await context.hasParentID(node.id, 'def_page_estilos') == true) {
+                } else if (state.from_estilos) {
                     resp.valid = false;
                 } else {
                     if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->\n`;
@@ -1946,9 +1950,9 @@ export default async function(context) {
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
                     if (!tmp.omit) {
-                        if (context.hasParentID(node.id, 'def_textonly')==true || tmp.span) {
+                        if (state.from_textonly || tmp.span) {
                             resp.open += context.tagParams('span', params) + text + '</span>\n';
-                        } else if (context.hasParentID(node.id, 'def_card_title') && !params.class) {
+                        } else if (state.from_card_title && !params.class) {
                             resp.open += text + '\n';
                         } else {
                             resp.open += context.tagParams('div', params) + text + '</div>\n';
@@ -1957,6 +1961,7 @@ export default async function(context) {
                     //
                 }
                 // return
+                resp.state.from_textonly=true;
                 return resp;
             }
         },
@@ -2347,7 +2352,7 @@ export default async function(context) {
                     let extract = require('extractjs')();
                     let elements = extract(`{name}={value}`,node.text);
                     //@todo test this after def_datatable exists
-                    if (context.hasParentID(node.id, 'def_datatable')==true) {
+                    if (state.from_datatable) {
                         if (elements.name=='items') {
                             elements.name = 'item';
                         } else if (elements.name=='headers') {
@@ -2521,6 +2526,7 @@ export default async function(context) {
                 resp.open += context.tagParams('v-data-table',params,false)+'\n';
                 resp.close = '</v-data-table>';
                 resp.state.friendly_name = 'table';
+                resp.state.from_datatable=true;
                 return resp;
             }
         },
@@ -2535,6 +2541,7 @@ export default async function(context) {
                 let resp = context.reply_template({ state });
                 context.x_state.pages[state.current_page].variables[resp.state.datatable_id] = [];
                 context.x_state.pages[state.current_page].var_types[resp.state.datatable_id] = 'array';
+                resp.state.from_datatable_headers=true;
                 return resp;
             }
         },
@@ -3722,7 +3729,13 @@ export default async function(context) {
                 resp.state.meta = { if_js:expresion_js, if_view:expresion_view, params, elements };
                 // prepare virtual vars for underscore support
                 if (params.expresion && params.expresion.contains('_.')) {
-                    context.x_state.pages[state.current_page].imports['underscore'] = '_';
+                    if (state.current_page) {
+                        context.x_state.pages[state.current_page].imports['underscore'] = '_';
+                    } else if (state.current_proxy) {
+                        context.x_state.proxies[state.current_proxy].imports['underscore'] = '_';
+                    } else if (state.current_store) {
+                        context.x_state.stores[state.current_store].imports['underscore'] = '_';
+                    }
                     //create virtual var 'computed'
                     resp.open += context.tagParams('vue_computed', {
                         name: `${node.id}_if`,
@@ -3853,6 +3866,7 @@ export default async function(context) {
                     if ('variables' in context.x_state.pages[state.current_page] === false) context.x_state.pages[state.current_page].variables = {};
                     if ('types' in context.x_state.pages[state.current_page] === false) context.x_state.pages[state.current_page].types = {};
                 }
+                resp.state.from_variables=true;
                 return resp;
             }
         },
@@ -5123,6 +5137,7 @@ export default async function(context) {
             x_text_contains: 'preguntar|dialogo:confirm',
             attributes_aliases: {
                 'title':                 'titulo,title',
+                'message':               'mensaje,contenido,message',
                 'buttonTrueText':        'true,aceptar,boton:aceptar',
                 'buttonFalseText':       'false,cancel,boton:cancelar',
                 'width':                 'ancho,width',
@@ -5137,7 +5152,7 @@ export default async function(context) {
                 let resp = context.reply_template({ state });
                 if (!state.from_script) return {...resp,...{ valid:false }};
                 //get vars and attrs
-                let tmp = { var:'' };
+                let tmp = { var:'', text:'' };
                 if (node.text.contains(',')) tmp.var = node.text.split(',').pop().trim();
                 //add plugin
                 context.x_state.plugins['vuetify-confirm'] = {
@@ -5147,7 +5162,30 @@ export default async function(context) {
                 //attrs
                 let params = aliases2params('def_preguntar', node, false, 'this.');
                 delete params.refx;
+                //process message attribute
+                if (params.message) {
+                    /* ex.= 'Estas seguro que deseas borrar {{ x }} ?'
+                    'Estas seguro que deseas borrar '+x+' ?'
+                    */
+                   let new_val = '';
+                    let vars = context.dsl_parser.findVariables({
+                        text: params.message,
+                        symbol: `{{`,
+                        symbol_closing: `}}`,
+                        array:true
+                    });
+                    for (let vr in vars) {
+
+                    }
+                    //
+                    tmp.text = params.message;
+                    delete params.message;
+                }
                 //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                if (tmp.var.contains('this.')) {
+
+                }
                 return resp;
             }
         },
