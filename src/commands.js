@@ -1811,13 +1811,13 @@ export default async function(context) {
                 if (text == '') text = '&nbsp;';
                 // some extra validation
                 if (state.from_toolbar && !state.from_slot) {
-                    resp.valid = false;
-                } else if (state.from_datatable_headers) {
-                    resp.valid = false;
+                    return {...resp,...{ valid:false }};
+                } else if (state.from_datatable_headers && !state.from_slot && !state.from_datatable_fila) {
+                    return {...resp,...{ valid:false }};
                 } else if (state.from_variables) {
-                    resp.valid = false;
+                    return {...resp,...{ valid:false }};
                 } else if (state.from_estilos) {
-                    resp.valid = false;
+                    return {...resp,...{ valid:false }};
                 } else {
                     if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->\n`;
                     //
@@ -2616,6 +2616,7 @@ export default async function(context) {
                 resp.open += context.tagParams('tr',params,false)+'\n';
                 resp.close = '</tr>';
                 resp.state.friendly_name = 'row';
+                resp.state.from_datatable_fila = true;
                 return resp;
             }
         },
