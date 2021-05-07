@@ -4581,7 +4581,7 @@ export default async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let tmp = { var:node.id, data:{}, model:'' };
+                let tmp = { var:node.id+'_', data:{}, model:'' };
                 if (node.text.contains(',')) tmp.var=node.text.split(',').splice(-1)[0].trim();
                 tmp.model = context.dsl_parser.findVariables({
                     text: node.text,
@@ -5097,7 +5097,7 @@ export default async function(context) {
                         return _.extend({},element,${tmp.attr.open});
                     });`;
                 } else {
-                    resp.open += `${tmp.original} = _.each(${tmp.original}, function(element2) {
+                    resp.open += `${tmp.original} = _.each(${tmp.original}, function(element) {
                         return _.extend({},element,${tmp.attr.open});
                     });`;
                 }
