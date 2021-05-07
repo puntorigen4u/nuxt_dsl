@@ -2086,7 +2086,7 @@ ${cur.attr('name')}: {
                 // process Styles
                 vue = this.processStyles(vue, page);
                 // removes refx attributes
-                //**vue = this.removeRefx(vue);
+                vue = this.removeRefx(vue);
                 // fix {vuepath:} placeholders
                 vue = this.fixVuePaths(vue, page);
                 // process lang files (po)
