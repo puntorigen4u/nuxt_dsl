@@ -30,7 +30,8 @@ export default class vue_dsl extends concepto {
     //Called after init method finishes
     async onInit() {
         // define and assign commands
-        this.x_console.outT({ message: `Vue Compiler v${process.env.npm_package_version}`, color: `brightCyan` });
+        let version = require('project-version');
+        this.x_console.outT({ message: `Vue Compiler v${version}`, color: `brightCyan` });
         await this.addCommands(internal_commands);
         this.x_console.outT({ message: `${Object.keys(this.x_commands).length} local x_commands loaded!`, color: `green` });
         //this.debug('x_commands',this.x_commands);
