@@ -2449,12 +2449,11 @@ export default async function(context) {
             hint: 'Muestra el mensaje definido cuando se detecta mouse sobre sus hijos',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
-                let params = aliases2params('def_tooltip', node, false);
+                let params = aliases2params('def_tooltip', node, false, 'this.');
                 let tmp = { text:'', params_span:{} };
-                if (params.texto && params.texto.contains('{{')==false) {
-                    tmp.text = `{{ ${params.texto} }}`;
-                } else if (params.texto && params.texto!='') {
-                    tmp.text = params.texto;
+                if (params.texto) tmp.text = params.texto;
+                if (tmp.text.contains('this.') && tmp.text.contains('{{')==false) {
+                    tmp.text = `{{ ${tmp.text} }}`;
                 }
                 delete params.texto;
                 if (params.class) {
@@ -5107,9 +5106,44 @@ export default async function(context) {
             }
         },
 
+        'def_preguntar': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_contains: 'preguntar|dialogo:confirm',
+            attributes_aliases: {
+                'title':                 'titulo,title',
+                'buttonTrueText':        'true,aceptar,boton:aceptar',
+                'buttonFalseText':       'false,cancel,boton:cancelar',
+                'width':                 'ancho,width',
+                'icon':                  'icon,icono',
+                'persistent':            'persistent,obligatorio,persistente'
+            },
+            /*x_test_func: function(node) {
+                //return true if its a valid match
+            },*/
+            hint: `Abre un dialogo preguntando lo indicado en sus atributos, respondiendo true o false en la variable indicada luego de la coma.`,
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //get vars and attrs
+                let tmp = { var:'' };
+                if (node.text.contains(',')) tmp.var = node.text.split(',').pop().trim();
+                //add plugin
+                context.x_state.plugins['vuetify-confirm'] = {
+                    global:true,
+                    npm: { 'vuetify-confirm':'*' }
+                };
+                //attrs
+                let params = aliases2params('def_preguntar', node, false, 'this.');
+                delete params.refx;
+                //code
+                return resp;
+            }
+        },
+
         //**def_guardar_nota
         //**def_agregar_campos
-        //def_preguntar
+        //def_preguntar - @in progress
         //def_array_transformar
         //def_procesar_imagen
         //def_imagen_exif
