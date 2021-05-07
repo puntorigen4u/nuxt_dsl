@@ -3725,8 +3725,8 @@ export default async function(context) {
                                                         .replaceAll('$vars.','')
                                                         .replaceAll('$params.','');
                 if (state.current_proxy) {
-                    expresion_js = expresion_js.replaceAll('$store.','$store.state.');
-                    expresion_view = expresion_view.replaceAll('$store.','$store.state.');
+                    expresion_js = expresion_js.replaceAll('$store.','store.state.');
+                    expresion_view = expresion_view.replaceAll('$store.','store.state.');
                 } else {
                     expresion_js = expresion_js.replaceAll('$store.','this.$store.state.');
                     expresion_view = expresion_view.replaceAll('$store.','$store.state.');
@@ -4786,7 +4786,11 @@ export default async function(context) {
                             if (x!=':progress' && x!=':method' && attrs[x].contains('.')==false) {
                                 attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
                             } else if (attrs[x].contains('$store.') || attrs[x].contains('this.') || attrs[x].contains('process.env.')) {
-                                attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
+                                if (state.current_proxy) {
+                                    attrs[x.right(x.length-1)] = '**'+attrs[x].replaceAll('$store.','store.')+'**';
+                                } else {
+                                    attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
+                                }
                             } else {
                                 attrs[x.right(x.length-1)] = attrs[x];
                             }
