@@ -2453,11 +2453,10 @@ export default async function(context) {
                 let tmp = { text:'', params_span:{} };
                 if (params.texto && params.texto.contains('{{')==false) {
                     tmp.text = `{{ ${params.texto} }}`;
-                    delete params.texto;
-                } else if (params.texto!='') {
+                } else if (params.texto && params.texto!='') {
                     tmp.text = params.texto;
-                    delete params.texto;
                 }
+                delete params.texto;
                 if (params.class) {
                     tmp.params_span.class = params.class;
                     delete params.class;
