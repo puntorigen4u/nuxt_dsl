@@ -3720,12 +3720,17 @@ export default async function(context) {
                 // prepare expressions
                 let expresion_js = params.expresion. replaceAll('$variables.','this.')
                                                     .replaceAll('$vars.','this.')                                   
-                                                    .replaceAll('$params.','this.')
-                                                    .replaceAll('$store.','this.$store.state.');
+                                                    .replaceAll('$params.','this.');
                 let expresion_view = params.expresion.   replaceAll('$variables.','')
                                                         .replaceAll('$vars.','')
-                                                        .replaceAll('$params.','')
-                                                        .replaceAll('$store.','$store.state.');
+                                                        .replaceAll('$params.','');
+                if (state.current_proxy) {
+                    expresion_js = expresion_js.replaceAll('$store.','$store.state.');
+                    expresion_view = expresion_view.replaceAll('$store.','$store.state.');
+                } else {
+                    expresion_js = expresion_js.replaceAll('$store.','this.$store.state.');
+                    expresion_view = expresion_view.replaceAll('$store.','$store.state.');
+                }
                 resp.state.meta = { if_js:expresion_js, if_view:expresion_view, params, elements };
                 // prepare virtual vars for underscore support
                 if (params.expresion && params.expresion.contains('_.')) {
