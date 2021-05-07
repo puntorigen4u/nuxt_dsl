@@ -305,8 +305,9 @@ Vue.use(VueMask);`,
     //Defines preparation steps before processing nodes.
     async onPrepare() {
         this.deploy_module = { pre:()=>{}, post:()=>{}, deploy:()=>true };
-        let deploy = this.x_state.central_config.deploy+'';
+        let deploy = this.x_state.central_config.deploy;
         if (deploy) {
+            deploy += '';
             if (deploy.contains('eb:')) {
                 this.deploy_module = new deploy_eb({ context:this });
             } else if (deploy=='local') {
