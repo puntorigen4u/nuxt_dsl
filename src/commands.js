@@ -1338,6 +1338,7 @@ export default async function(context) {
                 // add plugin
                 context.x_state.plugins['vue-picture-input'] = {
                     global: true,
+                    mode: 'client',
                     npm: {
                         'vue-picture-input': '*'
                     },
@@ -1385,6 +1386,7 @@ export default async function(context) {
                 // add plugin
                 context.x_state.plugins['vue-select-image'] = {
                     global: true,
+                    mode: 'client',
                     npm: {
                         'vue-select-image': '*'
                     },
@@ -1425,6 +1427,7 @@ export default async function(context) {
                 context.x_state.npm['luxon'] = '*'; // for i18n support
                 context.x_state.plugins['vue-datetime'] = {
                     global: true,
+                    mode: 'client',
                     npm: {
                         'vue-datetime': '*'
                     }
@@ -1833,6 +1836,7 @@ export default async function(context) {
                             npm: {
                                 'vue-numeral-filter': '*'
                             },
+                            mode: 'client',
                             config: `{ locale: 'es-es' }`
                         };
                     }
@@ -2024,7 +2028,8 @@ export default async function(context) {
                         global: true,
                         npm: {
                             'vue-scrollto': '*'
-                        }
+                        },
+                        mode: 'client'
                     };
                     if (params.scrollto.contains(',')) {
                         let element = params.scrollto.split(',')[0];
@@ -2777,6 +2782,7 @@ export default async function(context) {
                 context.x_state.plugins['pure-vue-chart'] = {
                     global:true,
                     npm: { 'pure-vue-chart':'*' },
+                    mode: 'client',
                     tag: 'pure-vue-chart'
                 };
                 //code
@@ -2872,6 +2878,7 @@ export default async function(context) {
                 if (params.scrollto) {
                     context.x_state.plugins['vue-scrollto'] = {
                         global:true,
+                        mode: 'client',
                         npm: { 'vue-scrollto':'*' }
                     };
                     params['v-scroll-to'] = { cancelable:false, element:params.scrollto };
@@ -3131,7 +3138,8 @@ export default async function(context) {
                 context.x_state.plugins['@chenfengyuan/vue-qrcode'] = {
                     global:true,
                     npm: { '@chenfengyuan/vue-qrcode':'*' },
-                    tag: 'qrcode'
+                    tag: 'qrcode',
+                    mode: 'client'
                 };
                 // code
                 resp.open += context.tagParams('qrcode',params,false)+'\n';
@@ -3215,7 +3223,8 @@ export default async function(context) {
                 context.x_state.plugins['vue-youtube-playlist'] = {
                     global:true,
                     npm: { 'vue-youtube-playlist':'*' },
-                    tag: 'youtube-playlist'
+                    tag: 'youtube-playlist',
+                    mode: 'client'
                 };
                 //code
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
@@ -3241,6 +3250,7 @@ export default async function(context) {
                 //plugin
                 context.x_state.plugins['vue-youtube-embed'] = {
                     global:true,
+                    mode: 'client',
                     npm: { 'vue-youtube-embed':'*' },
                     tag: 'youtube',
                     config: '{ global:true }'
@@ -3490,7 +3500,7 @@ export default async function(context) {
                 if (node.link!='') params.src = node.link;
                 //add packages
                 context.x_state.npm['vue-script2'] = '*';
-                context.x_state.plugins['vue-script2'] = { global:true, npm: { 'vue-script2':'*' }};
+                context.x_state.plugins['vue-script2'] = { global:true, mode: 'client', npm: { 'vue-script2':'*' }};
                 //code
                 resp.open = context.tagParams('script2', params, false);
                 if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
@@ -4182,6 +4192,7 @@ export default async function(context) {
                     // add async plugin to app
                     context.x_state.plugins['vue-async-computed'] = {
                         global: true,
+                        mode: 'client',
                         npm: {
                             'vue-async-computed': '*'
                         }
@@ -4384,6 +4395,7 @@ export default async function(context) {
                 if (tmp.text.contains('this.$scrollTo')) {
                     context.plugins['vue-scrollto'] = {
                         global:true,
+                        mode: 'client',
                         npm: {
                             'vue-scrollto': '*'
                         }
@@ -5186,7 +5198,6 @@ export default async function(context) {
                         array:true
                     });
                     for (let vr in vars) {
-                        //in progress
                         if (vars[vr].contains('|')) {
                             //add filter support: 'Estas seguro que deseas agregar {{ monto | numeral }} ?'
                             let clean = vars[vr].replaceAll('{{','').replaceAll('}}','');
@@ -5224,7 +5235,7 @@ export default async function(context) {
 
         //**def_guardar_nota
         //**def_agregar_campos
-        //**def_preguntar - @in progress
+        //**def_preguntar
         //def_array_transformar
         //def_procesar_imagen
         //def_imagen_exif
