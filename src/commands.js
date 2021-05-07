@@ -3196,6 +3196,7 @@ export default async function(context) {
                 //plugin
                 context.x_state.plugins['vue2-google-maps'] = {
                     global:true,
+                    mode: 'client',
                     npm: { 'vue2-google-maps':'*' },
                     as_star: true,
                     tag: 'GmapMap',
@@ -5179,7 +5180,10 @@ export default async function(context) {
                 //add plugin
                 context.x_state.plugins['vuetify-confirm'] = {
                     global:true,
-                    npm: { 'vuetify-confirm':'*' }
+                    mode: 'client',
+                    npm: { 'vuetify-confirm':'*' },
+                    extra_imports: ['vuetify'],
+                    config: '{ vuetify }'
                 };
                 //attrs
                 let params = aliases2params('def_preguntar', node, false, 'this.');

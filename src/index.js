@@ -143,6 +143,7 @@ export default class vue_dsl extends concepto {
         if (this.x_state.central_config.nuxt == 'latest') {
             this.x_state.plugins['v-mask'] = {
                 global: true,
+                mode: 'client',
                 npm: { 'v-mask': '*' },
                 customcode: `import Vue from 'vue';
 import VueMask from 'v-mask';
@@ -156,6 +157,7 @@ Vue.use(VueMask);`,
             this.x_console.outT({ message: `vue initialized() ->` });
             this.x_state.plugins['vue-moment'] = {
                 global: true,
+                mode: 'client',
                 npm: { 'vue-moment': '*' },
                 extra_imports: ['moment'],
                 requires: ['moment/locale/es'],
