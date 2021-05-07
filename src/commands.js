@@ -1202,7 +1202,7 @@ export default async function(context) {
                         .replaceAll('$params.', '')
                         .replaceAll('$store', '$store.state.');
                     params['v-model'] = vmodel;
-                } else {
+                } else if (node.text.trim()!='') {
                     params['v-model'] = node.text.trim();
                 }
                 // render by type
@@ -4754,6 +4754,8 @@ export default async function(context) {
                         if (typeof attrs[x] === 'string') {
                             if (x!=':progress' && x!=':method' && attrs[x].contains('.')==false) {
                                 attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
+                            } else if (attrs[x].contains('$store.') || attrs[x].contains('this.') || attrs[x].contains('process.env.')) {
+                                attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
                             } else {
                                 attrs[x.right(x.length-1)] = attrs[x];
                             }
@@ -4825,7 +4827,7 @@ export default async function(context) {
                     } else {
                         resp.close += `
                         const ${tmp.var}_ = await ${tmp.axios_call}.request(${node.id}_config, { progress:${tmp.progress} });
-                        const ${tmp.var} = ${tmp.vat}_.data;\n`;
+                        const ${tmp.var} = ${tmp.var}_.data;\n`;
                     }
                 }
                 //return
@@ -5034,7 +5036,7 @@ export default async function(context) {
         'def_agregar_campos': {
         	x_level: '>2',
         	x_icons: 'desktop_new',
-            x_text_pattern: `+(agregar campos|_.assign) "*"*`,
+            x_text_contains: 'agregar campos a',
             meta_type: 'script',
             hint: `Agrega los campos definidos en sus atributos (y valores) a cada uno de los registros de la variable de entrada (array de objetos).\n
                    Si hay una variable definida, se crea una nueva instancia del array con los campos nuevos, en caso contrario se modifican los valores de la variable original.`,
@@ -5042,7 +5044,7 @@ export default async function(context) {
                 let resp = context.reply_template({ state });
                 if (!state.from_script) return {...resp,...{ valid:false }};
                 //get vars and attrs
-                let tmp = {}, attrs = {};
+                let tmp = { var:'' };
                 if (node.text.contains(',')) tmp.var = node.text.split(',').pop().trim();
                 tmp.original = context.dsl_parser.findVariables({
                     text: node.text,
@@ -5056,33 +5058,55 @@ export default async function(context) {
                     tmp.original = tmp.original.replaceAll('$variables.','resp.')
                                      .replaceAll('$vars.','resp.')
                                      .replaceAll('$params.','resp.');
-                    attrs = aliases2params('def_agregar_campos', node, false, 'resp.');
-                } else {
+                } else if (tmp.var!='') {
                     tmp.var = tmp.var.replaceAll('$variables.','this.')
                                      .replaceAll('$vars.','this.')
                                      .replaceAll('$params.','this.')
-                                     .replaceAll('$store.','this.$store.state.');
+                                     .replaceAll('$store.','this.$store.state.');pon
                     tmp.original = tmp.original.replaceAll('$variables.','this.')
                                                .replaceAll('$vars.','this.')
                                                .replaceAll('$params.','this.')
                                                .replaceAll('$store.','this.$store.state.');
-                    attrs = aliases2params('def_agregar_campos', node, false, 'this.');
                 }
                 if (tmp.original.contains('**') && node.icons.includes('bell')) {
                     tmp.original = getTranslatedTextVar(tmp.original);
                 }
-                delete attrs.refx;
+                // create obj from current node as js obj
+                tmp.attr = await context.x_commands['def_struct'].func(node, { ...state, ...{
+                    as_object:true
+                }});
+                delete tmp.attr.refx;
+                //change this to resp if parent is server
+                if (state.from_server) tmp.attr.open = tmp.attr.open.replaceAll('this.','resp.');
+                //add underscore
+                if (state.current_page) {
+                    context.x_state.pages[state.current_page].imports['underscore'] = '_';
+                } else if (state.current_proxy) {
+                    context.x_state.proxies[state.current_proxy].imports['underscore'] = '_';
+                } else if (state.current_store) {
+                    context.x_state.stores[state.current_store].imports['underscore'] = '_';
+                }
                 //code
                 if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
-                
-
-                //code
+                if (tmp.var.contains('this')) {
+                    resp.open += `${tmp.var} = _.map(${tmp.original}, function(element) {
+                        return _.extend({},element,${tmp.attr.open});
+                    });`;
+                } else if (tmp.var!='') {
+                    resp.open += `let ${tmp.var} = _.map(${tmp.original}, function(element) {
+                        return _.extend({},element,${tmp.attr.open});
+                    });`;
+                } else {
+                    resp.open += `${tmp.original} = _.each(${tmp.original}, function(element2) {
+                        return _.extend({},element,${tmp.attr.open});
+                    });`;
+                }
                 return resp;
             }
         },
 
         //**def_guardar_nota
-        //def_agregar_campos
+        //**def_agregar_campos
         //def_preguntar
         //def_array_transformar
         //def_procesar_imagen
