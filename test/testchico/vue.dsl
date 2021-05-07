@@ -123,7 +123,7 @@
 <attribute NAME="value" VALUE="Hola a todos"/>
 </node>
 </node>
-<node CREATED="1593383033359" HGAP="-53" ID="ID_1933537114" MODIFIED="1619992100595" TEXT="html:v-footer" VSHIFT="-104">
+<node CREATED="1593383033359" HGAP="54" ID="ID_1933537114" MODIFIED="1620334813285" TEXT="html:v-footer" VSHIFT="-45">
 <icon BUILTIN="idea"/>
 <attribute_layout NAME_WIDTH="74" VALUE_WIDTH="100"/>
 <attribute NAME=":style" VALUE="$variables.fondo"/>
@@ -151,7 +151,7 @@
 </node>
 <node CREATED="1594004881822" ID="ID_1586770012" MODIFIED="1619028963938" TEXT="variables">
 <icon BUILTIN="xmag"/>
-<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1619134601582" TEXT="fondo">
+<node CREATED="1594004321947" ID="ID_71212592" MODIFIED="1620334817479" TEXT="fondo">
 <icon BUILTIN="help"/>
 <attribute NAME=":async" VALUE="false"/>
 <node CREATED="1564666068151" ID="ID_94606909" MODIFIED="1597686805394" TEXT="struct, respuesta">
@@ -173,6 +173,19 @@
 <icon BUILTIN="clanbomber"/>
 </node>
 </node>
+</node>
+<node CREATED="1620334824780" ID="ID_1563080412" MODIFIED="1620334832561" TEXT="let temp_calle = &apos;test&apos;;">
+<icon BUILTIN="penguin"/>
+</node>
+<node CREATED="1553569412219" ID="ID_266240029" MODIFIED="1620334820012" TEXT="consultar web, nominatim">
+<icon BUILTIN="desktop_new"/>
+<icon BUILTIN="bell"/>
+<attribute_layout NAME_WIDTH="120" VALUE_WIDTH="267"/>
+<attribute NAME=":url" VALUE="https://nominatim.openstreetmap.org/search"/>
+<attribute NAME=":method" VALUE="get"/>
+<attribute NAME="polygon_geojson" VALUE="1"/>
+<attribute NAME="q" VALUE="**temp_calle**"/>
+<attribute NAME="format" VALUE="json"/>
 </node>
 <node CREATED="1553565000664" ID="ID_678355206" MODIFIED="1597639670325" TEXT="responder &quot;**respuesta**&quot;">
 <icon BUILTIN="desktop_new"/>

@@ -987,7 +987,14 @@ export default async function(context) {
                 context.x_state.pages[state.current_page].components[tag_name] = var_name;
                 // process attributes and write output
                 let params = aliases2params('def_componente_view', node);
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note.trim()} -->\n`;
+                // filter $x values
+                for (let key in params) {
+                    if (params[key].charAt(0)=='$' && params[key].contains('$store')==false) {
+                        params[key] = params[key].right(params[key].length-1);
+                    }
+                }
+                //
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams(tag_name, params, false) + '\n';
                 resp.close = `</${tag_name}>\n`;
                 resp.state.from_componente=true;
@@ -3416,10 +3423,14 @@ export default async function(context) {
                     if (key.charAt(0)==':') {
                         params.n_params.push(key.right(key.length-1));
                         let val_tmp = attrs[key];
-                        if (attrs[key].charAt(0)=='$') {
+                        if (val_tmp.charAt(0)=='$') {
                             val_tmp = val_tmp.right(val_tmp.length-1);
                         }
                         params.v_params.push(val_tmp);
+                    } else if (attrs[key].contains('**') && node.icons.includes('bell')) {
+                        params.n_params.push(key);
+                        let sv = getTranslatedTextVar(attrs[key]);
+                        params.v_params.push(sv);
                     } else {
                         params.n_params.push(key);                    
                         if (isNumeric(attrs[key])) {
