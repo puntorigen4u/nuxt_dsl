@@ -2449,10 +2449,13 @@ export default async function(context) {
             hint: 'Muestra el mensaje definido cuando se detecta mouse sobre sus hijos',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
-                let params = aliases2params('def_tooltip', node, true);
+                let params = aliases2params('def_tooltip', node, false);
                 let tmp = { text:'', params_span:{} };
-                if (params.texto) {
+                if (params.texto && params.texto.contains('{{')==false) {
                     tmp.text = `{{ ${params.texto} }}`;
+                    delete params.texto;
+                } else if (params.texto!='') {
+                    tmp.text = params.texto;
                     delete params.texto;
                 }
                 if (params.class) {
