@@ -5177,7 +5177,8 @@ export default async function(context) {
                     /* ex.= 'Estas seguro que deseas borrar {{ x }} ?'
                     'Estas seguro que deseas borrar '+x+' ?'
                     */
-                   let new_val = '';
+                    tmp.text = params.message;
+                    let new_val = '';
                     let vars = context.dsl_parser.findVariables({
                         text: params.message,
                         symbol: `{{`,
@@ -5185,16 +5186,37 @@ export default async function(context) {
                         array:true
                     });
                     for (let vr in vars) {
-
+                        //in progress
+                        if (vars[vr].contains('|')) {
+                            //add filter support: 'Estas seguro que deseas agregar {{ monto | numeral }} ?'
+                            let clean = vars[vr].replaceAll('{{','').replaceAll('}}','');
+                            let the_var = clean.split('|')[0].trim();
+                            let the_filter = clean.split('|').pop().trim();
+                            the_filter = the_filter.replace('(',`(${the_var},`);
+                            tmp.text = tmp.text.replace(vars[vr],`'+this.$nuxt.$options.filters.${the_filter}+'`);
+                        } else {
+                            let n_var = vars[vr].replaceAll('{{',`'+`).replaceAll('}}',`+'`);
+                            tmp.text = tmp.text.replace(vars[vr],n_var);
+                        }
                     }
                     //
-                    tmp.text = params.message;
+                    tmp.text = `'${tmp.text}'`;
                     delete params.message;
                 }
                 //code
                 if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
-                if (tmp.var.contains('this.')) {
-
+                if (tmp.text && Object.keys(params)==0) {
+                    if (tmp.var.contains('this.')) {
+                        resp.open += `${tmp.var} = await this.$confirm(${tmp.text});\n`;
+                    } else {
+                        resp.open += `let ${tmp.var} = await this.$confirm(${tmp.text});\n`;
+                    }
+                } else {
+                    if (tmp.var.contains('this.')) {
+                        resp.open += `${tmp.var} = await this.$confirm(${tmp.text},${context.jsDump(params)});\n`;
+                    } else {
+                        resp.open += `let ${tmp.var} = await this.$confirm(${tmp.text},${context.jsDump(params)});\n`;
+                    }
                 }
                 return resp;
             }
@@ -5202,7 +5224,7 @@ export default async function(context) {
 
         //**def_guardar_nota
         //**def_agregar_campos
-        //def_preguntar - @in progress
+        //**def_preguntar - @in progress
         //def_array_transformar
         //def_procesar_imagen
         //def_imagen_exif
