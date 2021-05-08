@@ -92,7 +92,7 @@ export default async function(context) {
                 .replaceAll('$vars.', variables_to)
                 .replaceAll('$params.', variables_to)
                 .replaceAll('$config.', 'process.env.')
-                .replaceAll('$store.', '$store.state.').trim();
+                .replaceAll('$store.', variables_to+'$store.state.').trim();
             if (tvalue.charAt(0)=='$' && tvalue.contains('$store')==false) {
                 tvalue = tvalue.right(tvalue.length-1);
             }
@@ -906,15 +906,11 @@ export default async function(context) {
                     // without margen
                     if (tmp.params.center && tmp.params.center == 'true') {
                         delete params.center;
-                        if (context.x_state.es6) {
-                            params = {...params, ...{ wrap:null, 'align-center':null }};
-                            resp.open += context.tagParams('v-row', params, false) + '\n';
-                        } else {
-                            params = {...params, ...{ row:null, wrap:null, 'align-center':null }};
-                            resp.open += context.tagParams('v-layout', params, false) + '\n';
-                        }
+                        params = {...params, ...{ wrap:null, 'align-center':null }};
+                        resp.open += context.tagParams('v-row', params, false) + '\n';
                     } else {
-                        resp.open += context.tagParams('v-layout', { wrap:null, refx:node.id }, false)+'\n';
+                        params.wrap=null;
+                        resp.open += context.tagParams('v-layout', params, false)+'\n';
                     }
                     // part flex
                     if (tmp.tipo == 'flex' && tmp.params.center && tmp.params.center == 'true') {
@@ -2170,6 +2166,10 @@ export default async function(context) {
                 if (params.visible) {
                     params['v-model'] = params.visible;
                     delete params.visible;
+                }
+                if (params[':visible']) {
+                    params['v-model'] = params[':visible'];
+                    delete params[':visible'];
                 }
                 // write tag
                 resp.open += context.tagParams('v-navigation-drawer', params, false) + `\n`;
@@ -3718,8 +3718,13 @@ export default async function(context) {
 
                 } else if ('no es,!=,neq'.split(',').includes(elements.operator)) {
                     //@todo check if value is string - pendieng testing
-                    params.expresion = `${elements.variable}!=${elements.value}`;
-
+                    if ((isNumeric(elements.value) && elements.value.charAt(0)!='0') ||
+                        elements.value=='true' || elements.value=='false' ||
+                        elements.value.charAt(0)=='$' || elements.value.contains('this.')) {
+                        params.expresion = `${elements.variable}!=${elements.value}`;
+                    } else {
+                        params.expresion = `${elements.variable}!='${elements.value}'`;
+                    }
                 // records
                 } else if ('no contiene registros,contains no records'.split(',').includes(elements.operator)) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length==0`;
@@ -4327,6 +4332,7 @@ export default async function(context) {
                 });
                 // write output
                 if (resp.state.as_object) {
+                    resp.state.object = attrs;
                     resp.open = context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`");
                     delete resp.state.as_object;
                 } else {
@@ -4350,7 +4356,6 @@ export default async function(context) {
                 resp = await context.x_commands['def_struct'].func(node, { ...state, ...{
                     as_object:true
                 }});
-                delete resp.state.as_object;
                 // get var name
                 let tmp = {};
                 tmp.var = context.dsl_parser.findVariables({
@@ -4369,7 +4374,7 @@ export default async function(context) {
                 }
                 // extend given var with 'extend_node' content
                 tmp.nobj = resp.open;
-                if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open = `${tmp.var} = {...${tmp.var},...${tmp.nobj}};\n`;
                 return resp;
             }
@@ -4482,7 +4487,7 @@ export default async function(context) {
 
         'def_npm_instalar': {
             x_icons: 'desktop_new',
-            x_text_pattern: `npm:+(install|instalar) "*"`,
+            x_text_pattern: [`npm:+(install|instalar) "*"`,`npm:+(install|instalar) "*",*`],
             x_level: '>2',
             hint: 'Instala el paquete npm indicado entrecomillas y lo instancia en la página (import:true) o función actual, o lo asigna a la variable indicada luego de la coma.',
             func: async function(node, state) {
@@ -4651,11 +4656,11 @@ export default async function(context) {
                 //get attributes and values as struct
                 tmp.data = (await context.x_commands['def_struct'].func(node, { ...state, ...{
                     as_object:true
-                }})).open;
+                }}));
                 //code
-                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
-                if (tmp.data!='{}') {
-                    resp.open += `let ${node.id} = { keys:[], vals:[], where:${tmp.data} };
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                if (tmp.data.state.object && Object.keys(tmp.data.state.object)!='') {
+                    resp.open += `let ${node.id} = { keys:[], vals:[], where:${tmp.data.open} };
                     for (let ${node.id}_k in ${node.id}.where) {
                         ${node.id}.keys.push(${node.id}_k + '=?');
                         ${node.id}.vals.push(${node.id}.where[${node.id}_k]);
@@ -4792,7 +4797,7 @@ export default async function(context) {
                     simple:true,
                     proxy:isProxySon,
                     progress:true,
-                    axios_call:(isProxySon)?'$axios':'this.$axios',
+                    axios_call:(isProxySon==true)?'$axios':'this.$axios',
                     config: {
                         method:'get',
                         url:'',
@@ -4816,7 +4821,7 @@ export default async function(context) {
                                 attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
                             } else if (attrs[x].contains('$store.') || attrs[x].contains('this.') || attrs[x].contains('process.env.')) {
                                 if (state.current_proxy) {
-                                    attrs[x.right(x.length-1)] = '**'+attrs[x].replaceAll('$store.','store.')+'**';
+                                    attrs[x.right(x.length-1)] = '**'+attrs[x].replaceAll('this.$store.','store.')+'**';
                                 } else {
                                     attrs[x.right(x.length-1)] = '**'+attrs[x]+'**';
                                 }

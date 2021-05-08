@@ -1610,7 +1610,7 @@ ${cur.attr('name')}: {
         let target_val = (this.x_state.central_config.static==true)?'static':'server';
         let deploy = this.x_state.central_config.deploy+'';
         let config = {
-            ssr,
+            ssr:false, //8may21 forced psb
             target:target_val,
             components: true,
             telemetry: false,
@@ -1768,7 +1768,37 @@ ${cur.attr('name')}: {
         //muxt server methods
         if (this.x_state.functions && Object.keys(this.x_state.functions).length>0) config.serverMiddleware = ['~/server/api'];
         //nuxt build - cfc: 12637
-        config.build = { publicPath:'/_nuxt/' };
+        config.vuetify = {
+            treeShake:true,
+            options: {
+               variations:false
+            }
+        }; //8may21 psb
+        config.build = { 
+            publicPath:'/_nuxt/',
+            analyze: false,
+            extractCSS: true,
+            optimizeCSS: true,
+            /*
+            html: {
+                minify: {
+                    collapseBooleanAttributes: true,
+                    decodeEntities: true,
+                    minifyCSS: true,
+                    minifyJS: true,
+                    processConditionalComments: true,
+                    removeEmptyAttributes: true,
+                    removeRedundantAttributes: true,
+                    trimCustomFragments: true,
+                    useShortDoctype: true,
+                    minifyURLs: true,
+                    removeComments: true,
+                    removeEmptyElements: true,
+                    preserveLineBreaks: false,
+                    collapseWhitespace: true
+                }
+            }*/
+        };
         if (this.x_state.central_config.stage && this.x_state.central_config.stage!='production' && this.x_state.central_config.stage!='prod') {
             config.build.publicPath = `/${this.x_state.central_config.stage}/_nuxt/`;
         }
