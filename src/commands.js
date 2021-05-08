@@ -4654,7 +4654,7 @@ export default async function(context) {
                 }})).open;
                 //code
                 if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
-                if (tmp.data!='') {
+                if (tmp.data!='{}') {
                     resp.open += `let ${node.id} = { keys:[], vals:[], where:${tmp.data} };
                     for (let ${node.id}_k in ${node.id}.where) {
                         ${node.id}.keys.push(${node.id}_k + '=?');
