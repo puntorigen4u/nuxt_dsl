@@ -85,7 +85,8 @@ export default async function(context) {
         // process mapped attributes
         Object.keys(node.attributes).map(function(key) {
             let value = node.attributes[key];
-            let key_use = key.trim().replace(':', '');
+            let key_use = key.trim();
+            if (key_use.charAt(0)==':') key_use = key_use.right(key_use.length-1);
             let keytest = key_use.toLowerCase();
             let tvalue = value.toString().replaceAll('$variables.', variables_to)
                 .replaceAll('$vars.', variables_to)
@@ -1206,10 +1207,9 @@ export default async function(context) {
                     },
                     ...params
                 };
-                params['refx'] = node.id;
                 // add v-model as node.text
                 if (node.text.contains('$')) {
-                    let vmodel = node.text.trim().split(',').pop();
+                    let vmodel = node.text.trim();
                     vmodel = vmodel.replaceAll('$variables.', '')
                         .replaceAll('$vars.', '')
                         .replaceAll('$params.', '')
@@ -1297,6 +1297,7 @@ export default async function(context) {
                         tmp['v-mask'] = `'${tmp['mask']}'`;
                         delete tmp['mask'];
                     }
+                    tmp = {...tmp, ...params};
                     resp.open += context.tagParams('v-text-field', tmp, false) + '\n';
                     resp.close += `</v-text-field>\n`;
                 }
@@ -1322,7 +1323,7 @@ export default async function(context) {
                 // add node.text (var) as image prefill
                 if (node.text.trim() != '-') {
                     if (node.text.contains('$')) {
-                        let vmodel = node.text.trim().split(',').pop();
+                        let vmodel = node.text.trim();
                         vmodel = vmodel.replaceAll('$variables.', '')
                             .replaceAll('$vars.', '')
                             .replaceAll('$params.', '')
@@ -1373,7 +1374,7 @@ export default async function(context) {
                 if (node.text.trim() != '') {
                     let vmodel = node.text.trim();
                     if (node.text.contains('$')) {
-                        vmodel = vmodel.split(',').pop();
+                        //vmodel = vmodel.split(',').pop();
                         vmodel = vmodel.replaceAll('$variables.', '')
                             .replaceAll('$vars.', '')
                             .replaceAll('$params.', '')
@@ -1415,7 +1416,7 @@ export default async function(context) {
                 if (node.text.trim() != '') {
                     let vmodel = node.text.trim();
                     if (node.text.contains('$')) {
-                        vmodel = vmodel.split(',').pop();
+                        //vmodel = vmodel.split(',').pop();
                         vmodel = vmodel.replaceAll('$variables.', '')
                             .replaceAll('$vars.', '')
                             .replaceAll('$params.', '')
@@ -1454,7 +1455,7 @@ export default async function(context) {
                 if (node.text.trim() != '') {
                     let vmodel = node.text.trim();
                     if (node.text.contains('$')) {
-                        vmodel = vmodel.split(',').pop();
+                        //vmodel = vmodel.split(',').pop();
                         vmodel = vmodel.replaceAll('$variables.', '')
                             .replaceAll('$vars.', '')
                             .replaceAll('$params.', '')
@@ -3632,19 +3633,19 @@ export default async function(context) {
                         params.expresion = `${elements.variable} == '${elements.value}'`;
                     }
 
-                } else if ('es string,es texto,string,texto'.includes(elements.operator)) {
+                } else if ('es string,es texto,string,texto'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isString(${elements.variable})`;
 
-                } else if ('es numero,es int,numero,int'.includes(elements.operator)) {
+                } else if ('es numero,es int,numero,int'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable})`;
 
-                } else if ('es boolean,es boleano,es booleano,booleano,boleano,boolean'.includes(elements.operator)) {
+                } else if ('es boolean,es boleano,es booleano,booleano,boleano,boolean'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isBoolean(${elements.variable})`;
                 
-                } else if ('es fecha,es date,fecha,date'.includes(elements.operator)) {
+                } else if ('es fecha,es date,fecha,date'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isDate(${elements.variable})`;
                 
-                } else if ('es entero,es int,entero,int'.includes(elements.operator)) {
+                } else if ('es entero,es int,entero,int'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isFinite(${elements.variable})`;
                 
                 } else if ('es array,array'.split(',').includes(elements.operator)) {
@@ -3656,23 +3657,23 @@ export default async function(context) {
                 } else if ('es objeto,objeto'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isObject(${elements.variable})`;
                 
-                } else if ('es correo,es email,email,correo'.includes(elements.operator)) {
-                    params.expresion = `_.isString(${elements.variable}) && /\S+@\S+\.\S+/.test(${elements.variable})`;
+                } else if ('es correo,es email,email,correo'.split(',').includes(elements.operator)) {
+                    params.expresion = `_.isString(${elements.variable}) && /\\S+@\\S+\\.\\S+/.test(${elements.variable})`;
 
-                } else if ('no es correo,no es email'.includes(elements.operator)) {
-                    params.expresion = `!(_.isString(${elements.variable}) && /\S+@\S+\.\S+/.test(${elements.variable}))`;
+                } else if ('no es correo,no es email'.split(',').includes(elements.operator)) {
+                    params.expresion = `!(_.isString(${elements.variable}) && /\\S+@\\S+\\.\\S+/.test(${elements.variable}))`;
 
                 //numeric testings
-                } else if ('es menor o igual a,es menor o igual que'.includes(elements.operator)) {
+                } else if ('es menor o igual a,es menor o igual que'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} <= ${elements.value}`;
                 
-                } else if ('es menor a,es menor que'.includes(elements.operator)) {
+                } else if ('es menor a,es menor que'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} < ${elements.value}`;
 
-                } else if ('es mayor o igual a,es mayor o igual que'.includes(elements.operator)) {
+                } else if ('es mayor o igual a,es mayor o igual que'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} >= ${elements.value}`;
 
-                } else if ('es mayor a,es mayor que'.includes(elements.operator)) {
+                } else if ('es mayor a,es mayor que'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNumber(${elements.variable}) && _.isNumber(${elements.value}) && ${elements.variable} > ${elements.value}`;
 
                 } else if ('esta entre'==elements.operator && elements.value.contains(',')) {
@@ -3681,40 +3682,40 @@ export default async function(context) {
                     params.expresion = `${elements.variable} >= ${from} && ${elements.variable} <= ${until}`;
 
                 // strings
-                } else if ('no esta vacio,not empty'.includes(elements.operator)) {
+                } else if ('no esta vacio,not empty'.split(',').includes(elements.operator)) {
                     params.expresion = `(_.isObject(${elements.variable}) || (_.isString(${elements.variable})) &&  !_.isEmpty(${elements.variable})) || _.isNumber(${elements.variable}) || _.isBoolean(${elements.variable})`;
 
-                } else if ('esta vacio,is empty,esta vacia'.includes(elements.operator)) {
+                } else if ('esta vacio,is empty,esta vacia'.split(',').includes(elements.operator)) {
                     params.expresion = `(_.isObject(${elements.variable}) ||_.isString(${elements.variable})) &&  _.isEmpty(${elements.variable})`;
 
                 // other types
-                } else if ('existe,exists,no es indefinido,no es indefinida,esta definida'.includes(elements.operator)) {
+                } else if ('existe,exists,no es indefinido,no es indefinida,esta definida'.split(',').includes(elements.operator)) {
                     params.expresion = `!_.isUndefined(${elements.variable})`;
 
-                } else if ('no existe,doesnt exists,es indefinido,es indefinida,no esta definida'.includes(elements.operator)) {
+                } else if ('no existe,doesnt exists,es indefinido,es indefinida,no esta definida'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isUndefined(${elements.variable})`;
 
-                } else if ('no es nula,no es nulo'.includes(elements.operator)) {
+                } else if ('no es nula,no es nulo'.split(',').includes(elements.operator)) {
                     params.expresion = `!_.isNull(${elements.variable})`;
 
-                } else if ('es nula,es nulo'.includes(elements.operator)) {
+                } else if ('es nula,es nulo'.split(',').includes(elements.operator)) {
                     params.expresion = `_.isNull(${elements.variable})`;
 
-                } else if ('no es,!=,neq'.includes(elements.operator)) {
+                } else if ('no es,!=,neq'.split(',').includes(elements.operator)) {
                     //@todo check if value is string - pendieng testing
                     params.expresion = `${elements.variable}!=${elements.value}`;
 
                 // records
-                } else if ('no contiene registros,contains no records'.includes(elements.operator)) {
+                } else if ('no contiene registros,contains no records'.split(',').includes(elements.operator)) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length==0`;
 
-                } else if ('contiene registros,contains records'.includes(elements.operator)) {
+                } else if ('contiene registros,contains records'.split(',').includes(elements.operator)) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length`; //@todo check if this needs to be .length>0
 
-                } else if ('contiene registro,contiene item'.includes(elements.operator)) {
+                } else if ('contiene registro,contiene item'.split(',').includes(elements.operator)) {
                     params.expresion = `_.contains(${elements.variable},'${elements.value}')`;
 
-                } else if ('contiene,contains'.includes(elements.operator)) {
+                } else if ('contiene,contains'.split(',').includes(elements.operator)) {
                     if (elements.value.contains('this.')) {
                         params.expresion = `${elements.variable}.toLowerCase().indexOf(${elements.value}.toLowerCase())!=-1`;
                     } else {
