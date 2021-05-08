@@ -4654,7 +4654,7 @@ export default async function(context) {
                 }})).open;
                 //code
                 if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
-                if (Object.keys(tmp.data)!='') {
+                if (tmp.data!='') {
                     resp.open += `let ${node.id} = { keys:[], vals:[], where:${tmp.data} };
                     for (let ${node.id}_k in ${node.id}.where) {
                         ${node.id}.keys.push(${node.id}_k + '=?');
@@ -4701,7 +4701,7 @@ export default async function(context) {
                         //code
                         if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
                         //write update statement
-                        resp.open += `let ${node.id} = { keys:[], vals:[], from:[], data:${context.jsDump(tmp.data)} };\n`;
+                        resp.open += `let ${node.id} = { keys:[], vals:[], from:[], data:${tmp.data} };\n`;
                         resp.open += `for (let ${node.id}_k in ${node.id}.data) {
                             ${node.id}.keys.push(${node.id}_k+'=?');
                             ${node.id}.vals.push(${node.id}.data[${node.id}_k]);
