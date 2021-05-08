@@ -4660,7 +4660,7 @@ export default async function(context) {
                         ${node.id}.keys.push(${node.id}_k + '=?');
                         ${node.id}.vals.push(${node.id}.where[${node.id}_k]);
                     }
-                    let ${tmp.var} = this.alasql(\`SELECT * FROM \${tmp.model} WHERE \${${node.id}.keys.join(' AND ')}\`,${node.id}.vals);\n`;
+                    let ${tmp.var} = this.alasql(\`SELECT * FROM ${tmp.model} WHERE \${${node.id}.keys.join(' AND ')}\`,${node.id}.vals);\n`;
                 } else {
                     resp.open += `let ${tmp.var} = this.alasql('SELECT * FROM ${tmp.model}', []);\n`;
                     resp.open += `let ${node.id} = { where:{} };`;
