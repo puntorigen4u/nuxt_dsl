@@ -1298,6 +1298,7 @@ export default async function(context) {
                         delete tmp['mask'];
                     }
                     tmp = {...tmp, ...params};
+                    if (tmp[':type']) delete tmp.type;
                     resp.open += context.tagParams('v-text-field', tmp, false) + '\n';
                     resp.close += `</v-text-field>\n`;
                 }
@@ -5217,7 +5218,7 @@ export default async function(context) {
                     });
                     for (let vr in vars) {
                         if (vars[vr].contains('|')) {
-                            //add filter support: 'Estas seguro que deseas agregar {{ monto | numeral }} ?'
+                            //add filter support: 'Estas seguro que deseas agregar {{ monto | numeral('0,0') }} ?'
                             let clean = vars[vr].replaceAll('{{','').replaceAll('}}','');
                             let the_var = clean.split('|')[0].trim();
                             let the_filter = clean.split('|').pop().trim();
@@ -5251,15 +5252,124 @@ export default async function(context) {
             }
         },
 
+        'def_var_clonar': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_contains: 'clonar variable|copiar variable|variable:clonar|variable:copiar',
+            attributes_aliases: {},
+            hint: `Crea una copia de la variable indicada, en la variable luego de la coma.`,
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                //get vars and attrs
+                let tmp = { var:'', original:'' };
+                if (node.text.contains(',')) tmp.var = node.text.split(',').pop().trim();
+                //prepare new var
+                if (tmp.var.contains('$')) {
+                    if (state.from_server) {
+                        tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
+                                        .replaceAll('$vars.', 'resp.')
+                                        .replaceAll('$params.', 'resp.');
+                    } else {
+                        tmp.var = tmp.var.replaceAll('$variables.', 'this.')
+                                        .replaceAll('$vars.', 'this.')
+                                        .replaceAll('$params.', 'this.')
+                                        .replaceAll('$config.', 'process.env.')
+                                        .replaceAll('$store.', 'this.$store.state.');
+                        if (tmp.var=='this.') tmp.var='this';
+                    }
+                }
+                //prepare original var
+                tmp.original = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                });
+                if (tmp.original.contains('**') && node.icons.includes('bell')) {
+                    tmp.original = getTranslatedTextVar(tmp.original);
+                } else if (tmp.original.contains('$')) {
+                    if (state.from_server) {
+                        tmp.original = tmp.original.replaceAll('$variables.', 'resp.')
+                                                    .replaceAll('$vars.', 'resp.')
+                                                    .replaceAll('$params.', 'resp.');
+                    } else {
+                        tmp.original = tmp.original.replaceAll('$variables.', 'this.')
+                                                    .replaceAll('$vars.', 'this.')
+                                                    .replaceAll('$params.', 'this.')
+                                                    .replaceAll('$config.', 'process.env.')
+                                                    .replaceAll('$store.', 'this.$store.state.');
+                        if (tmp.original=='this.') tmp.original='this';
+                    }
+                }
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                if (tmp.var.contains('this.')) {
+                    resp.open += `${tmp.var} = JSON.parse(JSON.stringify(${tmp.original}));\n`;
+                } else {
+                    resp.open += `let ${tmp.var} = JSON.parse(JSON.stringify(${tmp.original}));\n`;
+                }
+                return resp;
+            }
+        },
+
+        'def_enviarpantalla': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_contains: 'enviar a pantalla',
+            x_not_empty: 'link',
+            attributes_aliases: {
+                'event_label':      'tag,tipo,etiqueta,event_label'
+            },
+            meta_type: 'script',
+            hint: 'Envia al usuario a la pantalla enlazada.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                if (node.link.contains('ID_')==false) return {...resp,...{ valid:false }};
+                // prepare
+                let tmp = { link:node.link, target:'' };
+                let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
+                if (link_node && link_node.valid==true) {
+                    tmp.target = `{vuepath:${link_node.text}}`;
+                } else {
+                    context.x_console.outT({ message:`enviar a pantalla, invalid linked node`, color:'red', data:link_node });
+                    throw `Invalid 'enviar a pantalla' linked node`;
+                }
+                //code
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                let isProxySon = ('current_proxy' in resp.state)?true:false;
+                if (isProxySon) {
+                    resp.open += `return redirect('${tmp.target}');\n`;
+                } else {
+                    // params
+                    let params = aliases2params('def_enviarpantalla', node, false, 'this.');
+                    delete params.refx;
+                    if (Object.keys(params)!='') {
+                        if (tmp.target.charAt(0)=='/') tmp.target = tmp.target.right(tmp.target.length-1);
+                        if (params[':query']) {
+                            resp.open += `this.$router.push({ path:'${tmp.target}', query:${context.jsDump(params)} });\n`;
+                        } else {
+                            resp.open += `this.$router.push({ name:'${tmp.target}', params:${context.jsDump(params)} });\n`;
+                        }    
+                    } else {
+                        resp.open += `this.$router.push('${tmp.target}');\n`;
+                    }
+                }
+                return resp;
+                
+            }
+        },
+
+
         //**def_guardar_nota
         //**def_agregar_campos
         //**def_preguntar
-        //def_array_transformar
+        //def_array_transformar (pending)
         //def_procesar_imagen
         //def_imagen_exif
-        //def_var_clonar
-        //def_modificar
-        //def_enviarpantalla
+        //**def_var_clonar
+        //--def_modificar (invalid node for vue)
+        //**def_enviarpantalla (todo test)
 
         'def_analytics_evento': {
         	x_level: '>2',
