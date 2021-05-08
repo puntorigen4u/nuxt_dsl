@@ -1727,6 +1727,14 @@ export default async function(context) {
                 });
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
                 let params = aliases2params('def_dialog', node);
+                if (params[':visible']) {
+                    params['v-model']=params[':visible'];
+                    delete params[':visible'];
+                }
+                if (params.visible) {
+                    params['v-model']=params.visible;
+                    delete params.visible;
+                }
                 // write tag
                 resp.open += context.tagParams('v-dialog', params, false) + '\n';
                 resp.close += `</v-dialog>\n`;
@@ -1807,11 +1815,15 @@ export default async function(context) {
                         class: []
                     },
                     tmp = {};
-                let text = node.text.replaceAll('$variables.', '')
-                    .replaceAll('$vars.', '')
-                    .replaceAll('$params.', '')
-                    .replaceAll('$config.', 'process.env.')
-                    .replaceAll('$store.', '$store.state.');
+                let base_text = node.text;
+                if (node.text_rich!='') {
+                    base_text = node.text_rich;
+                }
+                let text = base_text.replaceAll('$variables.', '')
+                .replaceAll('$vars.', '')
+                .replaceAll('$params.', '')
+                .replaceAll('$config.', 'process.env.')
+                .replaceAll('$store.', '$store.state.');
                 if (text == '') text = '&nbsp;';
                 // some extra validation
                 if (state.from_toolbar && !state.from_slot) {
@@ -1842,9 +1854,11 @@ export default async function(context) {
                         };
                     }
                     //node styles
-                    if (node.font.bold == true) params.class.push('font-weight-bold');
-                    if (node.font.size >= 10) params.class.push('caption');
-                    if (node.font.italic == true) params.class.push('font-italic');
+                    if (node.text_rich=='') {
+                        if (node.font.bold == true) params.class.push('font-weight-bold');
+                        if (node.font.size <= 10) params.class.push('caption');
+                        if (node.font.italic == true) params.class.push('font-italic');
+                    }
                     // - process attributes
                     Object.keys(node.attributes).map(function(key) {
                         let keytest = key.toLowerCase().trim();
@@ -1886,7 +1900,7 @@ export default async function(context) {
                             }
 
                         } else if (key == 'color') {
-                            if (key.indexOf(' ') != -1) {
+                            if (value.indexOf(' ') != -1) {
                                 let color_values = value.split(' ');
                                 params.class.push(`${color_values[0]}--text text--${color_values[1]}`);
                             } else {
