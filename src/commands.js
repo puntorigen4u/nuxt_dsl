@@ -5336,10 +5336,10 @@ export default async function(context) {
                     throw `Invalid 'enviar a pantalla' linked node`;
                 }
                 //code
-                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                //if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 let isProxySon = ('current_proxy' in resp.state)?true:false;
-                if (isProxySon) {
-                    resp.open += `return redirect('${tmp.target}');\n`;
+                if (isProxySon==true) {
+                    resp.open += `return redirect('${tmp.target}');\n`;
                 } else {
                     // params
                     let params = aliases2params('def_enviarpantalla', node, false, 'this.');

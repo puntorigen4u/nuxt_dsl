@@ -1712,8 +1712,10 @@ ${cur.attr('name')}: {
                     if (this.x_state.config_node.axios.local.contains('127.0.0.1')) 
                         this.x_state.config_node.axios.https=false;
                 }
+                delete ax_config.deploy;
             }
             config.axios = ax_config;
+            delete this.x_state.config_node.axios;
         }
         //nuxt vue config
         if (this.x_state.config_node['vue:config']) {
