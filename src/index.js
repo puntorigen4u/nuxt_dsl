@@ -34,7 +34,7 @@ export default class vue_dsl extends concepto {
         await this.addCommands(internal_commands);
         this.x_console.outT({ message: `${Object.keys(this.x_commands).length} local x_commands loaded!`, color: `green` });
         //this.debug('x_commands',this.x_commands);
-        this.x_crypto_key = require('crypto').randomBytes(32); // for hash helper method
+        //this.x_crypto_key = require('crypto').randomBytes(32); // for hash helper method
         // init vue
         // set x_state defaults
         this.x_state = {
@@ -697,7 +697,7 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                 if (page.xtitle) {
                     if (this.x_state.central_config.idiomas.indexOf(',') != -1) {
                         // i18n title
-                        let crc32 = `t_${this.hash(page.xtitle)}`;
+                        let crc32 = `t_${(await this.hash(page.xtitle))}`;
                         let def_lang = this.x_state.central_config.idiomas.indexOf(',')[0].trim().toLowerCase();
                         if (!this.x_state.strings_i18n[def_lang]) {
                             this.x_state.strings_i18n[def_lang] = {};
@@ -2455,11 +2455,11 @@ ${cur.attr('name')}: {
                         // apply grand_childs as meta tags
                         if (meta_child.text.toLowerCase() == 'keywords') {
                             resp.seo['keywords'] = meta_child.nodes.map(x => x.text);
-                            resp.meta.push({ hid: this.hash(meta_child.nodes[0].text), name: 'keywords', content: resp.seo['keywords'].join(',') });
+                            resp.meta.push({ hid: (await this.hash(meta_child.nodes[0].text)), name: 'keywords', content: resp.seo['keywords'].join(',') });
 
                         } else if (meta_child.text.toLowerCase() == 'language') {
                             resp.seo['language'] = meta_child.nodes[0].text;
-                            resp.meta.push({ hid: this.hash(meta_child.nodes[0].text), lang: meta_child.nodes[0].text });
+                            resp.meta.push({ hid: (await this.hash(meta_child.nodes[0].text)), lang: meta_child.nodes[0].text });
 
                         } else if (meta_child.text.toLowerCase() == 'charset') {
                             resp.seo['charset'] = meta_child.nodes[0].text;
@@ -2470,7 +2470,7 @@ ${cur.attr('name')}: {
                             if (meta_child.text.indexOf(':') != -1) {
                                 resp.meta.push({ property: meta_child.text, vmid: meta_child.text, content: meta_child.nodes[0].text });
                             } else {
-                                resp.meta.push({ hid: this.hash(meta_child.nodes[0].text), name: meta_child.text, content: meta_child.nodes[0].text });
+                                resp.meta.push({ hid: (await this.hash(meta_child.nodes[0].text)), name: meta_child.text, content: meta_child.nodes[0].text });
                             }
                         }
                         //
@@ -2662,6 +2662,12 @@ ${cur.attr('name')}: {
     }
 
     // hash helper method
+    async hash(thing) {
+        const {sha1} = require('crypto-hash');
+        let resp = await sha1(thing,{ outputFormat:'hex' });
+        return resp;
+    }
+    /*
     hash(thing) {
         // returns a hash of the given object, using google highwayhash (fastest)
         //this.debug_time({ id:`hash ${thing}` });
@@ -2676,7 +2682,7 @@ ${cur.attr('name')}: {
         let resp = highwayhash.asHexString(this.x_crypto_key, input);
         //this.debug_timeEnd({ id:`hash ${thing}` });;
         return resp;
-    }
+    }*/
 
     // atLeastNode
     atLeastNode(r) {

@@ -3718,7 +3718,8 @@ export default async function(context) {
 
                 } else if ('no es,!=,neq'.split(',').includes(elements.operator)) {
                     //@todo check if value is string - pendieng testing
-                    if ((isNumeric(elements.value) && elements.value.charAt(0)!='0') ||
+                    if ((typeof elements.value === 'string' && isNumeric(elements.value) && elements.value.charAt(0)!='0') ||
+                        !isNaN(elements.value) || 
                         elements.value=='true' || elements.value=='false' ||
                         elements.value.charAt(0)=='$' || elements.value.contains('this.')) {
                         params.expresion = `${elements.variable}!=${elements.value}`;
