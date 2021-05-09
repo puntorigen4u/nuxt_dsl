@@ -1777,8 +1777,10 @@ ${cur.attr('name')}: {
         config.build = { 
             publicPath:'/_nuxt/',
             analyze: false,
-            extractCSS: true,
-            optimizeCSS: true,
+            extractCSS: {
+                ignoreOrder:true
+            },
+            //optimizeCSS: true,
             /*
             html: {
                 minify: {
