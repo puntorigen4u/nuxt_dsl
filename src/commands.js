@@ -4241,7 +4241,7 @@ export default async function(context) {
         'def_responder': {
             x_icons: 'desktop_new',
             x_text_pattern: `responder "*"`,
-            x_all_hasparent: 'def_variables',
+            x_or_hasparent: 'def_variables,def_event_element',
             x_level: '>3',
             hint: 'Emite una respuesta para la variable de tipo funcion',
             func: async function(node, state) {
