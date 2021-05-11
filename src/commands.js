@@ -215,6 +215,11 @@ export default async function(context) {
     */
     return {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
+        'meta': {...null_template, ...{
+                version: '0.0.1',
+                x_level: '2000',
+            }
+        },
         'def_config': {...null_template,
             ... {
                 x_icons: 'desktop_new',
@@ -2067,27 +2072,34 @@ export default async function(context) {
                                 .replaceAll('$store.', '$store.state.');
                         }
                     }
-                    if (key.contains(':option:') || key.contains(':config:')) {
-                        key = '-1';
-                        let tkey = key.replaceAll(':option:','').replaceAll(':config:','').trim();
-                        attrs.config[tkey]=value;
-                    } else if (key.contains(':use')) {
-                        key = 'use';
-                    } else if (key.contains(':import')) {
-                        key = '-1';
-                        attrs.extra_imports.push(value);
-                    } else if (key.contains(':mode')) {
-                        key = 'mode';
-                    } else if (key==':npm') {
-                        key = 'npm';
-                        value = { npm:value, version:'*' };
-                        if (value.npm.contains(',')) {
-                            value.npm = value.npm.split(',')[0].trim();
-                            value.version = value.npm.split(',').pop().trim();
-                        }
+                    if (keytest == 'props') {
+                        value.split(' ').map(x => {
+                            attrs[x] = null
+                        });
                     }
-                    if  (key!='-1') attrs[key] = value; //.replaceAll('{now}','new Date()');
+                    //
+                    if (keytest.contains(':option:') || keytest.contains(':config:')) {
+                        let tkey = keytest.replaceAll(':option:','').replaceAll(':config:','').trim();
+                        attrs.config[tkey]=value;
+                    } else if (keytest.contains(':use')) {
+                        attrs.use = value;
+                    } else if (keytest.contains(':import')) {
+                        attrs.extra_imports.push(value);
+                    } else if (keytest.contains(':mode')) {
+                        attrs.mode = value;
+                    } else if (keytest==':npm') {
+                        let original = value;
+                        value = { npm:value, version:'*' };
+                        if (original.contains(',')) {
+                            value.npm = original.split(',')[0].trim();
+                            value.version = original.split(',').pop().trim();
+                        }
+                        attrs.npm = value;
+                    } else {
+                        attrs[key] = value;
+                    }
                 });
+                
                 if (!attrs.npm) throw `the required attribute :npm is missing! Please specify it.`;
                 // install plugin
                 context.x_state.npm[attrs.npm.npm] = attrs.npm.version;
