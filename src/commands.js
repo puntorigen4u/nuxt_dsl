@@ -41,6 +41,50 @@ export default async function(context) {
             });
         }
     };
+    const parseInputOutput = async function(node,state) {
+        //get vars and attrs
+        let tmp = { var:'', original:'' };
+        if (node.text.contains(',')) tmp.var = node.text.split(',').pop().trim();
+        //prepare new var
+        if (tmp.var.contains('$')) {
+            if (state.from_server) {
+                tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
+                                .replaceAll('$vars.', 'resp.')
+                                .replaceAll('$params.', 'resp.');
+            } else {
+                tmp.var = tmp.var.replaceAll('$variables.', 'this.')
+                                .replaceAll('$vars.', 'this.')
+                                .replaceAll('$params.', 'this.')
+                                .replaceAll('$config.', 'process.env.')
+                                .replaceAll('$store.', 'this.$store.state.');
+                if (tmp.var=='this.') tmp.var='this';
+            }
+        }
+        //prepare original var
+        tmp.original = context.dsl_parser.findVariables({
+            text: node.text,
+            symbol: `"`,
+            symbol_closing: `"`
+        });
+        if (tmp.original.contains('**') && node.icons.includes('bell')) {
+            tmp.original = getTranslatedTextVar(tmp.original);
+        } else if (tmp.original.contains('$')) {
+            if (state.from_server) {
+                tmp.original = tmp.original.replaceAll('$variables.', 'resp.')
+                                            .replaceAll('$vars.', 'resp.')
+                                            .replaceAll('$params.', 'resp.');
+            } else {
+                tmp.original = tmp.original.replaceAll('$variables.', 'this.')
+                                            .replaceAll('$vars.', 'this.')
+                                            .replaceAll('$params.', 'this.')
+                                            .replaceAll('$config.', 'process.env.')
+                                            .replaceAll('$store.', 'this.$store.state.');
+                if (tmp.original=='this.') tmp.original='this';
+            }
+        }
+        return { input:tmp.original, output:tmp.var };
+    };
+
     const getTranslatedTextVar = function(text,keep_if_same=false) {
         let vars = context.dsl_parser.findVariables({
             text,
@@ -2646,10 +2690,10 @@ export default async function(context) {
         	x_level: '>4',
         	x_icons: 'idea',
             x_text_exact: 'columna',
-            x_all_hasparent: 'def_datatable_fila',
             hint: 'Agrupa sus hijos en una columna de una tabla.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
+                if (!state.from_datatable_fila) return {...resp,...{valid:false}};
                 let params = aliases2params('def_datatable_col', node, true);
                 //code
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
@@ -2944,7 +2988,7 @@ export default async function(context) {
         	x_level: '>3',
         	x_icons: 'idea',
             x_text_pattern: '+(listado:fila:contenido|fila:contenido|contenido)',
-            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy,def_slot',
             hint: 'Define el contenido de una fila de un listado.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
@@ -2962,7 +3006,7 @@ export default async function(context) {
         	x_level: '>3',
         	x_icons: 'idea',
             x_text_pattern: '+(listado:fila:titulo|fila:titulo|titulo)',
-            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy,def_slot',
             hint: 'Define el titulo de una fila de un listado.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
@@ -2984,7 +3028,7 @@ export default async function(context) {
         	x_level: '>3',
         	x_icons: 'idea',
             x_text_pattern: '+(listado:fila:subtitulo|fila:subtitulo|subtitulo)',
-            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy,def_slot',
             hint: 'Define el subtitulo de una fila de un listado.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
@@ -3001,8 +3045,8 @@ export default async function(context) {
         'def_listado_fila_avatar': {
         	x_level: '>3',
         	x_icons: 'idea',
-            x_text_pattern: '+(listado:fila:avatar|fila:avatar|avatar)',
-            x_or_hasparent: 'def_listado_fila,def_listado_dummy',
+            x_text_pattern: '+(listado:fila:avatar|fila:avatar|fila-avatar|avatar)',
+            x_or_hasparent: 'def_listado_fila,def_listado_dummy,def_slot',
             hint: 'Define el avatar de una fila de un listado.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
@@ -4240,10 +4284,11 @@ export default async function(context) {
         //..scripts..
         'def_responder': {
             x_icons: 'desktop_new',
-            x_text_pattern: `responder "*"`,
-            x_or_hasparent: 'def_variables,def_event_element',
+            //x_text_pattern: `responder "*"`,
+            x_text_contains: `responder "`,
+            x_or_hasparent: 'def_variables,def_event_element,def_event_method',
             x_level: '>3',
-            hint: 'Emite una respuesta para la variable de tipo funcion',
+            hint: 'Emite una respuesta para la variable de tipo funcion o evento :rules',
             func: async function(node, state) {
                 let resp = context.reply_template({
                     state
@@ -5366,6 +5411,66 @@ export default async function(context) {
             }
         },
 
+        'def_procesar_imagen': {
+        	x_level: '>2',
+        	x_icons: 'desktop_new',
+            x_text_contains: 'procesar imagen|transformar imagen|ajustar imagen|imagen:transform',
+            attributes_aliases: {
+                'grey':      'greyscale,gris,grises,grey',
+                'maxkb':     'maxkb,compress',
+                'format':    'format,format,mimetype'
+            },
+            meta_type: 'script',
+            hint: 'Aplica las modificaciones indicadas en sus atributos a la imagen (dataurl) indicada como variables. Retorna un dataurl de la imagen modificada.',
+        	func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                if (!state.from_script) return {...resp,...{ valid:false }};
+                // get: cmd 'input', output / prepare params
+                let tmp = await parseInputOutput(node,state);
+                let params = (await context.x_commands['def_struct'].func(node, { ...state, ...{
+                    as_object:true
+                }})).state.object;
+                //code
+                context.x_state.npm['image-js'] = '*';
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                resp.open += `let { Image } = require('image-js');
+                let ${node.id} = ${tmp.input};\n`;
+                if (params.maxkb) {
+                    //compress first
+                    context.x_state.npm['browser-image-compression'] = '*';
+                    context.x_state.pages[resp.state.current_page].imports['browser-image-compression'] = 'imageCompression';
+                    resp.open += `let ${node.id}_f = await imageCompression.getFilefromDataUrl(${tmp.input});
+                    let ${node.id}_c = await imageCompression(${node.id}_f, { maxSizeMB: ${params.maxkb}/1000 });
+                    ${node.id} = await imageCompression.getDataUrlFromFile(${node.id}_c);\n`;
+                }
+                //scale and fxs
+                resp.open += `let ${tmp.output}_ = await Image.load(${node.id});\n`;
+                if (tmp.output.contains('this.')==false) resp.open += `let `;
+                resp.open += `${tmp.output} = ${tmp.output}_`;
+                // params
+                if (params.anchomax) resp.open += `.resize({ width:(${tmp.output}_.width>${params.anchomax})?${params.anchomax}:${tmp.output}_.width })`;
+                if (params.altomax) resp.open += `.resize({ height:(${tmp.output}_.height>${params.altomax})?${params.altomax}:${tmp.output}_.height })`;
+                if (params.resmax) resp.open += `.resize({ width:(${tmp.output}_.width>${params.resmax})?${params.resmax}:${tmp.output}_.width, height:(${tmp.output}_.height>${params.resmax})?${params.resmax}:${tmp.output}_.height })`;
+                if (params.resize && params.resize.contains('x')) {
+                    resp.open += `.resize({ width:${params.resize.split('x')[0]}, height:${params.resize.split('x').pop().trim()} })`;
+                } else {
+                    resp.open += `.resize({ width:${params.resize}, height:${params.resize} })`;
+                }
+                if (params.grey || params.greyscale || params.gris || params.grises) resp.open += `.grey()`;
+                if (params.format || params.formato || params.mimetype) {
+                    if (params.formato) params.format = params.formato;
+                    if (params.mimetype) params.format = params.mimetype;
+                    if (params.format.contains('/')) {
+                        resp.open += `.toDataURL('${params.format.replaceAll("'","")}')`;
+                    } else {
+                        resp.open += `.toDataURL('image/${params.format.replaceAll("'","")}')`;
+                    }
+                }
+                resp.open += `;\n`;
+                //
+                return resp;
+            }
+        },
 
         //**def_guardar_nota
         //**def_agregar_campos
