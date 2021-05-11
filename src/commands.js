@@ -2027,9 +2027,95 @@ export default async function(context) {
             }
         },
 
+        'def_tag': {
+            x_level: '>2',
+            x_icons: 'idea',
+            x_text_contains: 'tag:',
+            attributes_aliases: {
+                'option':   'config'
+            },
+            hint: 'Indica que se desea usar un custom tag en el lugar y que se desea instalarlo con la configuración de sus atributos de prefijo :.',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                let tmp = { install:{ config:{}, npm_version:'*', extra_imports:[] }, tag:node.text.replaceAll('tag:','').trim() };
+                //params
+                let attrs = {
+                    mode:'client',
+                    config:{},
+                    extra_imports: []
+                };
+                Object.keys(node.attributes).map(function(key) {
+                    let keytest = key.toLowerCase().trim();
+                    let value = node.attributes[key].trim();
+                    if (node.icons.includes('bell') && value.contains('**')) {
+                        value = getTranslatedTextVar(value,true);
+                    } else if (value.contains('assets:')) {
+                        value = context.getAsset(value, 'js');
+                    } else {
+                        // normalize vue type vars
+                        if (tmp.parent_server==true) {
+                            value = value.replaceAll('$variables.', 'resp.')
+                                .replaceAll('$vars.', 'resp.')
+                                .replaceAll('$params.', 'resp.');
+                        } else {
+                            value = value.replaceAll('$variables.', '')
+                                .replaceAll('$vars.', '')
+                                .replaceAll('$params.', '')
+                                .replaceAll('$config.', 'process.env.')
+                                .replaceAll('$store.', '$store.state.');
+                        }
+                    }
+                    if (key.contains(':option:') || key.contains(':config:')) {
+                        key = '-1';
+                        let tkey = key.replaceAll(':option:','').replaceAll(':config:','').trim();
+                        attrs.config[tkey]=value;
+                    } else if (key.contains(':use')) {
+                        key = 'use';
+                    } else if (key.contains(':import')) {
+                        key = '-1';
+                        attrs.extra_imports.push(value);
+                    } else if (key.contains(':mode')) {
+                        key = 'mode';
+                    } else if (key==':npm') {
+                        key = 'npm';
+                        value = { npm:value, version:'*' };
+                        if (value.npm.contains(',')) {
+                            value.npm = value.npm.split(',')[0].trim();
+                            value.version = value.npm.split(',').pop().trim();
+                        }
+                    }
+                    if  (key!='-1') attrs[key] = value; //.replaceAll('{now}','new Date()');
+                });
+                if (!attrs.npm) throw `the required attribute :npm is missing! Please specify it.`;
+                // install plugin
+                context.x_state.npm[attrs.npm.npm] = attrs.npm.version;
+                context.x_state.plugins[attrs.npm.npm] = {
+                    global: true,
+                    npm: {
+                        [attrs.npm.npm]: attrs.npm.version
+                    },
+                    mode: attrs.mode,
+                    extra_imports: attrs.extra_imports,
+                    config: attrs.config
+                };
+                if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag.toLowerCase();
+                if (Object.keys(attrs.config)=='') delete context.x_state.plugins[attrs.npm.npm].config;
+                //code
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                delete attrs.npm; delete attrs.mode; delete attrs.use;
+                delete attrs.extra_imports; delete attrs.config;
+                resp.open += context.tagParams(tmp.tag, attrs, false) + '\n';
+                resp.close += `</${tmp.tag}>\n`;
+                return resp;
+            }
+        },
+
         //..views..
         //*def_center
         //*def_html
+        //def_tag
         //*def_textonly
         //*def_margen
         //*def_contenedor

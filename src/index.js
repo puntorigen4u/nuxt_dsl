@@ -2665,8 +2665,9 @@ ${cur.attr('name')}: {
 
     // hash helper method
     async hash(thing) {
-        const {sha1} = require('crypto-hash');
-        let resp = await sha1(thing,{ outputFormat:'hex' });
+        let resp = await this.dsl_parser.hash(thing);
+        /*const {sha1} = require('crypto-hash');
+        let resp = await sha1(thing,{ outputFormat:'hex' });*/
         return resp;
     }
     /*

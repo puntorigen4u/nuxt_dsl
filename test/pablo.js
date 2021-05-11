@@ -1,3 +1,4 @@
+process.env.UV_THREADPOOL_SIZE=8*require('os').cpus().length;
 const vue = require('../lib/index');
 var myArgs = process.argv.slice(2);
 
