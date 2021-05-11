@@ -216,7 +216,7 @@ export default async function(context) {
     return {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
         'meta': {...null_template, ...{
-                version: '0.0.1',
+                version: '0.0.2',
                 x_level: '2000',
             }
         },
@@ -2012,7 +2012,8 @@ export default async function(context) {
                         return resp;
                     });
                     //normalize params
-                    if (params.class.length > 0) params.class = params.class.join(' ');
+                    if (params.class && params.class.length==0) delete params.class;
+                    if (params.class && params.class.length > 0) params.class = params.class.join(' ');
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
                     if (!tmp.omit) {
@@ -3218,15 +3219,15 @@ export default async function(context) {
                 if (params.style) params.style = params.style.join(';');
                 if (params.class) params.class = params.class.join(' ');
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
-                if (tmp.icono) {
+                if (tmp.icon) {
                     if (state.from_toolbar) {
                         resp.open += context.tagParams('v-btn',{ 'icon':null },false);
                         resp.open += context.tagParams('v-icon',params,false);
-                        resp.open += tmp.icono;
+                        resp.open += tmp.icon;
                         resp.open += '</v-icon>';
                         resp.open += '</v-btn>';
                     } else {
-                        resp.open += context.tagParams('v-icon',params,false)+tmp.icono+'</v-icon>';
+                        resp.open += context.tagParams('v-icon',params,false)+tmp.icon+'</v-icon>';
                         resp.open += '</v-icon>';
                     }
                 } else {
