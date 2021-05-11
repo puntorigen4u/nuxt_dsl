@@ -1687,8 +1687,8 @@ export default async function(context) {
                     }
                 });
                 // write tag
-                resp.open += context.tagParams('v-flex', params, false) + '\n';
-                resp.close = '</v-flex>\n';
+                resp.open += context.tagParams('v-col', params, false) + '\n';
+                resp.close = '</v-col>\n';
                 // return
                 return resp;
             }
@@ -1712,6 +1712,7 @@ export default async function(context) {
         'def_progress': {
             x_icons: 'idea',
             x_text_contains: 'progres',
+            x_not_text_contains: 'html:',
             x_level: '>2',
             attributes_aliases: {
                 'background-color': 'background-color,background',
@@ -2010,7 +2011,7 @@ export default async function(context) {
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
                     if (!tmp.omit) {
-                        if (state.from_textonly || tmp.span) {
+                        if (tmp.span && tmp.span==true) {
                             resp.open += context.tagParams('span', params) + text + '</span>\n';
                         } else if (state.from_card_title && !params.class) {
                             resp.open += text + '\n';
@@ -2291,13 +2292,13 @@ export default async function(context) {
                     delete params.icon;
                 }
                 // write tag
-                resp.open += context.tagParams('v-toolbar', params, false) + `\n`;
+                resp.open += context.tagParams('v-app-bar', params, false) + `\n`;
                 if (tmp.icon && tmp.icon != '') {
-                    resp.open += `<v-toolbar-side-icon><v-icon>${tmp.icon}</v-icon></v-toolbar-side-icon>\n`;
+                    resp.open += `<v-btn icon><v-icon>${tmp.icon}</v-icon></v-btn>\n`;
                 } else if (tmp.icon && tmp.icon == '') {
-                    resp.open += `<v-toolbar-side-icon></<v-toolbar-side-icon>\n`;
+                    resp.open += `<v-app-bar-nav-icon></<v-app-bar-nav-icon>\n`;
                 }
-                resp.close = `</v-toolbar>\n`;
+                resp.close = `</v-app-bar>\n`;
                 resp.state.from_toolbar=true;
                 return resp;
             }
@@ -4391,7 +4392,7 @@ export default async function(context) {
 
         'def_extender': {
             x_level: '>3',
-            x_text_pattern: `extender "*"`,
+            x_text_contains: `extender "`,
             x_icons: 'desktop_new',
             hint: 'Extiende los atributos de un objeto con los datos dados en los atributos.',
             func: async function(node, state) {
@@ -4420,8 +4421,17 @@ export default async function(context) {
                 }
                 // extend given var with 'extend_node' content
                 tmp.nobj = resp.open;
+                //underscore (seems necesary because vue doesn't detect spreads)
+                if (state.current_page) {
+                    context.x_state.pages[resp.state.current_page].imports['underscore'] = '_';
+                } else if (state.current_proxy) {
+                    context.x_state.proxies[resp.state.current_proxy].imports['underscore'] = '_';
+                } else if (state.current_store) {
+                    context.x_state.stores[resp.state.current_store].imports['underscore'] = '_';
+                }
                 if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
-                resp.open = `${tmp.var} = {...${tmp.var},...${tmp.nobj}};\n`;
+                //resp.open = `${tmp.var} = {...${tmp.var},...${tmp.nobj}};\n`;
+                resp.open = `${tmp.var} = _.extend(${tmp.var}, ${tmp.nobj});\n`;
                 return resp;
             }
         },
