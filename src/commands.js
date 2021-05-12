@@ -2267,11 +2267,11 @@ module.exports = async function(context) {
                 let params = aliases2params('def_barralateral', node);
                 // special cases
                 if (params.visible) {
-                    params['v-model'] = params.visible;
+                    params['value'] = params.visible;
                     delete params.visible;
                 }
                 if (params[':visible']) {
-                    params['v-model'] = params[':visible'];
+                    params[':value'] = params[':visible'];
                     delete params[':visible'];
                 }
                 // write tag
