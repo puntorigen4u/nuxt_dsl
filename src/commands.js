@@ -395,9 +395,9 @@ module.exports = async function(context) {
                 // parse attributes
                 Object.keys(node.attributes).map(function(keym) {
                     let key = keym.toLowerCase();
-                    if ([':def,:default,valor,value'].includes(key)) {
+                    if ([':def',':default','valor','value'].includes(key)) {
                         tmp.default =node.attributes[keym].toLowerCase();
-                    } else if ([':tipo,:type,tipo,type'].includes(key)) {
+                    } else if ([':tipo',':type','tipo','type'].includes(key)) {
                         tmp.type =node.attributes[keym].toLowerCase();
                     }
                 });
