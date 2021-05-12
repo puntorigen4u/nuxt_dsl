@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "vue_dsl",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -51,8 +51,8 @@
     "minimatch": "^3.0.4",
     "node-fetch": "^2.6.1",
     "node-persist": "^3.1.0",
-    "open-terminal": "^0.1.11",
     "open_console": "github:puntorigen4u/console",
+    "open-terminal": "^0.1.11",
     "ora": "^5.4.0",
     "prettier": "^2.2.1",
     "recursive-copy": "^2.0.10",

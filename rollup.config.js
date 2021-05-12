@@ -29,7 +29,8 @@ const config = {
     }),
     copy({
       assets: [
-        'src/assets'
+        'src/assets',
+        'src/commands.js'
       ]
     }),
     //compiler()

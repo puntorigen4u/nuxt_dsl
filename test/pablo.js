@@ -9,6 +9,7 @@ var myArgs = process.argv.slice(2);
     await base.init();
     // test node ID_1679802330 (should match def_store)
     //await base.addCommands(require('./more_commands.js'));
+    await base.addCommands(require('../lib/commands.js'));
     await base.process(); //aka writer()
     /* let nodetest = await base.dsl_parser.getNode({ id: 'ID_923953027', recurse:false });
     console.log('ID_923953027 nodetest',nodetest);

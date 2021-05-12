@@ -7,7 +7,7 @@ const concepto = require('concepto');
  * @name 	vue_dsl
  * @module 	vue_dsl
  **/
-import internal_commands from './commands'
+//import internal_commands from './commands'
 import deploy_local from './deploys/local'
 import deploy_eb from './deploys/eb'
 
@@ -31,8 +31,8 @@ export default class vue_dsl extends concepto {
     async onInit() {
         // define and assign commands
         //this.x_console.outT({ message: `Vue Compiler v${version}`, color: `brightCyan` });
-        await this.addCommands(internal_commands);
-        this.x_console.outT({ message: `${Object.keys(this.x_commands).length} local x_commands loaded!`, color: `green` });
+        //await this.addCommands(internal_commands);
+        if (Object.keys(this.x_commands).length>0) this.x_console.outT({ message: `${Object.keys(this.x_commands).length} local x_commands loaded!`, color: `green` });
         //this.debug('x_commands',this.x_commands);
         //this.x_crypto_key = require('crypto').randomBytes(32); // for hash helper method
         // init vue
@@ -205,7 +205,7 @@ Vue.use(VueMask);`,
         this.x_state.secrets={}; //await _extractSecrets(config_node)
         let path = require('path');
         for (let key in this.x_state.config_node) {
-            if (key.contains(':')==false) {
+            if (typeof key === 'string' && key.includes(':')==false) {
                 if (this.x_state.config_node[key][':secret']) {
                     let new_obj = {...this.x_state.config_node[key]};
                     delete new_obj[':secret']
@@ -305,11 +305,12 @@ Vue.use(VueMask);`,
 
     //Defines preparation steps before processing nodes.
     async onPrepare() {
+        if (Object.keys(this.x_commands).length>0) this.x_console.outT({ message: `${Object.keys(this.x_commands).length} x_commands loaded!`, color: `green` });
         this.deploy_module = { pre:()=>{}, post:()=>{}, deploy:()=>true };
         let deploy = this.x_state.central_config.deploy;
         if (deploy) {
             deploy += '';
-            if (deploy.contains('eb:')) {
+            if (deploy.includes('eb:')) {
                 this.deploy_module = new deploy_eb({ context:this });
             } else if (deploy=='local') {
                 this.deploy_module = new deploy_local({ context:this }); 
@@ -1494,7 +1495,7 @@ ${cur.attr('name')}: {
                 if (plugin.styles) {
                     for (let style_key in plugin.styles) {
                         let style = plugin.styles[style_key];
-                        if (style.file.contains('/')==false) {
+                        if (style.file.includes('/')==false) {
                             let target = path.join(this.x_state.dirs.css, style.file);
                             await this.writeFile(target, style.content);
                             resp.css_files.push({
@@ -1543,7 +1544,7 @@ ${cur.attr('name')}: {
                 if (plugin.styles) {
                     for (let style_key in plugin.styles) {
                         let style = plugin.styles[style_key];
-                        if (style.file.contains('/')) {
+                        if (style.file.includes('/')) {
                             code += `import '${style.file}';\n`;
                         }
                     }
@@ -1698,7 +1699,7 @@ ${cur.attr('name')}: {
                 delete ax_config.retries;
                 this.x_state.npm['axios-retry']='*';
             }
-            if (deploy.contains('eb:') || deploy.contains('true')) {
+            if (deploy.includes('eb:') || deploy.includes('true')) {
                 if (this.x_state.config_node.axios.deploy) {
                     ax_config.baseURL = this.x_state.config_node.axios.deploy;
                     ax_config.browserBaseURL = this.x_state.config_node.axios.deploy;
@@ -1709,7 +1710,7 @@ ${cur.attr('name')}: {
                     ax_config.baseURL = this.x_state.config_node.axios.local;
                     ax_config.browserBaseURL = this.x_state.config_node.axios.local;
                     delete ax_config.local;
-                    if (this.x_state.config_node.axios.local.contains('127.0.0.1')) 
+                    if (this.x_state.config_node.axios.local.includes('127.0.0.1')) 
                         this.x_state.config_node.axios.https=false;
                 }
                 delete ax_config.deploy;
@@ -1730,7 +1731,7 @@ ${cur.attr('name')}: {
         //nuxt env variables
         config.env={};
         for (let node_key in this.x_state.config_node) {
-            if (node_key.contains(':')==false) {
+            if (node_key.includes(':')==false) {
                 if ('aurora,vpc,aws'.split(',').includes(node_key)==false) {
                     if (this.x_state.secrets[node_key]===undefined && typeof this.x_state.config_node[node_key] === 'object') {
                         config.env[node_key.toLowerCase()]={...this.x_state.config_node[node_key]};
@@ -1889,7 +1890,7 @@ ${cur.attr('name')}: {
         if (this.x_state.central_config[':keywords']) data.keywords = this.x_state.central_config[':keywords'].split(',');
         //add dependencies
         for (let pack in this.x_state.npm) {
-            if (this.x_state.npm[pack].contains('http') && this.x_state.npm[pack].contains('github.com')) {
+            if (this.x_state.npm[pack].includes('http') && this.x_state.npm[pack].includes('github.com')) {
                 data.dependencies[pack] = `git+${this.x_state.npm[pack]}`;
             } else {
                 data.dependencies[pack] = this.x_state.npm[pack];
@@ -1897,7 +1898,7 @@ ${cur.attr('name')}: {
         }
         //add devDependencies
         for (let pack in this.x_state.dev_npm) {
-            if (this.x_state.dev_npm[pack].contains('http') && this.x_state.dev_npm[pack].contains('github.com')) {
+            if (this.x_state.dev_npm[pack].includes('http') && this.x_state.dev_npm[pack].includes('github.com')) {
                 data.devDependencies[pack] = `git+${this.x_state.dev_npm[pack]}`;
             } else {
                 data.devDependencies[pack] = this.x_state.dev_npm[pack];
@@ -1914,7 +1915,7 @@ ${cur.attr('name')}: {
     async createServerlessYML() {
         let yaml = require('yaml'), data = {};
         let deploy = this.x_state.central_config.deploy+'';
-        if (deploy.contains('eb:')==false &&
+        if (deploy.includes('eb:')==false &&
             deploy!=false &&
             deploy!='local') {
             data.service = this.x_state.central_config.service_name;
@@ -2055,7 +2056,7 @@ ${cur.attr('name')}: {
                     trailingComma: 'none'
                 });
             } catch(ee) {
-                this.debug(`error: could not format the vue file; trying vue-beautify`);
+                this.debug(`warning: could not format the vue file; trying vue-beautify`,ee);
                 let beautify = require('js-beautify');
                 let beautify_vue = beautify.html;
                 resp = beautify_vue(resp,{});
@@ -2541,7 +2542,7 @@ ${cur.attr('name')}: {
         //this.x_state.assets
         let resp = text.replaceAll('assets:',''),
             type_o = type.replaceAll('jsfunc', 'js').toLowerCase();
-        if (text.contains('assets:')) {
+        if (text.includes('assets:')) {
             if (resp in this.x_state.assets) {
                 if (this.x_state.central_config.idiomas.indexOf(',') != -1 && this.x_state.assets[resp].i18n == true) {
                     let first_key = this.x_state.assets[resp].i18n_keys.split(',')[0];
