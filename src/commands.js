@@ -3178,8 +3178,9 @@ module.exports = async function(context) {
                 if (params.style) params.style = params.style.join(';');
                 if (params.class) params.class = params.class.join(' ');
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                let from_toolbar = await context.isExactParentID(node.id, 'def_toolbar');
                 if (tmp.icon) {
-                    if (state.from_toolbar) {
+                    if (from_toolbar && from_toolbar==true) {
                         resp.open += context.tagParams('v-btn',{ 'icon':null },false);
                         resp.open += context.tagParams('v-icon',params,false);
                         resp.open += tmp.icon;
@@ -3190,7 +3191,7 @@ module.exports = async function(context) {
                         resp.open += '</v-icon>';
                     }
                 } else {
-                    if (state.from_toolbar) {
+                    if (from_toolbar && from_toolbar==true) {
                         resp.open += context.tagParams('v-app-bar-nav-icon',params,true);
                     } else {
                         //icon must be a child node
