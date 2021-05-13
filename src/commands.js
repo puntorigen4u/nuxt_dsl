@@ -1328,6 +1328,7 @@ module.exports = async function(context) {
                 });
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
                 let params = aliases2params('def_form_field', node);
+                params = {...params,...aliases2params('def_form_field_image', node)};
                 params['refx'] = node.id;
                 // add node.text (var) as image prefill
                 if (node.text.trim() != '-') {
@@ -1345,6 +1346,10 @@ module.exports = async function(context) {
                 // image defaults
                 params[':removable'] = false;
                 params[':hideChangeButton'] = true;
+                if (params.placeholder) {
+                    params[':customStrings'] = { drag: params.placeholder };
+                    delete params.placeholder;
+                }
                 // add plugin
                 context.x_state.plugins['vue-picture-input'] = {
                     global: true,
@@ -1380,7 +1385,8 @@ module.exports = async function(context) {
                     state
                 });
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
-                let params = aliases2params('def_form_field_galery', node);
+                let params = aliases2params('def_form_field', node);
+                params = {...params,...aliases2params('def_form_field_galery', node)};
                 params['refx'] = node.id;
                 // add node.text (var) as image prefill
                 if (node.text.trim() != '') {
