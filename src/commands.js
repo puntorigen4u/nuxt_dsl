@@ -2665,6 +2665,14 @@ module.exports = async function(context) {
                 //pass header name/id for headers future var
                 resp.state.datatable_id = node.id + '_headers';
                 params[':headers'] = resp.state.datatable_id;
+                if (params['items-per-page-text']) {
+                    //@todo add support for multiple footer-props:x attrs to footer-props attr
+                    params[':footer-props'] = { 
+                        showFirstLastPage: true,
+                        'items-per-page-text': params['items-per-page-text']
+                    };
+                    delete params[':items-per-page-text'];
+                }
                 //code
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
                 resp.open += context.tagParams('v-data-table',params,false)+'\n';
