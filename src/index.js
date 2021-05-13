@@ -2648,7 +2648,9 @@ ${cur.attr('name')}: {
         } else if (typeof obj === 'object') {
             let tmp=[];
             for (let llave in obj) {
-                let nuevo = `${llave}: `;
+                let llavet = llave;
+                if (llavet.includes('-') && llavet.includes(`'`)==false) llavet = `'${llave}'`;
+                let nuevo = `${llavet}: `;
                 let valor = obj[llave];
                 if (typeof valor === 'object' || Array.isArray(valor)) {
                     nuevo += this.jsDump(valor);

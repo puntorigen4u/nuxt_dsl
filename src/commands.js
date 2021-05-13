@@ -179,7 +179,7 @@ module.exports = async function(context) {
     return {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
         'meta': {...null_template, ...{
-                version: '0.0.3',
+                version: '0.0.4',
                 x_level: '2000',
             }
         },
