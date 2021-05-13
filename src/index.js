@@ -2629,6 +2629,7 @@ ${cur.attr('name')}: {
                 ob.indexOf(`'`)!=-1 || 
                 ob.indexOf('`')!=-1 ||
                 (ob.charAt(0)!='0' && isNumeric(ob)) ||
+                ob=='0' || 
                 ob=='true' || ob=='false')
                 ) {
                 nuevo += ob;

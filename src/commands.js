@@ -179,7 +179,7 @@ module.exports = async function(context) {
     return {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
         'meta': {...null_template, ...{
-                version: '0.0.4',
+                version: '0.0.5',
                 x_level: '2000',
             }
         },
@@ -3744,6 +3744,22 @@ module.exports = async function(context) {
                         elements.type = 'v-else-if'
                     }
                 }
+                let escape_value = function(value2) {
+                    //@todo apply below 13may21
+                    let value = value2;
+                    if (typeof value !== 'undefined') {
+                        if ((typeof value === 'string' && isNumeric(value) && value.charAt(0)!='0') ||
+                            !isNaN(value) || 
+                            (typeof value === 'string' && (value=='true' || value=='false')) ||
+                            (typeof value === 'string' && (value.charAt(0)=='$') || value.includes('this.'))
+                            ) {
+                            //value = value;
+                        } else {
+                            value = `'${value}'`;
+                        }
+                    }
+                    return value;
+                };
                 // tag params
                 let params = aliases2params('def_condicion_view',node);
                 params = {...params, ...{
@@ -3754,7 +3770,7 @@ module.exports = async function(context) {
                 }};
                 let sons = await node.getNodes();
                 if (sons.length==1) params.target=sons[0].id; //.id
-                if (params.individual && params.individual==true) {
+                if (params.individual && (params.individual==true || params.individual=='true')) {
                     params.tipo = 'v-if'; elements.type = 'v-if';
                     delete params.individual;
                 }
@@ -3787,7 +3803,7 @@ module.exports = async function(context) {
                     } else if (typeof elements.value === 'string' && (elements.value=='true' || elements.value=='false' || isNumeric(elements.value))) {
                         params.expresion = `${elements.variable} == ${elements.value}`;
                     } else {
-                        params.expresion = `${elements.variable} == '${elements.value}'`;
+                        params.expresion = `${elements.variable} == ${escape_value(elements.value)}`;
                     }
 
                 } else if ('es string,es texto,string,texto'.split(',').includes(elements.operator)) {
@@ -3859,15 +3875,8 @@ module.exports = async function(context) {
                     params.expresion = `_.isNull(${elements.variable})`;
 
                 } else if ('no es,!=,neq'.split(',').includes(elements.operator)) {
-                    //@todo check if value is string - pendieng testing
-                    if ((typeof elements.value === 'string' && isNumeric(elements.value) && elements.value.charAt(0)!='0') ||
-                        !isNaN(elements.value) || 
-                        elements.value=='true' || elements.value=='false' ||
-                        elements.value.charAt(0)=='$' || elements.value.includes('this.')) {
-                        params.expresion = `${elements.variable}!=${elements.value}`;
-                    } else {
-                        params.expresion = `${elements.variable}!='${elements.value}'`;
-                    }
+                    params.expresion = `${elements.variable}!=${escape_value(elements.value)}`;
+
                 // records
                 } else if ('no contiene registros,contains no records'.split(',').includes(elements.operator)) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length==0`;
@@ -3876,21 +3885,11 @@ module.exports = async function(context) {
                     params.expresion = `${elements.variable} && ${elements.variable}.length`; //@todo check if this needs to be .length>0
 
                 } else if ('contiene registro,contiene item'.split(',').includes(elements.operator)) {
-                    if ((typeof elements.value === 'string' && isNumeric(elements.value) && elements.value.charAt(0)!='0') ||
-                        !isNaN(elements.value) || 
-                        elements.value=='true' || elements.value=='false' ||
-                        elements.value.charAt(0)=='$' || elements.value.includes('this.')) {
-                        params.expresion = `_.contains(${elements.variable},${elements.value})`;
-                    } else {
-                        params.expresion = `_.contains(${elements.variable},'${elements.value}')`;
-                    }
+                    params.expresion = `_.contains(${elements.variable},${escape_value(elements.value)})`;
 
                 } else if ('contiene,contains'.split(',').includes(elements.operator)) {
-                    if (elements.value.includes('this.')) {
-                        params.expresion = `${elements.variable}.toLowerCase().indexOf(${elements.value}.toLowerCase())!=-1`;
-                    } else {
-                        params.expresion = `${elements.variable}.toLowerCase().indexOf('${elements.value}'.toLowerCase())!=-1`;
-                    }
+                    params.expresion = `${elements.variable}.toLowerCase().indexOf(${escape_value(elements.value)}.toLowerCase())!=-1`;
+
                 } else {
                     //operator not defined
                     context.x_console.outT({ message:`Operator (${elements.operator}) not defined in 'condicion si' x_command`, color:'red', data:{elements,params,which} });
@@ -4510,7 +4509,7 @@ module.exports = async function(context) {
                     state
                 });
                 // create obj from current node as js obj
-                resp = await context.x_commands['def_struct'].func(node, { ...state, ...{
+                let obj = await context.x_commands['def_struct'].func(node, { ...state, ...{
                     as_object:true
                 }});
                 // get var name
@@ -4521,7 +4520,7 @@ module.exports = async function(context) {
                     symbol_closing: '"'
                 }).trim();
                 // clean given varname $variables, etc.
-                if (resp.state.from_server) { //if (context.hasParentID(node.id, 'def_event_server')==true) {
+                if ((await context.hasParentID(node.id, 'def_event_server'))==true) { //@todo change after checking (revision) concepto inherited states; if (resp.state.from_server) {
                     tmp.var = tmp.var.replaceAll('$variables.', 'resp.')
                                      .replaceAll('$vars.', 'resp.').replaceAll('$params.', 'resp.');
                     tmp.var = (tmp.var == 'resp.') ? 'resp' : tmp.var;
@@ -4530,7 +4529,14 @@ module.exports = async function(context) {
                     tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
                 }
                 // extend given var with 'extend_node' content
-                tmp.nobj = resp.open;
+                // support attr = !attr - 13may21
+                for (let x in obj.state.object) {
+                    if (obj.state.object[x].charAt(0)=='!' &&
+                        obj.state.object[x].includes('this.')==false) {
+                            obj.state.object[x] = obj.state.object[x].replaceAll('!',`!${tmp.var}.`);
+                    }
+                }
+                tmp.nobj = context.jsDump(obj.state.object);
                 //underscore (seems necesary because vue doesn't detect spreads)
                 if (state.current_page) {
                     context.x_state.pages[resp.state.current_page].imports['underscore'] = '_';
@@ -4541,7 +4547,7 @@ module.exports = async function(context) {
                 }
                 if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 //resp.open = `${tmp.var} = {...${tmp.var},...${tmp.nobj}};\n`;
-                resp.open = `${tmp.var} = _.extend(${tmp.var}, ${tmp.nobj});\n`;
+                resp.open += `${tmp.var} = _.extend(${tmp.var}, ${tmp.nobj});\n`;
                 return resp;
             }
         },
