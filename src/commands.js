@@ -1987,8 +1987,9 @@ module.exports = async function(context) {
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
                     let dad_card_title = await context.isExactParentID(node.id, 'def_card_title');
+                    let dad_textonly = await context.isExactParentID(node.id, 'def_textonly');
                     if (!tmp.omit) {
-                        if (tmp.span && tmp.span==true) {
+                        if (dad_textonly==true || (tmp.span && tmp.span==true)) {
                             resp.open += context.tagParams('span', params) + text + '</span>\n';
                         } else if (dad_card_title && dad_card_title==true && !params.class) {
                             resp.open += text + '\n';
