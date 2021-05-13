@@ -1232,8 +1232,8 @@ module.exports = async function(context) {
                     resp.open += context.tagParams('v-combobox', params, false) + '\n';
                     resp.close += `</v-combobox>\n`;
                 } else if (tmp.type == 'toggle') {
-                    resp.open += context.tagParams('v-btn-toogle', params, false) + '\n';
-                    resp.close += `</v-btn-toogle>\n`;
+                    resp.open += context.tagParams('v-btn-toggle', params, false) + '\n';
+                    resp.close += `</v-btn-toggle>\n`;
                 } else if ('textarea,checkbox,radio,switch'.split(',').includes(tmp.type)) {
                     resp.open += context.tagParams(`v-${tmp.type}`, params, false) + '\n';
                     resp.close += `</v-${tmp.type}>\n`;
