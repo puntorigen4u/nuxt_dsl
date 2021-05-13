@@ -1979,10 +1979,11 @@ module.exports = async function(context) {
                     if (params.class && params.class.length > 0) params.class = params.class.join(' ');
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
+                    let dad_card_title = await context.isExactParentID(node.id, 'def_card_title');
                     if (!tmp.omit) {
                         if (tmp.span && tmp.span==true) {
                             resp.open += context.tagParams('span', params) + text + '</span>\n';
-                        } else if (state.from_card_title && !params.class) {
+                        } else if (dad_card_title && dad_card_title==true && !params.class) {
                             resp.open += text + '\n';
                         } else {
                             resp.open += context.tagParams('div', params) + text + '</div>\n';
