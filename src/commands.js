@@ -162,7 +162,11 @@ module.exports = async function(context) {
                     if (escape_vars && escape_vars==true) {
                         tvalue = tvalue.replaceAll('{{','').replaceAll('}}','');
                     }
-                    params[`:${key_use}`] = tvalue;
+                    if (keytest!='v-model') {
+                        params[`:${key_use}`] = tvalue;
+                    } else {
+                        params[key_use] = tvalue;
+                    }
                 } else {
                     params[key_use] = tvalue;
                 }
@@ -175,7 +179,7 @@ module.exports = async function(context) {
     return {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
         'meta': {...null_template, ...{
-                version: '0.0.2',
+                version: '0.0.3',
                 x_level: '2000',
             }
         },
