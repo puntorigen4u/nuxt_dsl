@@ -782,7 +782,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
             let name = cur.attr('name');
             let code = elem.children[0].data; //cur.html();
             //console.log('PABLO debug code computed:',code);
-            computed.push(`${name}() {${code}}`);
+            if (computed.includes(`${name}() {${code}}`)==false) {
+                computed.push(`${name}() {${code}}`);
+            }
             cur.remove();
             //return elem;
         });
