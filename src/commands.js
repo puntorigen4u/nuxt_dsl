@@ -1861,7 +1861,9 @@ module.exports = async function(context) {
                     return {...resp,...{ valid:false }}; */
                 if ((await context.hasParentID(node.id, 'def_toolbar'))==true && (await context.hasParentID(node.id, 'def_slot'))==false) {
                     return {...resp,...{ valid:false }};
-                } else if ((await context.hasParentID(node.id, 'def_datatable_headers'))==true && context.hasParentID(node.id, 'def_slot')==false && context.hasParentID(node.id, 'def_datatable_fila')==false) {
+                } else if ((await context.hasParentID(node.id, 'def_datatable_headers'))==true && 
+                            (await context.hasParentID(node.id, 'def_slot'))==false && 
+                            (await context.hasParentID(node.id, 'def_datatable_fila'))==false) {
                     return {...resp,...{ valid:false }};
                 } else if ((await context.hasParentID(node.id, 'def_variables'))==true) {
                     return {...resp,...{ valid:false }};
@@ -2003,9 +2005,9 @@ module.exports = async function(context) {
                     if (params.style) params.styles = params.styles.join(';');
                     //write code
                     let dad_card_title = await context.isExactParentID(node.id, 'def_card_title');
-                    let dad_textonly = await context.isExactParentID(node.id, 'def_textonly');
+                    let dad_hastextonly = await context.hasParentID(node.id, 'def_textonly');
                     if (!tmp.omit) {
-                        if (dad_textonly==true || (tmp.span && tmp.span==true)) {
+                        if (dad_hastextonly==true || (tmp.span && tmp.span==true)) {
                             resp.open += context.tagParams('span', params) + text + '</span>\n';
                         } else if (dad_card_title && dad_card_title==true && !params.class) {
                             resp.open += text + '\n';
