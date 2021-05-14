@@ -2620,10 +2620,12 @@ module.exports = async function(context) {
                 let params = aliases2params('def_tooltip', node, false, 'this.');
                 let tmp = { text:'', params_span:{} };
                 if (params.texto) tmp.text = params.texto;
+                if (params[':texto']) tmp.text = params[':texto'];
                 if (tmp.text.includes('this.') && tmp.text.includes('{{')==false) {
                     tmp.text = `{{ ${tmp.text} }}`;
                 }
                 delete params.texto;
+                delete params[':texto'];
                 if (params.class) {
                     tmp.params_span.class = params.class;
                     delete params.class;
