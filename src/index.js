@@ -824,9 +824,9 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
                     let test_n = [];
                     test.split(',').map(function(x) {
                         let tmp = x.replaceAll('$variables.', '')
-                            .replaceAll('$vars', '')
-                            .replaceAll('$params', '')
-                            .replaceAll('$store', '$store.state.');
+                            .replaceAll('$vars.', '')
+                            .replaceAll('$params.', '')
+                            .replaceAll('$store.', '$store.state.');
                         test_n.push(`'${tmp}'`);
                     });
                     watch += `watch: [${test_n.join(',')}]`;

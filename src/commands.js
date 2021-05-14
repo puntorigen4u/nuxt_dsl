@@ -2506,7 +2506,7 @@ module.exports = async function(context) {
                 if (node.text.includes('=')) {
                     let extract = require('extractjs')();
                     let elements = extract(`{name}={value}`,node.text);
-                    //@todo test this after def_datatable exists
+                    //@todo test this after 'def_datatable' exists
                     if (state.from_datatable) {
                         if (elements.name=='items') {
                             elements.name = 'item';
@@ -2651,7 +2651,7 @@ module.exports = async function(context) {
                 'class':                'class,:class',
                 'width':                'width,ancho',
                 'height':               'height,alto',
-                'items-per-page-text':  'rows-per-page-text'
+                'rows-per-page-text':   'rows-per-page-text'
             },
             hint: 'Dibuja una tabla con datos.',
         	func: async function(node, state) {
@@ -2677,13 +2677,12 @@ module.exports = async function(context) {
                 //pass header name/id for headers future var
                 resp.state.datatable_id = node.id + '_headers';
                 params[':headers'] = resp.state.datatable_id;
-                if (params['items-per-page-text']) {
+                if (params['rows-per-page-text']) {
                     //@todo add support for multiple footer-props:x attrs to footer-props attr
                     params[':footer-props'] = { 
-                        showFirstLastPage: true,
-                        'items-per-page-text': params['items-per-page-text']
+                        'items-per-page-text': params['rows-per-page-text']
                     };
-                    delete params[':items-per-page-text'];
+                    delete params['rows-per-page-text'];
                 }
                 //code
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
