@@ -699,7 +699,7 @@ module.exports = async function(context) {
                 }.bind(this));
                 // has comments ?
                 if (node.text_note != '') {
-                    resp.open = `<!-- ${node.text_note.replaceAll('<br/ >','\n')} -->\n`;
+                    resp.open = `<!-- ${node.text_note.cleanLines()} -->\n`;
                 }
                 // set code
                 resp.open += `<template>\n`;
@@ -867,7 +867,7 @@ module.exports = async function(context) {
                     tipo: 'flex',
                     width: 6
                 };
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note.trim()} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 if (node.text.includes(':wrap')) tmp.tipo = 'wrap';
                 let params = aliases2params('def_layout_view', node);
                 tmp.params = {...params
@@ -955,7 +955,7 @@ module.exports = async function(context) {
                     state
                 });
                 let params = {};
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 if (context.x_state.central_config['keep-alive']) params['keep-alive'] = null;
                 // write tag
                 resp.open += context.tagParams('nuxt', params, true) + `\n`;
@@ -1057,7 +1057,7 @@ module.exports = async function(context) {
                     params.push(`${key}: ${value}`);
                 });
                 // write output and return
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open += `this.$emit('${event_name}',{${params.join(',')}});\n`;
                 return resp;
             }
@@ -1079,7 +1079,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_card', node);
                 // write tag
                 resp.open += context.tagParams('v-card', params, false) + '\n';
@@ -1097,7 +1097,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_card_title', node);
                 resp.open += context.tagParams('v-card-title', params, false) + '\n';
                 resp.close += `</v-card-title>\n`;
@@ -1115,7 +1115,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_card_text', node);
                 resp.open += context.tagParams('v-card-text', params, false) + '\n';
                 resp.close += `</v-card-text>\n`;
@@ -1132,7 +1132,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_card_actions', node);
                 resp.open += context.tagParams('v-card-actions', params, false) + '\n';
                 resp.close += `</v-card-actions>\n`;
@@ -1149,7 +1149,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_card_media', node);
                 if (context.x_state.es6) {
                     resp.open += context.tagParams('v-img', params, false) + '\n';
@@ -1181,7 +1181,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_form', node);
                 resp.open += context.tagParams('v-form', params, false) + '\n';
                 resp.close += `</v-form>\n`;
@@ -1208,7 +1208,7 @@ module.exports = async function(context) {
                     state
                 });
                 let tmp = {};
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_form_field', node);
                 tmp = {... {
                         type: 'text'
@@ -1326,7 +1326,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_form_field', node);
                 params = {...params,...aliases2params('def_form_field_image', node)};
                 params['refx'] = node.id;
@@ -1384,7 +1384,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_form_field', node);
                 params = {...params,...aliases2params('def_form_field_galery', node)};
                 params['refx'] = node.id;
@@ -1433,7 +1433,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_form_field_date', node);
                 if (node.text.trim() != '') {
                     let vmodel = node.text.trim();
@@ -1472,7 +1472,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_form_field_datetime', node);
                 if (node.text.trim() != '') {
                     let vmodel = node.text.trim();
@@ -1539,7 +1539,7 @@ module.exports = async function(context) {
                     config: JSON.stringify(config)
                 };
                 // return output
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('vuetify-google-autocomplete', params, false) + '\n';
                 resp.close = `</vuetify-google-autocomplete>\n`;
                 return resp;
@@ -1563,7 +1563,7 @@ module.exports = async function(context) {
                 });
                 let params = aliases2params('def_margen', node);
                 // code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->\n`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams('v-container', params, false) + '\n';
                 resp.close += '</v-container>\n';
                 //
@@ -1582,7 +1582,7 @@ module.exports = async function(context) {
                 });
                 let params = aliases2params('def_contenedor', node);
                 // code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->\n`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams('v-container', params, false) + '\n';
                 resp.close = '</v-container>\n';
                 // return
@@ -1602,7 +1602,7 @@ module.exports = async function(context) {
                 let params = {
                     refx: node.id
                 };
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 // process attributes
                 Object.keys(node.attributes).map(function(key) {
                     let value = node.attributes[key];
@@ -1684,7 +1684,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-spacer', {}, true) + '\n';
                 return resp;
             }
@@ -1713,7 +1713,7 @@ module.exports = async function(context) {
                 let tmp = {
                     tipo: 'circular'
                 };
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 // process our own attributes_aliases to normalize node attributes
                 let params = aliases2params('def_progress', node);
                 Object.keys(params).map(function(key) {
@@ -1748,7 +1748,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_dialog', node);
                 if (params[':visible']) {
                     params['v-model']=params[':visible'];
@@ -1777,7 +1777,7 @@ module.exports = async function(context) {
                     refx: node.id,
                     class: 'text-xs-center'
                 };
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open = context.tagParams('div', params, false) + '<center>\n';
                 resp.close += '</center></div>\n';
                 return resp;
@@ -1794,7 +1794,7 @@ module.exports = async function(context) {
                 });
                 let params = aliases2params('def_html', node);
                 // parse attributes
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let tag = node.text.replace('html:', '');
                 if (node.nodes_raw && node.nodes_raw.length > 0) {
                     let tmp = await node.getNodes({ recurse:false });
@@ -1868,7 +1868,7 @@ module.exports = async function(context) {
                 } else if ((await context.hasParentID(node.id, 'def_page_estilos'))==true) {
                     return {...resp,...{ valid:false }};
                 } else {
-                    if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->\n`;
+                    if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->\n`;
                     //
                     if (node.text.indexOf('..lorem..') != -1 && node.text.indexOf(':') != -1) {
                         //lorem ipsum text
@@ -2104,7 +2104,7 @@ module.exports = async function(context) {
                 if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag.toLowerCase();
                 if (Object.keys(attrs.config)=='') delete context.x_state.plugins[attrs.npm.npm].config;
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 delete attrs.npm; delete attrs.mode; delete attrs.use;
                 delete attrs.extra_imports; delete attrs.config;
                 resp.open += context.tagParams(tmp.tag, attrs, false) + '\n';
@@ -2135,7 +2135,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_avatar', node);
                 let img_params = {};
                 // move :src to img src
@@ -2163,7 +2163,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_boton', node);
                 // special cases
                 // targets a scroll position ?
@@ -2227,7 +2227,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_chip', node);
                 // pre-process text
                 let text = node.text.trim().replaceAll('chip:', '');
@@ -2269,7 +2269,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_menu', node);
                 // special cases
                 if (params.visible) {
@@ -2292,7 +2292,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_barralateral', node);
                 // special cases
                 if (params.visible) {
@@ -2319,7 +2319,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_barrainferior', node);
                 // special cases
                 if (params.visible) {
@@ -2347,7 +2347,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_contenido',node);
                 // write tag
                 resp.open += context.tagParams('v-main', params, false) + `\n`;
@@ -2368,7 +2368,7 @@ module.exports = async function(context) {
                     state
                 });
                 let tmp = {};
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_toolbar', node);
                 // special cases
                 if (params[':icon']) {
@@ -2400,7 +2400,7 @@ module.exports = async function(context) {
         	hint: 'Titulo para nodo toolbar',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_toolbar_title', node);
                 // special cases
                 if (params.color) {
@@ -2469,7 +2469,7 @@ module.exports = async function(context) {
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_layout_custom', node);
                 resp.open += context.tagParams('v-layout',params,true);
                 return resp;
@@ -2484,7 +2484,7 @@ module.exports = async function(context) {
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_divider', node);
                 resp.open += context.tagParams('v-divider',params,true);
                 return resp;
@@ -2499,7 +2499,7 @@ module.exports = async function(context) {
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_slot', node);
                 if (node.text.includes('=')) {
                     let extract = require('extractjs')();
@@ -2534,7 +2534,7 @@ module.exports = async function(context) {
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_div', node);
                 resp.open += context.tagParams('div',params,false)+'\n';
                 resp.close = '</div>';
@@ -2551,7 +2551,7 @@ module.exports = async function(context) {
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_agrupar', node);
                 if (params.centrar && params.centrar==true) {
                     params['justify-center'] = null;
@@ -2580,7 +2580,7 @@ module.exports = async function(context) {
                     params['align-center'] = null;
                     delete params.centrar;
                 }
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-layout',params,false)+'\n';
                 resp.close = '</v-layout>';
                 return resp;
@@ -2595,7 +2595,7 @@ module.exports = async function(context) {
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 let params = aliases2params('def_hover', node);
                 resp.open += context.tagParams('v-hover',params,false)+'\n';
                 resp.open += context.tagParams('template',{ 'slot-scope':'{ hover }' },false)+'\n';
@@ -2630,7 +2630,7 @@ module.exports = async function(context) {
                     delete params[':class'];
                 }
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-tooltip',params,false)+'\n';
                 resp.open += context.tagParams('template',{ 'v-slot:activator':'{ on }' },false)+'\n';
                 resp.close = '</template>';
@@ -2684,7 +2684,7 @@ module.exports = async function(context) {
                     delete params[':items-per-page-text'];
                 }
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-data-table',params,false)+'\n';
                 resp.close = '</v-data-table>';
                 resp.state.friendly_name = 'table';
@@ -2774,7 +2774,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_datatable_fila', node, true);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('tr',params,false)+'\n';
                 resp.close = '</tr>';
                 resp.state.friendly_name = 'row';
@@ -2793,7 +2793,7 @@ module.exports = async function(context) {
                 if (!state.from_datatable_fila) return {...resp,...{valid:false}};
                 let params = aliases2params('def_datatable_col', node, true);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('td',params,false)+'\n';
                 resp.close = '</td>';
                 resp.state.friendly_name = 'column';
@@ -2841,7 +2841,7 @@ module.exports = async function(context) {
                     params[':total-visible'] = params[':length'];
                 }
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-pagination',params,false)+'\n';
                 resp.close = '</v-pagination>';
                 return resp;
@@ -2867,7 +2867,7 @@ module.exports = async function(context) {
                     delete params.colores;
                 }
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-sparkline',params,false)+'\n';
                 resp.close = '</v-sparkline>';
                 resp.state.friendly_name = 'spark';
@@ -2913,7 +2913,7 @@ module.exports = async function(context) {
                 context.x_state.pages[state.current_page].variables[options_var] = config;
                 context.x_state.pages[state.current_page].var_types[options_var] = typeof config;
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('highcharts',{ ':options':options_var },false)+'\n';
                 resp.close = '</highcharts>';
                 resp.state.friendly_name = 'highchart';
@@ -2943,7 +2943,7 @@ module.exports = async function(context) {
                     tag: 'pure-vue-chart'
                 };
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('pure-vue-chart',params,false)+'\n';
                 resp.close = '</pure-vue-chart>';
                 resp.state.friendly_name = 'trend';
@@ -2971,7 +2971,7 @@ module.exports = async function(context) {
                     if (params.lineas==3) params['three-line']=null;
                 }
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 if (params.layout && params.layout=='true') {
                     params.tag = 'v-list'; delete params.layout;
                     resp.open += context.tagParams('v-layout',params,false)+'\n';
@@ -3004,7 +3004,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_listado_grupo', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-list-group',params,false)+'\n';
                 resp.close = '</v-list-group>';
                 resp.state.friendly_name = 'grupo';
@@ -3052,7 +3052,7 @@ module.exports = async function(context) {
                     }
                 }
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-list-item',params,false)+'\n';
                 if (params.subheader) {
                     resp.open += context.tagParams('v-subheader',params,false)+tmp.subheader+'</v-subheader>\n';
@@ -3073,7 +3073,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_listado_fila_accion', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-list-item-action',params,false)+'\n';
                 resp.close = '</v-list-item-action>';
                 resp.state.friendly_name = 'accion_fila';
@@ -3091,7 +3091,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_listado_fila_contenido', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-list-item-content',params,false)+'\n';
                 resp.close = '</v-list-item-content>';
                 resp.state.friendly_name = 'contenido_fila';
@@ -3109,7 +3109,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_listado_fila_titulo', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 if (params['v-text'] || params[':v-text']) {
                     resp.open += context.tagParams('v-list-item-title',params,true)+'\n';
                 } else {
@@ -3131,7 +3131,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_listado_fila_subtitulo', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('v-list-item-subtitle',params,false)+'\n';
                 resp.close = '</v-list-item-subtitle>';
                 resp.state.friendly_name = 'subtitulo_fila';
@@ -3149,7 +3149,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = aliases2params('def_listado_fila_avatar', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 if (state.from_slot) {
                     resp.open += context.tagParams('v-list-item-avatar',params,false)+'\n';
                     resp.close = '</v-list-item-avatar>';
@@ -3215,7 +3215,7 @@ module.exports = async function(context) {
                 //code
                 if (params.style) params.style = params.style.join(';');
                 if (params.class) params.class = params.class.join(' ');
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 let from_toolbar = await context.isExactParentID(node.id, 'def_toolbar');
                 if (tmp.icon) {
                     if (from_toolbar && from_toolbar==true) {
@@ -3252,7 +3252,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let params = {...{ alt:'' },...aliases2params('def_imagen', node)};
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 //translate asset if defined
                 for (let x in params) {
                     if (params[x] && params[x].includes('assets:')) {
@@ -3278,7 +3278,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 let options = aliases2params('def_imagen', node);
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 //translate asset if defined
                 for (let x in options) {
                     if (options[x] && options[x].includes('assets:')) {
@@ -3361,7 +3361,7 @@ module.exports = async function(context) {
                     config: context.jsDump(config)
                 };
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('GmapMap',params,false)+'\n';
                 resp.close = '</GmapMap>';
                 resp.state.friendly_name = 'mapa';
@@ -3386,7 +3386,7 @@ module.exports = async function(context) {
                     mode: 'client'
                 };
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('youtube-playlist',params,false)+'\n';
                 resp.close = '</youtube-playlist>';
                 resp.state.friendly_name = 'youtube';
@@ -3415,7 +3415,7 @@ module.exports = async function(context) {
                     config: '{ global:true }'
                 };
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note} -->`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 resp.open += context.tagParams('youtube',params,false)+'\n';
                 resp.close = '</youtube>';
                 resp.state.friendly_name = 'youtube';
@@ -3452,7 +3452,7 @@ module.exports = async function(context) {
                 }
                 let params = (await context.x_commands['def_xcada_registro'].func(node, {...state,...{ get_params:true } })).state.params;
                 //code
-                if (node.text_note != '') resp.open += `<!-- ${node.text_note.trim()} -->\n`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams('vue_for', params, false) + '\n';
                 resp.close = '</vue_for>';
                 return resp;
@@ -3474,7 +3474,7 @@ module.exports = async function(context) {
                 if (node.nodes_raw.length==0) return resp;
                 let params = {};
                 resp.open = context.tagParams('vue_mounted', {}, false)+'<!--';
-                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open += `/*${node.text_note.cleanLines()}*/\n`;
                 resp.close = '--></vue_mounted>';
                 resp.state.from_script=true;
                 return resp;
@@ -3494,7 +3494,7 @@ module.exports = async function(context) {
                 if (node.nodes_raw.length==0) return resp;
                 let params = aliases2params('def_event_server',node);
                 resp.open = context.tagParams('server_asyncdata', {}, false)+'<!--';
-                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 if (!params.return) resp.open += `let resp={};`;
                 resp.close = '--></server_asyncdata>';
                 resp.state.from_server=true;
@@ -3526,7 +3526,7 @@ module.exports = async function(context) {
                 if (params.async) delete params.async;
                 //code
                 resp.open = context.tagParams('vue_event_method', params, false)+'<!--';
-                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 resp.close = '--></vue_event_method>';
                 resp.state.from_script=true;
                 return resp;
@@ -3636,7 +3636,7 @@ module.exports = async function(context) {
                 params.n_params = params.n_params.join(',');
                 params.v_params = params.v_params.join(',');
                 resp.open = context.tagParams('vue_event_element', params, false)+'<!--';
-                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 resp.close = '--></vue_event_element>';
                 resp.state.from_script=true;
                 return resp;
@@ -3662,7 +3662,7 @@ module.exports = async function(context) {
                 context.x_state.plugins['vue-script2'] = { global:true, mode: 'client', npm: { 'vue-script2':'*' }};
                 //code
                 resp.open = context.tagParams('script2', params, false);
-                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 resp.close = '</script2>';
                 resp.state.from_script=true;
                 return resp;
@@ -3898,7 +3898,7 @@ module.exports = async function(context) {
                 }
 
                 //comments?
-                if (node.text_note != '') resp.open += `<!--${node.text_note}-->\n`;
+                if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->\n`;
                 // prepare expressions
                 let expresion_js = params.expresion. replaceAll('$variables.','this.')
                                                     .replaceAll('$vars.','this.')                                   
@@ -3970,10 +3970,10 @@ module.exports = async function(context) {
                 //code
                 let sons = await node.getNodes();
                 if (sons.length>1) {
-                    if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
+                    if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                     resp.open += context.tagParams('template', { 'v-else': null }, false);
                 } else if (sons.length==1) {
-                    if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
+                    if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                     resp.open += context.tagParams('vue_if', { 
                         'expresion':'',
                         'tipo':'v-else',
@@ -4025,7 +4025,7 @@ module.exports = async function(context) {
                 });
                 if (!resp.state.from_script || (resp.state.from_script && resp.state.from_script==false)) return {...resp,...{ valid:false }};
                 //code
-                if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open += `else {\n`;
                 resp.close = `}\n`;
                 return resp;
@@ -4324,7 +4324,7 @@ module.exports = async function(context) {
                 params.flat = resp.state.vars_path.join('.'); // inherit parent var from def_variables_field last state
                 // write tag
                 resp.open = context.tagParams('vue_watched_var', params, false)+'<!--';
-                if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 resp.close = '--></vue_watched_var>';
                 resp.state.from_script=true;
                 return resp;
@@ -4374,11 +4374,11 @@ module.exports = async function(context) {
                         }
                     };
                     resp.open = context.tagParams('vue_async_computed', params, false)+'<!--\n';
-                    if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                    if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                     resp.close = '--></vue_async_computed>\n';
                 } else {
                     resp.open = context.tagParams('vue_computed', params, false)+'<!--\n';
-                    if (node.text_note != '') resp.open += `/*${node.text_note}*/\n`;
+                    if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                     resp.close = '--></vue_computed>\n';
                 }
                 resp.state.from_script=true;
@@ -4403,7 +4403,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (node.text_note != '') resp.open = `/*${node.text_note}*/\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 let text = context.dsl_parser.findVariables({
                     text: node.text,
                     symbol: `"`,
@@ -4492,7 +4492,7 @@ module.exports = async function(context) {
                     resp.open = context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`");
                     delete resp.state.as_object;
                 } else {
-                    if (node.text_note != '') resp.open = `// ${node.text_note}\n`;
+                    if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                     resp.open += `let ${tmp.var.trim()} = ${context.jsDump(attrs).replaceAll("'`","`").replaceAll("`'","`")};\n`;
                 }
                 return resp;
@@ -4601,7 +4601,7 @@ module.exports = async function(context) {
                     context.x_state.pages[resp.state.current_page].imports['underscore'] = '_';
                 }
                 //code
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open += tmp.text;
                 if (resp.open.right(1)!=';') resp.open += ';';
                 resp.open += '\n';
@@ -4651,7 +4651,7 @@ module.exports = async function(context) {
                     attrs[key] = value;
                 });
                 //code
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open += `console.log(${tmp.text},${context.jsDump(attrs)});\n`;
                 return resp;
             }
@@ -4678,7 +4678,7 @@ module.exports = async function(context) {
                 attr.var = attr.tipo_ = node.text.split(',').pop();
                 //code
                 context.x_state.npm[attr.text] = attr.version;
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 if (!attr.require) {
                     if ('current_func' in resp.state) {
                         context.x_state.functions[resp.state.current_func].imports[attr.text] = attr.tipo_;
@@ -4703,7 +4703,7 @@ module.exports = async function(context) {
                 });
                 let tmp = { var:node.text.split(',').pop() };
                 //code
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 context.x_state.npm['nanoid']='2.1.1';
                 resp.open += `let ${tmp.var} = require('nanoid')();\n`;
                 return resp;
@@ -4728,7 +4728,7 @@ module.exports = async function(context) {
                 let amount = node.text.split(' ').pop();
                 if (amount=='minutos') time += `*60`;
                 if (amount=='horas') time += `*60*60`;
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open += `setTimeout(function q() {\n`;
                 resp.close = `}.bind(this), 1000*${time});\n`;
                 return resp;
@@ -4751,7 +4751,7 @@ module.exports = async function(context) {
                     if (item.text=='error' && item.icons.includes('help')) has_error=true;
                 }.bind(this));
                 //code
-                if (node.text_note != '') resp.open = `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 resp.open += 'try {\n';
                 if (has_error==false) {
                     resp.close += `} catch(e${node.id}) {\n console.log('error en comando probar: recuerda usar evento ?error como hijo para controlarlo.');\n`;
@@ -4774,7 +4774,7 @@ module.exports = async function(context) {
                 //code
                 resp.open += `} catch(e${node.id}) {\n`;
                 resp.open += `let error = e${node.id};\n`;
-                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 return resp;
             }
         },
@@ -4801,7 +4801,7 @@ module.exports = async function(context) {
                     as_object:true
                 }})).open;
                 //code
-                if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 resp.open += `this.alasql('INSERT INTO ${tmp.model} VALUES ?', [${tmp.data}]);\n`;
                 return resp;
             }
@@ -4876,7 +4876,7 @@ module.exports = async function(context) {
                             as_object:true
                         }})).open;
                         //code
-                        if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                        if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                         //write update statement
                         resp.open += `let ${node.id} = { keys:[], vals:[], from:[], data:${tmp.data} };\n`;
                         resp.open += `for (let ${node.id}_k in ${node.id}.data) {
@@ -4925,7 +4925,7 @@ module.exports = async function(context) {
                         }).trim();
                         tmp.model_where = link_node.id + '.where';
                         //code
-                        if (node.text_note != '') resp.open += `// ${node.text_note.trim()}\n`;
+                        if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                         resp.open += `let ${node.id} = { keys:[], vals:[] };\n`;
                         resp.open += `for (let ${node.id}_k in ${tmp.model_where}) {
                             ${node.id}.keys.push(${node.id}_k+'=?');
@@ -5652,7 +5652,7 @@ module.exports = async function(context) {
                 }
                 //code
                 if ('google:analytics' in context.x_state.config_node) {
-                    if (node.text_note != '') resp.open += `// ${node.text_note}\n`;
+                    if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                     resp.open += `this.$gtag('event', ${event}, ${context.jsDump(details)});\n`;
                     return resp;
                 } else {
