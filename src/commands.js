@@ -4934,7 +4934,7 @@ module.exports = async function(context) {
                             ${node.id}.vals.push(${tmp.model_where}[${node.id}_k]);
                         }\n`;
                         resp.open += `if (${node.id}.keys.length>0) {
-                            this.alasql(\`DELETE FROM ${tmp.model} WHERE \${${node.id}.keys.JOIN(' AND ')}\`,${node.id}.vals);
+                            this.alasql(\`DELETE FROM ${tmp.model} WHERE \${${node.id}.keys.join(' AND ')}\`,${node.id}.vals);
                         } else {
                             this.alasql(\`DELETE FROM ${tmp.model}\`,[]);
                         }\n`;
