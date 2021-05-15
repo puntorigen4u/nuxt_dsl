@@ -1771,8 +1771,9 @@ ${cur.attr('name')}: {
         //muxt server methods
         if (this.x_state.functions && Object.keys(this.x_state.functions).length>0) config.serverMiddleware = ['~/server/api'];
         //nuxt build - cfc: 12637
+        //google-autocomplete plugin doesn work if treeShake is true
         config.vuetify = {
-            treeShake:true,
+            treeShake:false,
             options: {
                variations:false
             }
