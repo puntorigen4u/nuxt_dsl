@@ -1915,6 +1915,35 @@ ${cur.attr('name')}: {
         //this.x_console.outT({ message:'future package.json', data:data});
     }
 
+    async createVSCodeHelpers({ vetur=true }={}) {
+        // creates Visual Studio code common helpers
+        let path = require('path');
+        // creates /tsconfig.json file for Vetur and IntelliSense
+        if (vetur==true) {
+            let data = {
+                include: [ './client/**/*' ],
+                compilerOptions: {
+                    module: 'es2015',
+                    moduleResolution: 'node',
+                    target: 'es5',
+                    sourceMap: true,
+                    allowJs: true,
+                    paths: {
+                        '~/*': ['./client/*'],
+                        '@/*': ['./client/*'],
+                        '~~/*': ['./*'],
+                        '@@/*': ['./*'] 
+                    }
+                },
+                exclude: ['node_modules','.nuxt','dist','secrets']
+            };
+            //write to disk
+            let target = path.join(this.x_state.dirs.app,`tsconfig.json`);
+            let content = JSON.stringify(data);
+            await this.writeFile(target,content);
+        }
+    }
+
     async createServerlessYML() {
         let yaml = require('yaml'), data = {};
         let deploy = this.x_state.central_config.deploy+'';
@@ -2159,7 +2188,7 @@ ${cur.attr('name')}: {
         // *************************
         // copy/write related files
         // *************************
-        // copy static required files for known NPMs packages (gif.js) @TODO improved this ugly hack  
+        // copy static required files for known NPMs packages (gif.js) @TODO improve this ugly hack  
         //this.x_state.npm['gif.js'] = '*';
         if (this.x_state.npm['gif.js']) {
             this.x_console.outT({ message: `downloading required gif.worker.js file for gif.js npm package`, color: 'yellow' });
@@ -2203,6 +2232,8 @@ ${cur.attr('name')}: {
             await this.createNuxtConfig()
             //create package.json
             await this.createPackageJSON();
+            //create VSCode helpers
+            await this.createVSCodeHelpers();
             //create serverless.yml for deploy:sls - cfc:12881
             await this.createServerlessYML();
             //execute deploy (npm install, etc) - moved to onEnd
