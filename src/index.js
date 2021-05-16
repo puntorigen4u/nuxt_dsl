@@ -1915,33 +1915,31 @@ ${cur.attr('name')}: {
         //this.x_console.outT({ message:'future package.json', data:data});
     }
 
-    async createVSCodeHelpers({ vetur=true }={}) {
+    async createVSCodeHelpers() {
         // creates Visual Studio code common helpers
         let path = require('path');
         // creates /tsconfig.json file for Vetur and IntelliSense
-        if (vetur==true) {
-            let data = {
-                include: [ './client/**/*' ],
-                compilerOptions: {
-                    module: 'es2015',
-                    moduleResolution: 'node',
-                    target: 'es5',
-                    sourceMap: true,
-                    allowJs: true,
-                    paths: {
-                        '~/*': ['./client/*'],
-                        '@/*': ['./client/*'],
-                        '~~/*': ['./*'],
-                        '@@/*': ['./*'] 
-                    }
-                },
-                exclude: ['node_modules','.nuxt','dist','secrets']
-            };
-            //write to disk
-            let target = path.join(this.x_state.dirs.app,`tsconfig.json`);
-            let content = JSON.stringify(data);
-            await this.writeFile(target,content);
-        }
+        let data = {
+            include: [ './client/**/*' ],
+            compilerOptions: {
+                module: 'es2015',
+                moduleResolution: 'node',
+                target: 'es5',
+                sourceMap: true,
+                allowJs: true,
+                paths: {
+                    '~/*': ['./client/*'],
+                    '@/*': ['./client/*'],
+                    '~~/*': ['./*'],
+                    '@@/*': ['./*'] 
+                }
+            },
+            exclude: ['node_modules','.nuxt','dist','secrets']
+        };
+        //write to disk
+        let target = path.join(this.x_state.dirs.app,`tsconfig.json`);
+        let content = JSON.stringify(data);
+        await this.writeFile(target,content);
     }
 
     async createServerlessYML() {
