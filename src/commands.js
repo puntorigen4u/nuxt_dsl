@@ -180,7 +180,7 @@ module.exports = async function(context) {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
         'meta': {...null_template, ...{
                 name: 'NuxtJS / Vuetify',
-                version: '0.0.5',
+                version: '0.0.7',
                 x_level: '2000',
             }
         },
@@ -3274,14 +3274,14 @@ module.exports = async function(context) {
         'def_qrcode': {
         	x_level: '>3',
         	x_icons: 'idea',
-            x_text_exact: 'qrcode',
+            x_text_contains: 'qrcode',
             //x_not_empty: 'attributes[:src]',
             x_or_hasparent: 'def_page,def_componente,def_layout',
             hint: 'Agrega un codigo QR en el lugar.',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
-                let options = aliases2params('def_imagen', node);
-                //code
+                let options = aliases2params('def_qrcode', node);
+                //code.
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->`;
                 //translate asset if defined
                 for (let x in options) {
@@ -3292,9 +3292,11 @@ module.exports = async function(context) {
                 }
                 let params = {};
                 if (options.value) params.value = options.value;
-                if (options[':value']) params[':value'] = options.value;
+                if (options[':value']) params[':value'] = options[':value'];
+                if (options.ref) params.ref = options.ref;
                 delete options.value; delete options[':value'];
                 delete options.refx;
+                delete options.ref;
                 params[':options'] = options;
                 // install plugin
                 context.x_state.plugins['@chenfengyuan/vue-qrcode'] = {
