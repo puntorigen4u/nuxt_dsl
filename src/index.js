@@ -9,6 +9,7 @@ const concepto = require('concepto');
  **/
 //import internal_commands from './commands'
 import deploy_local from './deploys/local'
+import deploy_remote from './deploys/remote'
 import deploy_eb from './deploys/eb'
 
 export default class vue_dsl extends concepto {
@@ -315,6 +316,9 @@ Vue.use(VueMask);`,
             } else if (deploy=='local') {
                 this.deploy_module = new deploy_local({ context:this }); 
                 //
+            } else if (deploy=='remote') {
+                this.deploy_module = new deploy_remote({ context:this }); 
+
             } else if (deploy=='localsls') {
                 //sls local deployment
 
@@ -1707,7 +1711,7 @@ ${cur.attr('name')}: {
                     ax_config.browserBaseURL = this.x_state.config_node.axios.deploy;
                     delete ax_config.deploy;
                 }
-            } else if (deploy=='local') {
+            } else if (deploy=='local' || deploy=='remote') {
                 if (this.x_state.config_node.axios.local) {
                     ax_config.baseURL = this.x_state.config_node.axios.local;
                     ax_config.browserBaseURL = this.x_state.config_node.axios.local;
@@ -1717,6 +1721,7 @@ ${cur.attr('name')}: {
                 }
                 delete ax_config.deploy;
             }
+            if (deploy=='remote') this.x_state.config_node.axios.https=true;
             config.axios = ax_config;
             delete this.x_state.config_node.axios;
         }
