@@ -1362,6 +1362,25 @@ module.exports = async function(context) {
                     params[':customStrings'] = { drag: params.placeholder };
                     delete params.placeholder;
                 }
+                // transform numeric valuas as :key
+                let isNumeric = function(n) {
+                    return !isNaN(parseFloat(n)) && isFinite(n);
+                };
+                for (let key in params) {
+                    if (key.charAt(0)!=':' && 
+                        (params[key].charAt(0)!='0' || params[key]=='0') && (
+                            isNumeric(params[key])==true || 
+                            params[key]=='true' || 
+                            params[key]=='false'
+                        )
+                    ) {
+                        params[':'+key] = params[key];
+                        delete params[key];
+                    } else if (!isNaN(params[key]) && params[key].toString().indexOf('.') != -1) {
+                        params[':'+key] = params[key];
+                        delete params[key];
+                    }
+                }
                 // add plugin
                 context.x_state.plugins['vue-picture-input'] = {
                     global: true,
