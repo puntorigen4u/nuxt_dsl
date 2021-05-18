@@ -184,7 +184,7 @@ module.exports = async function(context) {
         //'cancel': {...null_template,...{ x_icons:'button_cancel'} },
         'meta': {...null_template, ...{
                 name: 'NuxtJS / Vuetify',
-                version: '0.0.8',
+                version: '0.0.7',
                 x_level: '2000',
             }
         },
@@ -1261,7 +1261,8 @@ module.exports = async function(context) {
                         });
                         // replace {{ x }} with {{ item.x }}
                         vars.map(old => {
-                            new_val.replaceAll(old, `item.${old.trim()}`);
+                            let oldt = old.trim();
+                            new_val = new_val.replaceAll(oldt, `item.${oldt}`);
                         });
                         // if starts with "{{ ", remove
                         if (new_val.slice(0, 3) == '{{ ') new_val = new_val.slice(3);

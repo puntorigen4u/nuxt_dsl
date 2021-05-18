@@ -12,6 +12,23 @@ export default class local extends base_deploy {
         super({ context, name:'Local' });
     }
 
+    async modifyNuxtConfig(config) {
+        let deploy = this.context.x_state.central_config.deploy+'';
+        if (this.context.x_state.config_node.axios) {
+            let ax_config = config.axios;
+            if (this.context.x_state.config_node.axios.local) {
+                ax_config.baseURL = this.context.x_state.config_node.axios.local;
+                ax_config.browserBaseURL = this.context.x_state.config_node.axios.local;
+                delete ax_config.local;
+                if (this.context.x_state.config_node.axios.local.includes('127.0.0.1')) 
+                    this.context.x_state.config_node.axios.https=false;
+            }
+            delete ax_config.deploy;
+            config.axios = ax_config;
+        }
+        return config;
+    }
+
     async deploy() {
         let build={};
         if ((await this._isLocalServerRunning())==false) {

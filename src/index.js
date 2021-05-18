@@ -1617,7 +1617,7 @@ ${cur.attr('name')}: {
         let target_val = (this.x_state.central_config.static==true)?'static':'server';
         let deploy = this.x_state.central_config.deploy+'';
         let config = {
-            ssr:false, //8may21 forced psb
+            ssr:true, //8may21 forced psb,18may default true
             target:target_val,
             components: true,
             telemetry: false,
@@ -1647,7 +1647,7 @@ ${cur.attr('name')}: {
             },
             srcDir: 'client/',
             performance: {
-                gzip: false
+                gzip: true
             },
             router: {
                 base: '/'
@@ -1656,6 +1656,7 @@ ${cur.attr('name')}: {
         };
         if (this.x_state.central_config.static==true) {
             config.ssr=false;
+            config.performance.gzip = false;
         }
         //add title:meta data
         if (this.x_state.config_node['nuxt:meta']) {
@@ -1708,6 +1709,7 @@ ${cur.attr('name')}: {
                 delete ax_config.retries;
                 this.x_state.npm['axios-retry']='*';
             }
+            /*
             if (deploy.includes('eb:') || deploy.includes('true')) {
                 if (this.x_state.config_node.axios.deploy) {
                     ax_config.baseURL = this.x_state.config_node.axios.deploy;
@@ -1723,9 +1725,9 @@ ${cur.attr('name')}: {
                         this.x_state.config_node.axios.https=false;
                 }
                 delete ax_config.deploy;
-            }
+            }*/
             config.axios = ax_config;
-            delete this.x_state.config_node.axios;
+            //delete this.x_state.config_node.axios;
         }
         //nuxt vue config
         if (this.x_state.config_node['vue:config']) {
@@ -1838,6 +1840,7 @@ ${cur.attr('name')}: {
         //we don't need webpack build rules in this edition:omit from cfc, so we are ready here
         //let util = require('util');
         //let content = util.inspect(config,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
+        config = await this.deploy_module.modifyNuxtConfig(config);
         let content = this.jsDump(config).replaceAll("'`","`").replaceAll("`'","`");
         await this.writeFile(target,`export default ${content}`);
         //this.x_console.outT({ message:'future nuxt.config.js', data:data});
@@ -1905,7 +1908,7 @@ ${cur.attr('name')}: {
         //if port is not 3000
         if (this.x_state.central_config.port!=3000) data.scripts.dev = `nuxt --port ${this.x_state.central_config.port}`;
         if (this.x_state.central_config[':hostname']) data.scripts.dev += ` --hostname '${this.x_state.central_config[':hostname']}'`;
-        if (this.x_state.central_config.deploy=='remote' && !this.x_state.central_config[':hostname']) data.scripts.dev += ` --hostname '0.0.0.0'`;
+        //if (this.x_state.central_config.deploy=='remote' && !this.x_state.central_config[':hostname']) data.scripts.dev += ` --hostname '0.0.0.0'`;
         if (this.x_state.central_config[':version']) data.version = this.x_state.central_config[':version'];
         if (this.x_state.central_config[':author']) data.author = this.x_state.central_config[':author'];
         if (this.x_state.central_config[':license']) data.license = this.x_state.central_config[':license'];
@@ -1939,6 +1942,7 @@ ${cur.attr('name')}: {
         //write to disk
         let path = require('path');
         let target = path.join(this.x_state.dirs.app,`package.json`);
+        data = await this.deploy_module.modifyPackageJSON(data);
         let content = JSON.stringify(data);
         await this.writeFile(target,content);
         //this.x_console.outT({ message:'future package.json', data:data});
@@ -2691,6 +2695,8 @@ ${cur.attr('name')}: {
                 ob=='0' || 
                 ob=='true' || ob=='false')
                 ) {
+                nuevo += ob;
+            } else if (!isNaN(ob) && ob.toString().indexOf('.') != -1) {
                 nuevo += ob;
             } else if (typeof ob === 'string') {
                 nuevo += `'${ob}'`;

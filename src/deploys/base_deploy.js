@@ -103,6 +103,12 @@ export default class base_deploy {
     }
     async post() {
     }
+    async modifyPackageJSON(data) {
+        return data;
+    }
+    async modifyNuxtConfig(config) {
+        return config;
+    }
 
     // HELPER methods
     async exists(dir_or_file) {

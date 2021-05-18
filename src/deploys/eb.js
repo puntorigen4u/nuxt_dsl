@@ -23,6 +23,18 @@ export default class eb extends base_deploy {
         console.log(logo_txt);
     }
 
+    async modifyNuxtConfig(config) {
+        let deploy = this.context.x_state.central_config.deploy+'';
+        if (this.context.x_state.config_node.axios && this.context.x_state.config_node.axios.deploy) {
+            let ax_config = config.axios;
+            ax_config.baseURL = this.context.x_state.config_node.axios.deploy;
+            ax_config.browserBaseURL = this.context.x_state.config_node.axios.deploy;
+            delete ax_config.deploy;
+            config.axios = ax_config;
+        }
+        return config;
+    }
+
     async deploy() {
         let build={};
         this.context.x_console.title({ title:'Deploying to Amazon AWS Elastic Bean', color:'green' });
