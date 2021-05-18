@@ -1721,7 +1721,6 @@ ${cur.attr('name')}: {
                 }
                 delete ax_config.deploy;
             }
-            if (deploy=='remote') this.x_state.config_node.axios.https=true;
             config.axios = ax_config;
             delete this.x_state.config_node.axios;
         }
@@ -1882,6 +1881,8 @@ ${cur.attr('name')}: {
         }
         //if port is not 3000
         if (this.x_state.central_config.port!=3000) data.scripts.dev = `nuxt --port ${this.x_state.central_config.port}`;
+        if (this.x_state.central_config[':hostname']) data.scripts.dev += ` --hostname '${this.x_state.central_config[':hostname']}'`;
+        if (this.x_state.central_config.deploy=='remote' && !this.x_state.central_config[':hostname']) data.scripts.dev += ` --hostname '0.0.0.0'`;
         if (this.x_state.central_config[':version']) data.version = this.x_state.central_config[':version'];
         if (this.x_state.central_config[':author']) data.author = this.x_state.central_config[':author'];
         if (this.x_state.central_config[':license']) data.license = this.x_state.central_config[':license'];
