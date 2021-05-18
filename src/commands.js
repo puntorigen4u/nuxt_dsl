@@ -1012,6 +1012,7 @@ module.exports = async function(context) {
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams(tag_name, params, false) + '\n';
                 resp.close = `</${tag_name}>\n`;
+                resp.state.friendly_name = tag_name.split('-').splice(-1)[0].trim();
                 resp.state.from_componente=true;
                 return resp;
             }
