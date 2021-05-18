@@ -1947,15 +1947,15 @@ ${cur.attr('name')}: {
     async createVSCodeHelpers() {
         // creates Visual Studio code common helpers
         let path = require('path');
-        // creates /tsconfig.json file for Vetur and IntelliSense
+        // creates /jsconfig.json file for Vetur and IntelliSense
         let data = {
             include: [ './client/**/*' ],
             compilerOptions: {
+                baseUrl: './',
                 module: 'es2015',
                 moduleResolution: 'node',
                 target: 'es5',
                 sourceMap: true,
-                allowJs: true,
                 paths: {
                     '~/*': ['./client/*'],
                     '@/*': ['./client/*'],
@@ -1966,7 +1966,7 @@ ${cur.attr('name')}: {
             exclude: ['node_modules','.nuxt','dist','secrets']
         };
         //write to disk
-        let target = path.join(this.x_state.dirs.app,`tsconfig.json`);
+        let target = path.join(this.x_state.dirs.app,`jsconfig.json`);
         let content = JSON.stringify(data);
         await this.writeFile(target,content);
     }
