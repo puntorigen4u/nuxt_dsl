@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "vue_dsl",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -30,7 +30,8 @@
     "test_www": "npm run dev && node test/pablo.js test/www/vue.dsl",
     "test_dsls": "npm run dev && node test/pablo.js test/spotify/vue.dsl",
     "test_dsle": "npm run dev && node test/pablo.js test/ejecutivos/vue.dsl",
-    "test_dslm": "npm run dev && node test/pablo.js test/master/vue.dsl"
+    "test_dslm": "npm run dev && node test/pablo.js test/master/vue.dsl",
+    "test_dsla": "npm run dev && node test/pablo.js test/apoderado/vue.dsl"
   },
   "dependencies": {
     "asciify-image": "^0.1.6",
