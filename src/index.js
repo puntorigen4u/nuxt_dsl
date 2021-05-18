@@ -1654,6 +1654,9 @@ ${cur.attr('name')}: {
             },
             dev: false
         };
+        if (this.x_state.central_config.static==true) {
+            config.ssr=false;
+        }
         //add title:meta data
         if (this.x_state.config_node['nuxt:meta']) {
             for (let meta_key in this.x_state.config_node['nuxt:meta']) {
@@ -1809,6 +1812,26 @@ ${cur.attr('name')}: {
                 }
             }*/
         };
+        if (this.x_state.central_config.static==true) {
+            config.build.html = {
+                minify: {
+                    collapseBooleanAttributes: true,
+                    decodeEntities: true,
+                    minifyCSS: true,
+                    minifyJS: true,
+                    processConditionalComments: true,
+                    removeEmptyAttributes: true,
+                    removeRedundantAttributes: true,
+                    trimCustomFragments: true,
+                    useShortDoctype: true,
+                    minifyURLs: true,
+                    removeComments: true,
+                    removeEmptyElements: true,
+                    preserveLineBreaks: false,
+                    collapseWhitespace: true
+                }
+            };
+        }
         if (this.x_state.central_config.stage && this.x_state.central_config.stage!='production' && this.x_state.central_config.stage!='prod') {
             config.build.publicPath = `/${this.x_state.central_config.stage}/_nuxt/`;
         }
@@ -1829,11 +1852,11 @@ ${cur.attr('name')}: {
             dependencies: {},
             devDependencies: {},
             scripts: {
-                dev: 'nuxt',
-                build: 'nuxt export --no-lock',
-                start: 'nuxt export && nuxt serve',
-                generate: 'nuxt export',
-                deploy: 'nuxt export --no-lock && eb deploy',
+                dev: 'nuxt generate && nuxt start',
+                build: 'nuxt generate --no-lock',
+                start: 'nuxt generate && nuxt start',
+                generate: 'nuxt generate',
+                deploy: 'nuxt generate --no-lock && eb deploy',
                 'start-server': 'nuxt build && node app.js',
                 'start-sls': 'nuxt build && sls offline start'
             },
