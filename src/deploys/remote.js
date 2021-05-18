@@ -14,7 +14,7 @@ export default class remote extends base_deploy {
 
     async deploy() {
         let build={};
-        if ((await this._isLocalServerRunning())==false) {
+        if ((await this._isLocalServerRunning())==false || this.context.x_state.central_config.static==true) {
             this.context.x_console.title({ title:'Deploying NuxtJS instance with remote access', color:'green' });
             await this.logo();
             //only launch nuxt server if its not running already
@@ -30,7 +30,7 @@ export default class remote extends base_deploy {
                 this.context.x_console.outT({ message:`There was an error deploying locally.`, color:'red', data:build.deploy_local.toString()});
                 return false;
             }
-                
+            
         } else {
             this.context.x_console.title({ title:'Updating local running NuxtJS instance', color:'green' });
             await this.logo();

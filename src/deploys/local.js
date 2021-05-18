@@ -14,7 +14,7 @@ export default class local extends base_deploy {
 
     async deploy() {
         let build={};
-        if ((await this._isLocalServerRunning())==false) {
+        if ((await this._isLocalServerRunning())==false || this.context.x_state.central_config.static==true) {
             this.context.x_console.title({ title:'Deploying Local NuxtJS instance', color:'green' });
             await this.logo();
             //only launch nuxt server if its not running already
