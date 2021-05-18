@@ -3751,7 +3751,7 @@ module.exports = async function(context) {
                     }
                     await setImmediatePromise(); //@improved
                 };
-                if (!did_match) throw 'no matching condicion node for case: '+node.text;
+                if (!did_match) throw `no matching pattern 'condicion' node for case!`;
 
                 // extract the values
                 let extract = require('extractjs')();
