@@ -13,7 +13,6 @@ export default class local extends base_deploy {
     }
 
     async modifyNuxtConfig(config) {
-        let deploy = this.context.x_state.central_config.deploy+'';
         if (this.context.x_state.config_node.axios) {
             let ax_config = config.axios;
             if (this.context.x_state.config_node.axios.local) {

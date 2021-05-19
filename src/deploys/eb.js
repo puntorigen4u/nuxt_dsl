@@ -24,7 +24,6 @@ export default class eb extends base_deploy {
     }
 
     async modifyNuxtConfig(config) {
-        let deploy = this.context.x_state.central_config.deploy+'';
         if (this.context.x_state.config_node.axios && this.context.x_state.config_node.axios.deploy) {
             let ax_config = config.axios;
             ax_config.baseURL = this.context.x_state.config_node.axios.deploy;

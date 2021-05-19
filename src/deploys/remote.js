@@ -19,7 +19,6 @@ export default class remote extends base_deploy {
         return data;
     }
     async modifyNuxtConfig(config) {
-        let deploy = this.context.x_state.central_config.deploy+'';
         if (this.context.x_state.config_node.axios) {
             let ax_config = config.axios;
             if (this.context.x_state.config_node.axios.local) {
@@ -32,6 +31,11 @@ export default class remote extends base_deploy {
             delete ax_config.deploy;
             config.axios = ax_config;
         }
+        //force a static build
+        config.ssr = false;
+        config.target = 'static';
+        config.performance.gzip = false;
+        //return
         return config;
     }
 
