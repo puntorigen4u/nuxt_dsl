@@ -5551,11 +5551,10 @@ module.exports = async function(context) {
                 // prepare
                 let tmp = { link:node.link, target:'' };
                 let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
-                if (link_node && link_node.valid==true) {
+                if (link_node && link_node.valid==true && link_node.text.trim()!='') {
                     tmp.target = `{vuepath:${link_node.text}}`;
                 } else {
-                    context.x_console.outT({ message:`enviar a pantalla, invalid linked node`, color:'red', data:link_node });
-                    throw `Invalid 'enviar a pantalla' linked node`;
+                    throw `Invalid 'enviar a pantalla' linked node!`;
                 }
                 //code
                 //if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
