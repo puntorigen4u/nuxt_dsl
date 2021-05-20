@@ -11,6 +11,7 @@ const concepto = require('concepto');
 import deploy_local from './deploys/local'
 import deploy_remote from './deploys/remote'
 import deploy_eb from './deploys/eb'
+import deploy_ghpages from './deploys/ghpages'
 
 export default class vue_dsl extends concepto {
 
@@ -317,7 +318,10 @@ Vue.use(VueMask);`,
                 this.deploy_module = new deploy_local({ context:this }); 
                 //
             } else if (deploy=='remote') {
-                this.deploy_module = new deploy_remote({ context:this }); 
+                this.deploy_module = new deploy_remote({ context:this });
+
+            } else if (deploy=='ghpages') {
+                this.deploy_module = new deploy_ghpages({ context:this });
 
             } else if (deploy=='localsls') {
                 //sls local deployment
