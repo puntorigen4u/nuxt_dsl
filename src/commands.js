@@ -4307,12 +4307,17 @@ module.exports = async function(context) {
                         copy_dad.pop();
                         //console.log('my dad path is '+copy_dad.join('.'));
                         let daddy = getVal(context.x_state.pages[state.current_page].variables, copy_dad.join('.'));
-                        //console.log('daddy says:',daddy);
+                        console.log('daddy says:',daddy);
                         if (tmp.type == 'script') {
                             // if we are a script node, just push our values, and not ourselfs.
-                            params.value.map(i => {
-                                daddy.push(i);
-                            });
+                            if (Array.isArray(params.value)) {
+                                params.value.map(i => {
+                                    daddy.push(i);
+                                });
+                            } else if (typeof params.value == 'object') {
+                                daddy = params.value;
+                            }
+
                         } else if (tmp.field != params.value) {
                             // push as object (array of objects)
                             let tmpi = {};
