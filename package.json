@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "vue_dsl",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -28,7 +28,7 @@
     "docs": "jsdoc2md -t README.hbs src/*.js > README.md",
     "test_dsl": "npm run dev && node test/pablo.js test/testchico/vue.dsl",
     "test_www": "npm run dev && node test/pablo.js test/www/vue.dsl",
-    "test_dsls": "npm run dev && node test/pablo.js test/spotify/vue.dsl",
+    "test_dsls": "npm run dev && node test/pablo.js test/sitio/vue.dsl",
     "test_dsle": "npm run dev && node test/pablo.js test/ejecutivos/vue.dsl",
     "test_dslm": "npm run dev && node test/pablo.js test/master/vue.dsl",
     "test_dsla": "npm run dev && node test/pablo.js test/apoderado/vue.dsl"
@@ -57,6 +57,7 @@
     "open-terminal": "^0.1.11",
     "ora": "^5.4.0",
     "prettier": "^2.2.1",
+    "print-code": "^1.0.2",
     "recursive-copy": "^2.0.10",
     "safe-eval": "^0.4.1",
     "terminal-tab": "^0.0.7",

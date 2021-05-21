@@ -334,7 +334,9 @@ Vue.use(VueMask);`,
     }
 
     //Executed when compiler founds an error processing nodes.
-    async onErrors(errors) {}
+    async onErrors(errors) {
+        this.errors_found=true;
+    }
 
     //configNode helper
     async generalConfigSetup() {
@@ -1876,6 +1878,7 @@ ${cur.attr('name')}: {
         //if not static
         if (!this.x_state.central_config.static) {
             data.scripts = {...data.scripts, ...{
+                dev: 'nuxt --no-lock',
                 build: 'nuxt build --no-lock',
                 start: 'nuxt start --no-lock',
                 generate: 'nuxt generate',
@@ -2075,10 +2078,13 @@ ${cur.attr('name')}: {
 
     async onEnd() {
         //execute deploy (npm install, etc) AFTER vue compilation (18-4-21: this is new)
-        if (!(await this.deploy_module.deploy()) && !this.x_state.central_config.componente) {
-            this.x_console.outT({ message:'Something went wrong deploying, check the console, fix it and run again.', color:'red' });
-        };
-        await this.deploy_module.post();
+        if (!this.errors_found) {
+            //only deploy if no errors were found
+            if (!(await this.deploy_module.deploy()) && !this.x_state.central_config.componente) {
+                this.x_console.outT({ message:'Something went wrong deploying, check the console, fix it and run again.', color:'red' });
+            };
+            await this.deploy_module.post();
+        }
     }
 
     async exists(dir_or_file) {
