@@ -1844,7 +1844,9 @@ ${cur.attr('name')}: {
         //we don't need webpack build rules in this edition:omit from cfc, so we are ready here
         //let util = require('util');
         //let content = util.inspect(config,{ depth:Infinity }).replaceAll("'`","`").replaceAll("`'","`");
-        config = await this.deploy_module.modifyNuxtConfig(config);
+        if (this.deploy_module.modifyNuxtConfig) {
+            config = await this.deploy_module.modifyNuxtConfig(config);
+        }
         let content = this.jsDump(config).replaceAll("'`","`").replaceAll("`'","`");
         await this.writeFile(target,`export default ${content}`);
         //this.x_console.outT({ message:'future nuxt.config.js', data:data});
@@ -1946,7 +1948,9 @@ ${cur.attr('name')}: {
         //write to disk
         let path = require('path');
         let target = path.join(this.x_state.dirs.app,`package.json`);
-        data = await this.deploy_module.modifyPackageJSON(data);
+        if (this.deploy_module.modifyPackageJSON) {
+            data = await this.deploy_module.modifyPackageJSON(data);
+        }
         let content = JSON.stringify(data);
         await this.writeFile(target,content);
         //this.x_console.outT({ message:'future package.json', data:data});

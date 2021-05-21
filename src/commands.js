@@ -4186,7 +4186,10 @@ module.exports = async function(context) {
                     params.value = node.text.trim().replaceAll('&#xa;', '')
                         .replaceAll('&apos;', '"')
                         .replaceAll('&#xf1;', 'ñ');
+                    let copy_test = [...resp.state.vars_types];
                     if (params.value.charAt(0) != '[' && params.value.charAt(0) != '{') {
+                        params.value = '[' + params.value + ']';
+                    } else if (copy_test.pop()=='array' && params.value.charAt(0) != '[') {
                         params.value = '[' + params.value + ']';
                     }
                     let convertjs = require('safe-eval');
@@ -4298,24 +4301,25 @@ module.exports = async function(context) {
                     //console.log('MY DAD TYPE:'+resp.state.vars_types[resp.state.vars_types.length - 2]);
                     if (resp.state.vars_types[resp.state.vars_types.length - 2] == 'object') {
                         // dad was an object
-                        //console.log('dad was an object',resp.state.vars_types[resp.state.vars_types.length-1]);
-                        setToValue(context.x_state.pages[state.current_page].variables, params.value, resp.state.vars_path.join('.'));
+                        let copy_dad = [...resp.state.vars_path];
+                        if (typeof params.value == 'object' && resp.state.vars_types[resp.state.vars_types.length-1] == 'script') {
+                            copy_dad.pop();
+                        }
+                        setToValue(context.x_state.pages[state.current_page].variables, params.value, copy_dad.join('.'));
                     } else if (resp.state.vars_types[resp.state.vars_types.length - 2] == 'array') {
-                        //console.log('dad was an array',resp.state.vars_types[resp.state.vars_types.length-1]);
+                        //console.log('dad was an array',{ type:resp.state.vars_types[resp.state.vars_types.length-1], path:resp.state.vars_path});
                         // dad is an array.. 
                         let copy_dad = [...resp.state.vars_path];
                         copy_dad.pop();
                         //console.log('my dad path is '+copy_dad.join('.'));
                         let daddy = getVal(context.x_state.pages[state.current_page].variables, copy_dad.join('.'));
-                        console.log('daddy says:',daddy);
+                        //console.log('daddy says:',daddy);
                         if (tmp.type == 'script') {
                             // if we are a script node, just push our values, and not ourselfs.
                             if (Array.isArray(params.value)) {
                                 params.value.map(i => {
                                     daddy.push(i);
                                 });
-                            } else if (typeof params.value == 'object') {
-                                daddy = params.value;
                             }
 
                         } else if (tmp.field != params.value) {
