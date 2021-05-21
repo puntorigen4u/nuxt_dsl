@@ -3769,6 +3769,7 @@ module.exports = async function(context) {
                 
                 let elements = {...defaults,...extract(patterns[which],text_trim)};
                 // pre-process elements
+                let original_value = elements.value;
                 if (typeof elements.variable === 'string' && elements.variable.includes('**') && node.icons.includes('bell')) elements.variable = getTranslatedTextVar(elements.variable);
                 if (typeof elements.value === 'string' && elements.value.includes('**') && node.icons.includes('bell')) elements.value = getTranslatedTextVar(elements.value);
                 if (typeof elements.variable === 'string' && (elements.variable.includes('$variables.') || 
@@ -3844,6 +3845,9 @@ module.exports = async function(context) {
                         let temp = elements.value.right(elements.value.length-1);
                         params.expresion = `${elements.variable} == ${temp}`;
                     } else if (typeof elements.value === 'string' && (elements.value=='true' || elements.value=='false' || isNumeric(elements.value))) {
+                        params.expresion = `${elements.variable} == ${elements.value}`;
+                    } else if (original_value.includes('**') && elements.value!=original_value) {
+                        //means it had variables
                         params.expresion = `${elements.variable} == ${elements.value}`;
                     } else {
                         params.expresion = `${elements.variable} == ${escape_value(elements.value)}`;
