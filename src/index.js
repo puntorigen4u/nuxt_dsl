@@ -2215,13 +2215,23 @@ ${cur.attr('name')}: {
                 // write files
                 let w_path = path.join(this.x_state.dirs.pages, thefile.file);
                 if (page.tipo == 'componente') {
-                    this.x_console.outT({ message: `trying to write vue 'component' file ${thefile.file}`, color: 'cyan' });
+                    this.x_console.outT({ message: `writing vue 'component' file ${thefile.file}`, color: 'cyan' });
                     w_path = path.join(this.x_state.dirs.components, thefile.file);
+                    if (page.for_bit) {
+                        // save component version for publishing component with bit.dev
+                        let bitj = thefile.file.replace('.vue','.json');
+                        this.x_console.outT({ message: `writing dsl 'component' file ${bitj} (for bit.dev support)`, color: 'brightCyan' });
+                        let bit_file = path.join(this.x_state.dirs.components, bitj);
+                        await this.writeFile(bit_file, page.for_bit);
+                    }
+                    //let inspect = require('util').inspect;
+                    //if (page.for_bit) console.log('for bit before writing',inspect(JSON.parse(page.for_bit),{ depth:Infinity }));
+                    
                 } else if (page.tipo == 'layout') {
-                    this.x_console.outT({ message: `trying to write vue 'layout' file ${thefile.file}`, color: 'cyan' });
+                    this.x_console.outT({ message: `writing vue 'layout' file ${thefile.file}`, color: 'cyan' });
                     w_path = path.join(this.x_state.dirs.layouts, thefile.file);
                 } else {
-                    this.x_console.outT({ message: `trying to write vue 'page' file ${thefile.file}`, color: 'cyan' });
+                    this.x_console.outT({ message: `writing vue 'page' file ${thefile.file}`, color: 'cyan' });
                 }
                 await this.writeFile(w_path, vue.full);
                 //

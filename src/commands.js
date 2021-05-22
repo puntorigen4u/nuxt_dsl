@@ -645,7 +645,12 @@ module.exports = async function(context) {
                     };
                 }
                 if (resp.state.from_def_layout) context.x_state.pages[resp.state.current_page].tipo = 'layout';
-                if (resp.state.from_def_componente) context.x_state.pages[resp.state.current_page].tipo = 'componente';
+                if (resp.state.from_def_componente) {
+                    context.x_state.pages[resp.state.current_page].tipo = 'componente';
+                    if (resp.state.for_bit) {
+                        context.x_state.pages[resp.state.current_page].for_bit = resp.state.for_bit;
+                    }
+                }
                 // is this a 'home' page ?
                 if (node.icons.includes('gohome')) context.x_state.pages[resp.state.current_page].path = '/';
                 // attributes overwrite anything
@@ -973,26 +978,52 @@ module.exports = async function(context) {
             x_not_icons: 'button_cancel,desktop_new,list,help,idea',
             x_text_contains: 'componente:',
             x_empty: 'icons',
+            // if def_page,def_assets code changes, also recompile def_componente nodes 
+            x_watch: 'def_page,def_assets', 
             hint: 'Archivo vue tipo componente',
             func: async function(node, state) {
                 let resp = context.reply_template({
                     state
                 });
-                /*
-                if (Object.keys(node.attributes).includes('bit')) {
-                    // save node code for bit re-import
-                    let source = await context.dsl_parser.getNode({ id:node.id, nodes_raw:false, recurse:true });
-                    //let dsl_code = source.$.toArray(); //parent().find(`node[ID=${node.id}]`).
-                    let viewer = require('util').inspect;
-                    console.log('PABLO debug ',viewer(source,{ depth:Infinity }));
-                }*/
-                // call def_page for functionality informing we are calling from def_componente using state.
-                resp = await context.x_commands['def_page'].func(node, {...state,
+                let new_state = {...state,
                     ... {
                         from_def_componente: true
                     }
-                });
+                };
+                /* */
+                if (node.attributes.bit) {
+                    let for_bit_import = { name:node.attributes.bit };
+                    // save node code for bit re-import
+                    for_bit_import.source = await context.dsl_parser.getNode({ id:node.id, nodes_raw:false, recurse:true });                    
+                    // extract assets defined within source
+                    let search_assets = function(node) {
+                        let assets = [];
+                        for (let att in node.attributes) {
+                            if (node.attributes[att].includes('assets:')) {
+                                assets.push(node.attributes[att].replace('assets:',''));
+                            }
+                        }
+                        for (let no in node.nodes) {
+                            assets = [...assets,...search_assets(node.nodes[no])];
+                        }
+                        return assets;
+                    };
+                    let tmp_assets = search_assets(for_bit_import.source);
+                    // get real file for assets
+                    for_bit_import.assets = {};
+                    for (let as in tmp_assets) {
+                        let asset_ = tmp_assets[as];
+                        if (asset_ in context.x_state.assets) {
+                            for_bit_import.assets[asset_] = context.x_state.assets[asset_];
+                        }
+                    }
+                    // export
+                    new_state.for_bit = JSON.stringify(for_bit_import);
+                }
+                // call def_page for functionality informing we are calling from def_componente using state.
+                resp = await context.x_commands['def_page'].func(node, new_state);
                 delete resp.state.from_def_componente;
+                delete resp.state.for_bit;
                 return resp;
             }
         },
@@ -5589,6 +5620,10 @@ module.exports = async function(context) {
                 let resp = context.reply_template({ state });
                 if (!state.from_script) return {...resp,...{ valid:false }};
                 if (node.link.includes('ID_')==false) return {...resp,...{ valid:false }};
+                if ((await context.hasParentID(node.id, 'def_componente'))==true) {
+                    // components should not have links to other pages, only instances
+                    throw `Invalid 'enviar a pantalla' origin node! Components can't point to other pages; use the instance for that`;
+                }
                 // prepare
                 let tmp = { link:node.link, target:'' };
                 let link_node = await context.dsl_parser.getNode({ id:node.link, recurse:false });
