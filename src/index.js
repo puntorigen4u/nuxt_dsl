@@ -2216,16 +2216,23 @@ ${cur.attr('name')}: {
                 let w_path = path.join(this.x_state.dirs.pages, thefile.file);
                 if (page.tipo == 'componente') {
                     this.x_console.outT({ message: `writing vue 'component' file ${thefile.file}`, color: 'cyan' });
-                    w_path = path.join(this.x_state.dirs.components, thefile.file);
-                    if (page.for_bit) {
-                        // save component version for publishing component with bit.dev
-                        let bitj = thefile.file.replace('.vue','.json');
-                        this.x_console.outT({ message: `writing dsl 'component' file ${bitj} (for bit.dev support)`, color: 'brightCyan' });
-                        let bit_file = path.join(this.x_state.dirs.components, bitj);
-                        await this.writeFile(bit_file, page.for_bit);
+                    w_path = path.join(this.x_state.dirs.components, thefile.file.replace('.vue',''));
+                    //create individual 'component' directory
+                    let fs = require('fs').promises;
+                    try {
+                        await fs.mkdir(w_path, { recursive:true });
+                    } catch(errdir) {
                     }
+                    if (page.for_export) {
+                        // save component version for publishing component as plugin
+                        let djson = thefile.file.replace('.vue','.json');
+                        this.x_console.outT({ message: `writing dsl 'component' file ${djson} (for export)`, color: 'brightCyan' });
+                        let dsl_file = path.join(w_path, djson);
+                        await this.writeFile(dsl_file, page.for_export);
+                    }
+                    w_path = path.join(w_path, thefile.file);
                     //let inspect = require('util').inspect;
-                    //if (page.for_bit) console.log('for bit before writing',inspect(JSON.parse(page.for_bit),{ depth:Infinity }));
+                    //if (page.for_export) console.log('for export before writing',inspect(JSON.parse(page.for_export),{ depth:Infinity }));
                     
                 } else if (page.tipo == 'layout') {
                     this.x_console.outT({ message: `writing vue 'layout' file ${thefile.file}`, color: 'cyan' });

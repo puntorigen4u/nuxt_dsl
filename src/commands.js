@@ -647,8 +647,8 @@ module.exports = async function(context) {
                 if (resp.state.from_def_layout) context.x_state.pages[resp.state.current_page].tipo = 'layout';
                 if (resp.state.from_def_componente) {
                     context.x_state.pages[resp.state.current_page].tipo = 'componente';
-                    if (resp.state.for_bit) {
-                        context.x_state.pages[resp.state.current_page].for_bit = resp.state.for_bit;
+                    if (resp.state.for_export) {
+                        context.x_state.pages[resp.state.current_page].for_export = resp.state.for_export;
                     }
                 }
                 // is this a 'home' page ?
@@ -991,10 +991,13 @@ module.exports = async function(context) {
                     }
                 };
                 /* */
-                if (node.attributes.bit) {
-                    let for_bit_import = { name:node.attributes.bit };
+                if (node.attributes.export) {
+                    let for_export_import = { name:node.text.replace('componente:','').trim() };
+                    if (node.attributes.export!='') {
+                        for_export_import.name = node.attributes.export;
+                    }
                     // save node code for bit re-import
-                    for_bit_import.source = await context.dsl_parser.getNode({ id:node.id, nodes_raw:false, recurse:true });                    
+                    for_export_import.source = await context.dsl_parser.getNode({ id:node.id, nodes_raw:false, recurse:true });                    
                     // extract assets defined within source
                     let search_assets = function(node) {
                         let assets = [];
@@ -1008,17 +1011,17 @@ module.exports = async function(context) {
                         }
                         return assets;
                     };
-                    let tmp_assets = search_assets(for_bit_import.source);
+                    let tmp_assets = search_assets(for_export_import.source);
                     // get real file for assets
-                    for_bit_import.assets = {};
+                    for_export_import.assets = {};
                     for (let as in tmp_assets) {
                         let asset_ = tmp_assets[as];
                         if (asset_ in context.x_state.assets) {
-                            for_bit_import.assets[asset_] = context.x_state.assets[asset_];
+                            for_export_import.assets[asset_] = context.x_state.assets[asset_];
                         }
                     }
                     // export
-                    new_state.for_bit = JSON.stringify(for_bit_import);
+                    new_state.for_export = JSON.stringify(for_export_import);
                 }
                 // call def_page for functionality informing we are calling from def_componente using state.
                 resp = await context.x_commands['def_page'].func(node, new_state);
@@ -1041,7 +1044,7 @@ module.exports = async function(context) {
                 let tag_name = `c-${file_name}`;
                 let var_name = file_name.replaceAll('-', '');
                 // add import to page
-                context.x_state.pages[state.current_page].imports[`~/components/${file_name}.vue`] = var_name;
+                context.x_state.pages[state.current_page].imports[`~/components/${file_name}/${file_name}.vue`] = var_name;
                 context.x_state.pages[state.current_page].components[tag_name] = var_name;
                 // process attributes and write output
                 let params = aliases2params('def_componente_view', node);
