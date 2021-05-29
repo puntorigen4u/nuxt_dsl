@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 process.env.UV_THREADPOOL_SIZE=8*require('os').cpus().length;
-const commandLineArgs = require('command-line-args');
+const cli = require('command-line-args');
 const open_console = require('open_console');
 const pkg = require('../package.json');
 const vue = require('../lib/index');
-let definitions = [
+let myArgs = cli([
     { name:'src', alias:'s', type: String },
+    { name:'clean', alias:'c', type: Boolean },
     { name:'debug', alias:'d', type: Boolean },
     { name:'help', alias:'h', type: Boolean }
-];
+]);
 
-let myArgs = commandLineArgs(definitions);
 //var myArgs = process.argv.slice(2);
 
 (async () => {
@@ -20,14 +20,15 @@ let myArgs = commandLineArgs(definitions);
     let x_console = new open_console();
     x_console.title({ title:`Concepto VUE_DSL Compiler v${pkg.version}`, titleColor:'brightYellow', color:'green' });
     let printUsage = function() {
-        x_console.out({ message:'Usage information:', color:'cyan' });
-        x_console.out({ message:'vue_dsl --src file [--debug] [--help]', color:'yellow' });
+        x_console.out({ message:'Usage:', color:'cyan' });
+        x_console.out({ message:'vue_dsl [options]', color:'yellow' });
         console.log('');
         if (myArgs.help) {
-            x_console.out({ message:'Options help:', color:'brightCyan' });
-            x_console.out({ message:'--src vue.dsl | (required) relative/absolute vue.dsl file to parse', color:'cyan' });
-            x_console.out({ message:'--debug | (optional) turns verbose logging on', color:'cyan' });
-            x_console.out({ message:'--help | this console messages', color:'cyan' });
+            x_console.out({ message:'Options:', color:'brightCyan' });
+            x_console.out({ message:'-s, --src vue.dsl\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
+            x_console.out({ message:'-c, --clean\t\tclear cache before compiling', color:'cyan' });
+            x_console.out({ message:'-d, --debug\t\tturns verbose logging on', color:'cyan' });
+            x_console.out({ message:'-h, --help\t\tthis console messages', color:'cyan' });
             console.log('');
         }
     };
@@ -36,9 +37,8 @@ let myArgs = commandLineArgs(definitions);
     } else {
         let opts = { debug:false }, file = '';
         if (myArgs.src) file = myArgs.src;
-        if (myArgs.debug) opts.debug = myArgs.debug;
         if (file!='') {
-            let base = new vue(file,opts);
+            let base = new vue(file,myArgs);
             await base.init();
             await base.addCommands(require('../lib/commands.js'));
             await base.process();
