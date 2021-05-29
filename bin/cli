@@ -1,18 +1,26 @@
 #!/usr/bin/env node
 process.env.UV_THREADPOOL_SIZE=8*require('os').cpus().length;
-const cli = require('command-line-args');
+//const cli = require('command-line-args');
 const open_console = require('open_console');
 const pkg = require('../package.json');
 const vue = require('../lib/index');
-let myArgs = cli([
-    { name:'src', alias:'s', type: String },
-    { name:'clean', alias:'c', type: Boolean },
-    { name:'debug', alias:'d', type: Boolean },
-    { name:'help', alias:'h', type: Boolean }
-]);
+const mri = require('mri');
+let myArgs = mri(process.argv, {
+    alias: {
+        src: ['s','source'],
+        clean: ['c','clear'],
+        help: ['h','ayuda'],
+        debug: 'd'
+    },
+    boolean: ['clean','debug'],
+    default: {
+        clean:false,
+        debug:false
+    }
+});
+delete myArgs._;
 
-//var myArgs = process.argv.slice(2);
-
+/* */
 (async () => {
     // testing code here
     //let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
@@ -23,14 +31,14 @@ let myArgs = cli([
         x_console.out({ message:'Usage:', color:'cyan' });
         x_console.out({ message:'vue_dsl [options]', color:'yellow' });
         console.log('');
-        if (myArgs.help) {
+        //if (myArgs.help) {
             x_console.out({ message:'Options:', color:'brightCyan' });
             x_console.out({ message:'-s, --src vue.dsl\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
             x_console.out({ message:'-c, --clean\t\tclear cache before compiling', color:'cyan' });
             x_console.out({ message:'-d, --debug\t\tturns verbose logging on', color:'cyan' });
-            x_console.out({ message:'-h, --help\t\tthis console messages', color:'cyan' });
+            x_console.out({ message:'-h, --help\t\tthis console output', color:'cyan' });
             console.log('');
-        }
+        //}
     };
     if (myArgs.help || !myArgs.src) {
         printUsage();
@@ -51,3 +59,4 @@ let myArgs = cli([
 })().catch(err => {
     console.error(err);
 });
+/* */
