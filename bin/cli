@@ -1,18 +1,53 @@
 #!/usr/bin/env node
 process.env.UV_THREADPOOL_SIZE=8*require('os').cpus().length;
+const commandLineArgs = require('command-line-args');
+const open_console = require('open_console');
+const pkg = require('../package.json');
 const vue = require('../lib/index');
-var myArgs = process.argv.slice(2);
+let definitions = [
+    { name:'src', alias:'s', type: String },
+    { name:'debug', alias:'d', type: Boolean },
+    { name:'help', alias:'h', type: Boolean }
+];
+
+let myArgs = commandLineArgs(definitions);
+//var myArgs = process.argv.slice(2);
 
 (async () => {
     // testing code here
-    let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
-    let debug = (myArgs.length>1)?eval(myArgs[1].trim()):false;
-    let base = new vue(file,{ debug });
-    await base.init();
-    await base.addCommands(require('../lib/commands.js'));
-    await base.process();
-    console.log('total time passed, since constructor: '+base.secsPassed_());
-
+    //let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
+    //let debug = (myArgs.length>1)?eval(myArgs[1].trim()):false;
+    let x_console = new open_console();
+    x_console.title({ title:`Concepto VUE_DSL Compiler v${pkg.version}`, titleColor:'brightYellow', color:'green' });
+    let printUsage = function() {
+        x_console.out({ message:'Usage information:', color:'cyan' });
+        x_console.out({ message:'vue_dsl --src file [--debug] [--help]', color:'yellow' });
+        console.log('');
+        if (myArgs.help) {
+            x_console.out({ message:'Options help:', color:'brightCyan' });
+            x_console.out({ message:'--src vue.dsl | (required) relative/absolute vue.dsl file to parse', color:'cyan' });
+            x_console.out({ message:'--debug | (optional) turns verbose logging on', color:'cyan' });
+            x_console.out({ message:'--help | this console messages', color:'cyan' });
+            console.log('');
+        }
+    };
+    if (myArgs.help || !myArgs.src) {
+        printUsage();
+    } else {
+        let opts = { debug:false }, file = '';
+        if (myArgs.src) file = myArgs.src;
+        if (myArgs.debug) opts.debug = myArgs.debug;
+        if (file!='') {
+            let base = new vue(file,opts);
+            await base.init();
+            await base.addCommands(require('../lib/commands.js'));
+            await base.process();
+            console.log('total time passed, since constructor: '+base.secsPassed_());
+        } else {
+            console.log('--src requires a file to be specified!')
+            printUsage();
+        }
+    }
 })().catch(err => {
     console.error(err);
 });
