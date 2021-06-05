@@ -5723,6 +5723,73 @@ module.exports = async function(context) {
             }
         },
 
+        'def_array_transformar': {
+            x_icons: 'desktop_new',
+            x_text_pattern: [`array:+(transformar|manipular)*`],
+            x_level: '>2',
+            hint:  `Transforma los campos del array de estructuras entregado, restringiendo los campos incluidos, o bien manipulando sus valores.`,
+            func: async function(node, state) {
+                let resp = context.reply_template({ state });
+                let tmp = {};
+                if (node.text.includes(',')) tmp.var=node.text.split(',').splice(-1)[0].trim();
+                tmp.text = context.dsl_parser.findVariables({
+                    text: node.text,
+                    symbol: `"`,
+                    symbol_closing: `"`
+                }).trim();
+                if (node.icons.includes('bell') && tmp.text.includes('**')) {
+                    tmp.text = getTranslatedTextVar(tmp.text);
+                }
+                let isNumeric = function(n) {
+                    return !isNaN(parseFloat(n)) && isFinite(n);
+                };
+                //code
+                context.x_state.functions[resp.state.current_func].imports['underscore'] = '_';
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
+                if (tmp.var && tmp.var.includes('this.')) {
+                    resp.open += `${tmp.var} = _.map(${tmp.text}, function(o${node.level}) {\n`; //})
+                } else {
+                    resp.open += `let ${tmp.var} = _.map(${tmp.text}, function(o${node.level}) {\n`;
+                }
+                resp.open += `let ${node.id} = o${node.level};\n`;
+                Object.keys(node.attributes).map(function(att) {
+                    let name = att.trim();;
+                    let value = node.attributes[att];
+                    if (name.charAt(0)!=':' && name.charAt(0)!='.') {
+                        if (node.icons.includes('bell')) {
+                            value = getTranslatedTextVar(value);
+                        }
+                        if (isNumeric(value) || value.substr(0,2)=='$.') {
+                        } else if (value.includes(`'`)) {
+                        } else if (value.includes('**') && node.icons.includes('bell')) {
+                        } else if (value!=node.attributes[att]) {
+                        } else if (value!='') {
+                            if (value.charAt(0)=='!') {
+                                value = `!${tmp.text}.${name}`;
+                            }
+                        }
+                    }
+                    //
+                    if (name.toLowerCase()==':campos') {
+                        resp.open += `${node.id} = _.pick(o${node.level}, ${context.jsDump(value.split(',')).replaceAll('[','').replaceAll(']','')});\n`;
+                    } else {
+                        if (value.includes('(') && value.includes(')') && value.includes('?')) {
+                            value = value.replaceAll(`(.`,`(o${node.level}.`);
+                            value = value.replaceAll(`?.`,`?o${node.level}.`);
+                            value = value.replaceAll(`:.`,`:o${node.level}.`);
+                            resp.open += `${node.id}.${name} = ${value};\n`;
+                        } else {
+                            resp.open += `${node.id}.${name} = o${node.level}${value};\n`;
+                        }
+                    }
+                });
+                resp.open += `return ${node.id};\n`;
+                resp.open += `});\n`;
+                //return
+                return resp;
+            }
+        },
+
         //**def_guardar_nota
         //**def_agregar_campos
         //**def_preguntar
