@@ -58,6 +58,11 @@ export default class vue_dsl extends concepto {
         this.x_state.config_node = await this._readConfig();
         //this.debug('config_node',this.x_state.config_node);
         this.x_state.central_config = await this._readCentralConfig();
+        //if requested change deploy target
+        if (this.x_config.deploy && this.x_config.deploy.trim()!='') {
+            this.x_console.outT({ message: `(as requested) force changing deploy target to: ${this.x_config.deploy.trim()}`, color: `brightYellow` });
+            this.x_state.central_config.deploy = this.x_config.deploy;
+        }
         //this.debug('central_config',this.x_state.central_config);
         this.x_state.assets = await this._readAssets();
         //this.debug('assets_node',this.x_state.assets);
