@@ -43,14 +43,14 @@ if (myArgs.cpu) {
         console.log('');
         //if (myArgs.help) {
             x_console.out({ message:'Options:', color:'brightCyan' });
-            x_console.out({ message:'-s, --src vue.dsl\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
-            x_console.out({ message:'-x, --clean\t\tclear cache before compiling', color:'cyan' });
-            x_console.out({ message:'-g, --justgit\t\tjust create the _git.dsl version', color:'cyan' });
-            x_console.out({ message:'-p, --deploy\t\tforce change the deploy value', color:'cyan' });
-            x_console.out({ message:'-n, --nodeploy\t\tdo everything as requested, except launching the terminal', color:'cyan' });
-            x_console.out({ message:'-c, --cpu [float]\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
-            x_console.out({ message:'-d, --debug\t\tturns verbose logging on', color:'cyan' });
-            x_console.out({ message:'-h, --help\t\tthis console output', color:'cyan' });
+            x_console.out({ message:'-s, --src vue.dsl\t\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
+            x_console.out({ message:'-x, --clean\t\t\tclear cache before compiling', color:'cyan' });
+            x_console.out({ message:'-g, --justgit\t\t\tjust create the _git.dsl version', color:'cyan' });
+            x_console.out({ message:'-p, --deploy [local,eb:x]\tforce change the deploy value', color:'cyan' });
+            x_console.out({ message:'-n, --nodeploy\t\t\tdo everything as requested, except launching the terminal', color:'cyan' });
+            x_console.out({ message:'-c, --cpu [float]\t\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
+            x_console.out({ message:'-d, --debug\t\t\tturns verbose logging on', color:'cyan' });
+            x_console.out({ message:'-h, --help\t\t\tthis console output', color:'cyan' });
             console.log('');
         //}
     };
