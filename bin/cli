@@ -8,17 +8,24 @@ const mri = require('mri');
 let myArgs = mri(process.argv, {
     alias: {
         src: ['s','source'],
-        clean: ['c','clear'],
+        clean: ['x','clear'],
+        cpu: ['c','cpu'],
         help: ['h','ayuda'],
-        debug: 'd'
+        debug: 'd',
+        justgit: ['g','justgit']
     },
-    boolean: ['clean','debug'],
+    boolean: ['clean','debug','justgit'],
     default: {
         clean:false,
-        debug:false
+        debug:false,
+        justgit:false
     }
 });
 delete myArgs._;
+if (myArgs.cpu) {
+    process.env.UV_THREADPOOL_SIZE=8*parseFloat(myArgs.cpu);
+    delete myArgs.cpu;
+}
 
 /* */
 (async () => {
@@ -34,7 +41,9 @@ delete myArgs._;
         //if (myArgs.help) {
             x_console.out({ message:'Options:', color:'brightCyan' });
             x_console.out({ message:'-s, --src vue.dsl\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
-            x_console.out({ message:'-c, --clean\t\tclear cache before compiling', color:'cyan' });
+            x_console.out({ message:'-x, --clean\t\tclear cache before compiling', color:'cyan' });
+            x_console.out({ message:'-g, --justgit\t\tjust create the _git.dsl version', color:'cyan' });
+            x_console.out({ message:'-c, --cpu [float]\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
             x_console.out({ message:'-d, --debug\t\tturns verbose logging on', color:'cyan' });
             x_console.out({ message:'-h, --help\t\tthis console output', color:'cyan' });
             console.log('');
