@@ -12,13 +12,15 @@ let myArgs = mri(process.argv, {
         cpu: ['c','cpu'],
         help: ['h','ayuda'],
         debug: 'd',
-        justgit: ['g','justgit']
+        justgit: ['g','justgit'],
+        nodeploy: ['n','nodeploy']
     },
     boolean: ['clean','debug','justgit'],
     default: {
         clean:false,
         debug:false,
-        justgit:false
+        justgit:false,
+        nodeploy:false
     }
 });
 delete myArgs._;
@@ -43,6 +45,7 @@ if (myArgs.cpu) {
             x_console.out({ message:'-s, --src vue.dsl\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
             x_console.out({ message:'-x, --clean\t\tclear cache before compiling', color:'cyan' });
             x_console.out({ message:'-g, --justgit\t\tjust create the _git.dsl version', color:'cyan' });
+            x_console.out({ message:'-n, --nodeploy\t\tdo everything as requested, except launching the terminal', color:'cyan' });
             x_console.out({ message:'-c, --cpu [float]\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
             x_console.out({ message:'-d, --debug\t\tturns verbose logging on', color:'cyan' });
             x_console.out({ message:'-h, --help\t\tthis console output', color:'cyan' });

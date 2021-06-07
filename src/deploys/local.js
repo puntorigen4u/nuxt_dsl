@@ -40,11 +40,15 @@ export default class local extends base_deploy {
                 this.x_console.outT({ message:`There was an error building the project.`, color:'red' });
                 return false;
             }
-            
-            build.deploy_local = await this.run();
-            if (build.deploy_local.length>0) {
-                this.context.x_console.outT({ message:`There was an error deploying locally.`, color:'red', data:build.deploy_local.toString()});
-                return false;
+            if (this.context.x_config.nodeploy && this.context.x_config.nodeploy==true) {
+                this.context.x_console.outT({ message:`Aborting final deployment as requested`, color:'brightRed'});
+                return true;
+            } else {
+                build.deploy_local = await this.run();
+                if (build.deploy_local.length>0) {
+                    this.context.x_console.outT({ message:`There was an error deploying locally.`, color:'red', data:build.deploy_local.toString()});
+                    return false;
+                }
             }
         } else {
             this.context.x_console.title({ title:'Updating local running NuxtJS instance', color:'green' });
