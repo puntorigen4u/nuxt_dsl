@@ -2264,7 +2264,7 @@ module.exports = async function(context) {
                     }
                     delete params.scrollto;
                 }
-                // re-map props from older version of vuetify props to ones used here
+                // re-map props from older version of vuetify props to ones used here.
                 if ('flat' in params && params.flat == null) {
                     params.text = null;
                     delete params.flat;
