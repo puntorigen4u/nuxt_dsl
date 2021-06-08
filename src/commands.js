@@ -2258,9 +2258,9 @@ module.exports = async function(context) {
                     if (params.scrollto.includes(',')) {
                         let element = params.scrollto.split(',')[0];
                         let offset = params.scrollto.split(',').pop().trim();
-                        params['v-scroll-to'] = `{ element:'${element}', offset:${offset}, cancelable:false }`;
+                        params['v-scroll-to'] = `{ element:'#${element}', offset:${offset}, cancelable:false }`;
                     } else {
-                        params['v-scroll-to'] = `{ element:'${params.scrollto}', cancelable:false }`;
+                        params['v-scroll-to'] = `{ element:'#${params.scrollto}', cancelable:false }`;
                     }
                     delete params.scrollto;
                 }
@@ -3119,9 +3119,9 @@ module.exports = async function(context) {
                         mode: 'client',
                         npm: { 'vue-scrollto':'*' }
                     };
-                    params['v-scroll-to'] = { cancelable:false, element:params.scrollto };
+                    params['v-scroll-to'] = { cancelable:false, element:'#'+params.scrollto };
                     if (params.scrollto.includes(',')) {
-                        params['v-scroll-to'].element = params.scrollto.split(',')[0];
+                        params['v-scroll-to'].element = '#'+params.scrollto.split(',')[0];
                         params['v-scroll-to'].offset = params.scrollto.split(',').splice(-1)[0];
                     }
                     delete params.scrollto;
