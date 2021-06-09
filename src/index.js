@@ -11,6 +11,7 @@ const concepto = require('concepto');
 import deploy_local from './deploys/local'
 import deploy_remote from './deploys/remote'
 import deploy_eb from './deploys/eb'
+import deploy_s3 from './deploys/s3'
 import deploy_ghpages from './deploys/ghpages'
 
 export default class vue_dsl extends concepto {
@@ -63,6 +64,10 @@ export default class vue_dsl extends concepto {
             this.x_console.outT({ message: `(as requested) force changing deploy target to: ${this.x_config.deploy.trim()}`, color: `brightYellow` });
             this.x_state.central_config.deploy = this.x_config.deploy;
         }
+        let compile_folder = this.x_state.central_config.apptitle;
+        if (this.x_config.folder && this.x_config.folder.trim()!='') {
+            compile_folder = this.x_config.folder.trim();
+        }
         //this.debug('central_config',this.x_state.central_config);
         this.x_state.assets = await this._readAssets();
         //this.debug('assets_node',this.x_state.assets);
@@ -73,7 +78,7 @@ export default class vue_dsl extends concepto {
                 'assets': 'assets/',
                 'static': 'static/',
                 'umd': 'umd/'
-            });
+            },compile_folder);
         } else {
             this.x_state.dirs = await this._appFolders({
                 'client': 'client/',
@@ -89,7 +94,7 @@ export default class vue_dsl extends concepto {
                 'store': 'client/store/',
                 'lang': 'client/lang/',
                 'secrets': 'secrets/'
-            });
+            },compile_folder);
         }
         // read modelos node (virtual DB)
         this.x_state.models = await this._readModelos(); //alias: database tables
@@ -319,6 +324,9 @@ Vue.use(VueMask);`,
             deploy += '';
             if (deploy.includes('eb:')) {
                 this.deploy_module = new deploy_eb({ context:this });
+            } else if (deploy.includes('s3:')) {
+                this.deploy_module = new deploy_s3({ context:this }); 
+
             } else if (deploy=='local') {
                 this.deploy_module = new deploy_local({ context:this }); 
                 //

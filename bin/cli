@@ -14,9 +14,10 @@ let myArgs = mri(process.argv, {
         debug: 'd',
         justgit: ['g','justgit'],
         nodeploy: ['n','nodeploy'],
-        deploy: ['p','deploy']
+        deploy: ['p','deploy'],
+        folder: ['f','folder']
     },
-    boolean: ['clean','debug','justgit'],
+    boolean: ['clean','debug','justgit','nodeploy'],
     default: {
         clean:false,
         debug:false,
@@ -48,6 +49,7 @@ if (myArgs.cpu) {
             x_console.out({ message:'-g, --justgit\t\t\tjust create the vue_git.dsl version', color:'cyan' });
             x_console.out({ message:'-p, --deploy [local,eb:x]\tforce change the deploy value', color:'cyan' });
             x_console.out({ message:'-n, --nodeploy\t\t\tdo everything as requested, except launching the terminal', color:'cyan' });
+            x_console.out({ message:'-f, --folder name\t\toutput folder name. default: central node text', color:'cyan' });
             x_console.out({ message:'-c, --cpu [float]\t\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
             x_console.out({ message:'-d, --debug\t\t\tturns verbose logging on', color:'cyan' });
             x_console.out({ message:'-h, --help\t\t\tthis console output', color:'cyan' });
