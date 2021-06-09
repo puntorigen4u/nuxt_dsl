@@ -56,33 +56,86 @@ export default class s3 extends base_deploy {
 
     async run() {
         let spawn = require('await-spawn');
-        let errors = [];
+        let path = require('path');
+        let errors = [], results={};
         let bucket = this.context.x_state.central_config.deploy.replaceAll('s3:','').trim();
-        //AWS S3 deploy
-        this.context.debug('AWS S3 deploy');
-        let spinner = this.context.x_console.spinner({ message:'Obtaining AWS credentials' });
-        const AWS = require('aws-sdk');
-        const { getAWSCredentials } = require('aws-get-credentials');
-        AWS.config.credentials = await getAWSCredentials();
-        spinner.succeed('Credentials ready');
-        spinner.start(`Creating bucket:${bucket} and uploading website`);
-        let s3 = new AWS.S3({ apiVersion: '2006-03-01' });
-        let info = await s3.putBucketWebsite({
-            Bucket:bucket,
-            WebsiteConfiguration: {
-                ErrorDocument: {
-                    Key: 'index.html'
-                },
-                IndexDocument: {
-                    Suffix:'index.html'
-                }
-            }
-        });
-        if (info.error) {
-            spinner.faild('Upload failed ->'+info.error.message);
-        } else {
-            spinner.succeed('Uploaded successfully ->'+info.data);
+        if (this.x_state.central_config.dominio) {
+            bucket = this.x_state.central_config.dominio.trim();
         }
+        let region = 'us-east-1';
+        if (this.context.x_state.config_node.aws.region) region = this.context.x_state.config_node.aws.region;
+        let dist_folder = path.join(this.context.x_state.dirs.compile_folder,'dist/');
+        //AWS S3 deploy        
+        this.context.debug('AWS S3 deploy');
+        //create bucket policy
+        let spinner = this.context.x_console.spinner({ message:`Creating policy for bucket:${bucket}` });
+        let policy = {
+            Version: '2012-10-17',
+            Statement: [
+                {
+                    Sid: 'PublicReadGetObject',
+                    Effect: 'Allow',
+                    Principal: '*',
+                    Action: 's3:GetObject',
+                    Resource: `arn:aws:s3:::${bucket}/*`
+                }
+            ]
+        };
+        let policyFile = path.join(this.context.x_state.dirs.base,'policy.json');
+        try {
+            await this.context.writeFile(policyFile,JSON.stringify(policy));
+            spinner.succeed('Bucket policy created');    
+        } catch(x1) {
+            spinner.fail('Bucket policy creation failed');
+            errors.push(x1);
+        }
+        //create bucket
+        spinner.start('Creating bucket');
+        try {
+            results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',bucket,'--region',region,'--create-bucket-configuration','LocationConstraint='+region,'--profile','equivalent'],{ cwd:this.context.x_state.dirs.base });
+            spinner.succeed(`Bucket created in ${region}`);
+        } catch(x2) { 
+            spinner.fail('Bucket creation failed');
+            errors.push(x2);
+        }
+        //add bucket policy
+        //aws s3api put-bucket-policy --bucket www.happy-bunny.xyz --policy file:///tmp/bucket_policy.json --profile equivalent
+        spinner.start('Adding bucket policy');
+        try {
+            results.adding_policy = await spawn('aws',['s3api','put-bucket-policy','--bucket',bucket,'--policy','file://'+policyFile,'--profile','equivalent'],{ cwd:this.context.x_state.dirs.base });
+            spinner.succeed(`Bucket policy added correctly`);
+        } catch(x3) { 
+            spinner.fail('Adding bucket policy failed');
+            errors.push(x3);
+        }
+        //upload website files to bucket
+        //aws s3 sync /tmp/SOURCE_FOLDER s3://www.happy-bunny.xyz/  --profile equivalent
+        spinner.start('Uploading website files to bucket');
+        try {
+            results.website_upload = await spawn('aws',['s3','sync',dist_folder,'s3://'+bucket+'/','--profile','equivalent'],{ cwd:this.context.x_state.dirs.base });
+            spinner.succeed(`Website uploaded successfully`);
+        } catch(x4) { 
+            spinner.fail('Failed uploading website files');
+            errors.push(x4);
+        }
+        //set s3 bucket as website, set index.html and error page
+        //aws s3 website s3://www.happy-bunny.xyz/ --index-document index.html --error-document error.html --profile equivalent
+        spinner.start('Setting S3 bucket as type website');
+        try {
+            results.set_as_website = await spawn('aws',
+                [   's3','sync',
+                    dist_folder,'s3://'+bucket+'/',
+                    '--index-document','index.html',
+                    '--error-document','200.html',
+                    '--profile','equivalent'],
+                { cwd:this.context.x_state.dirs.base });
+            spinner.succeed(`Bucket configured as website successfully`);
+            this.context.x_console.outT({ message:`Website ready at http://${bucket}.s3-website-${region}.amazonaws.com/`, color:'green'});
+        } catch(x5) { 
+            spinner.fail('Failed configuring bucket as website');
+            errors.push(x5);
+        }
+        //ready
         return errors;
     }
 
@@ -140,11 +193,18 @@ export default class s3 extends base_deploy {
                 // debug
                 this.context.x_console.outT({ message: `config:aws:access ->${this.context.x_state.config_node.aws.access}` });
                 this.context.x_console.outT({ message: `config:aws:secret ->${this.context.x_state.config_node.aws.secret}` });
+                if (this.context.x_state.config_node.aws.region) {
+                    this.context.x_console.outT({ message: `config:aws:region ->${this.context.x_state.config_node.aws.region}` });
+                }
                 // transform config_node.aws keys into ini
-                let to_ini = ini.stringify({
+                let to_aws = {
                     aws_access_key_id: this.context.x_state.config_node.aws.access,
                     aws_secret_access_key: this.context.x_state.config_node.aws.secret
-                }, { section: 'default' });
+                };
+                if (this.context.x_state.config_node.aws.region) {
+                    to_aws.region = this.context.x_state.config_node.aws.region;
+                }
+                let to_ini = ini.stringify(to_aws, { section: 'default' });
                 this.context.debug('Setting .aws/credentials from config node');
                 // save as .aws/credentials (ini file)
                 await fs.writeFile(aws_ini_file, to_ini, 'utf-8');
@@ -156,6 +216,7 @@ export default class s3 extends base_deploy {
                 this.context.x_state.config_node.aws = { access: '', secret: '' };
                 if (parsed.default.aws_access_key_id) this.context.x_state.config_node.aws.access = parsed.default.aws_access_key_id;
                 if (parsed.default.aws_secret_access_key) this.context.x_state.config_node.aws.secret = parsed.default.aws_secret_access_key;
+                if (parsed.default.region) this.context.x_state.config_node.aws.region = parsed.default.region; 
             }
         }
     }

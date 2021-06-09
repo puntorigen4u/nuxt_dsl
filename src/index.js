@@ -68,6 +68,10 @@ export default class vue_dsl extends concepto {
         if (this.x_config.folder && this.x_config.folder.trim()!='') {
             compile_folder = this.x_config.folder.trim();
         }
+        if (this.x_config.aws_region && this.x_config.aws_region.trim()!='') {
+            if (!this.x_state.config_node.aws) this.x_state.config_node.aws = {}; 
+            this.x_state.config_node.aws.region = this.x_config.aws_region.trim();    
+        }
         //this.debug('central_config',this.x_state.central_config);
         this.x_state.assets = await this._readAssets();
         //this.debug('assets_node',this.x_state.assets);

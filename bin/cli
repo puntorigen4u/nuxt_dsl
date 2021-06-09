@@ -15,7 +15,8 @@ let myArgs = mri(process.argv, {
         justgit: ['g','justgit'],
         nodeploy: ['n','nodeploy'],
         deploy: ['p','deploy'],
-        folder: ['f','folder']
+        folder: ['f','folder'],
+        aws_region: ['aws_region']
     },
     boolean: ['clean','debug','justgit','nodeploy'],
     default: {
@@ -53,6 +54,9 @@ if (myArgs.cpu) {
             x_console.out({ message:'-c, --cpu [float]\t\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
             x_console.out({ message:'-d, --debug\t\t\tturns verbose logging on', color:'cyan' });
             x_console.out({ message:'-h, --help\t\t\tthis console output', color:'cyan' });
+            console.log('');
+            x_console.out({ message:'Special options:', color:'brightYellow' });
+            x_console.out({ message:'--aws_region\t\t\tAWS region overwrite (default:us-east-1)', color:'yellow' });
             console.log('');
         //}
     };
