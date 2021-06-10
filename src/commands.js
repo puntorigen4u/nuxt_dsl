@@ -1248,7 +1248,7 @@ module.exports = async function(context) {
             x_not_text_contains: 'google:',
             attributes_aliases: {
                 'placeholder': 'hint,ayuda',
-                'mark': 'mask,mascara,formato',
+                'mask': 'mask,mascara,formato',
                 'prepend-icon': 'pre:icon',
                 'append-icon': 'post:icon',
                 'type': 'type,tipo',
@@ -1268,7 +1268,7 @@ module.exports = async function(context) {
                     },
                     ...params
                 };
-                // add v-model as node.text
+                // add v-model as node.text.
                 if (node.text.includes('$')) {
                     let vmodel = node.text.trim();
                     vmodel = vmodel.replaceAll('$variables.', '')
