@@ -12,6 +12,9 @@ export default class s3 extends base_deploy {
     }
 
     async logo() {
+        let cfonts = require('cfonts');
+        cfonts.say(this.name, {...{ font:'3d', colors:['red','#333'] }});
+        /*
         let asciify = require('asciify-image'), path = require('path');
         let aws = path.join(__dirname,'assets','aws.png');
         let logo_txt = await asciify(aws, 
@@ -21,6 +24,7 @@ export default class s3 extends base_deploy {
             }
         );
         console.log(logo_txt);
+        */
     }
 
     async modifyNuxtConfig(config) {
