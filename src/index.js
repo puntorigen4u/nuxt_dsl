@@ -2006,7 +2006,8 @@ ${cur.attr('name')}: {
     async createServerlessYML() {
         let yaml = require('yaml'), data = {};
         let deploy = this.x_state.central_config.deploy+'';
-        if (deploy.includes('eb:')==false &&
+        if (deploy.includes('eb:')==false && 
+            deploy.includes('s3:')==false && 
             deploy!=false &&
             deploy!='local') {
             data.service = this.x_state.central_config.service_name;
@@ -2352,7 +2353,9 @@ ${cur.attr('name')}: {
         // map our values to real database values 
         let type_map = {
             id: { value: 'INT AUTOINCREMENT PRIMARY KEY', alias: ['identificador', 'autoid', 'autonum', 'key'] },
-            texto: { value: 'STRING', alias: ['text', 'varchar', 'string'] },
+            string: { value: 'STRING', alias: ['varchar', 'string'] },
+            text: { value: 'TEXT', alias: ['texto', 'largo'] },
+            smalltext: { value: `TEXT('tiny')`, alias: ['textochico', 'textocorto', 'corto'] },
             int: { value: 'INTEGER', alias: ['numero chico', 'small int', 'numero'] },
             float: { value: 'FLOAT', alias: ['decimal', 'real'] },
             boolean: { value: 'BOOLEAN', alias: ['boleano', 'true/false'] },

@@ -42,7 +42,7 @@ export default class base_deploy {
         let node_modules_final = path.join(this.context.x_state.dirs.app,'node_modules');
         let node_package = path.join(this.context.x_state.dirs.app,'package.json');
         let npm={}, errors=[];
-        this.context.x_console.outT({ message:`Building project`, color:'cyan' });
+        this.context.x_console.out({ message:`Building project`, color:'cyan' });
         let spinner = this.context.x_console.spinner({ message:'Building project' });
         let node_modules_exist = await this.exists(node_modules_final);
         let node_package_exist = await this.exists(node_package);

@@ -59,8 +59,8 @@ export default class s3 extends base_deploy {
         let path = require('path');
         let errors = [], results={};
         let bucket = this.context.x_state.central_config.deploy.replaceAll('s3:','').trim();
-        if (this.x_state.central_config.dominio) {
-            bucket = this.x_state.central_config.dominio.trim();
+        if (this.context.x_state.central_config.dominio) {
+            bucket = this.context.x_state.central_config.dominio.trim();
         }
         let region = 'us-east-1';
         if (this.context.x_state.config_node.aws.region) region = this.context.x_state.config_node.aws.region;
@@ -92,7 +92,7 @@ export default class s3 extends base_deploy {
         //create bucket
         spinner.start('Creating bucket');
         try {
-            results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',bucket,'--region',region,'--create-bucket-configuration','LocationConstraint='+region,'--profile','equivalent'],{ cwd:this.context.x_state.dirs.base });
+            results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',bucket,'--region',region,'--profile','default'],{ cwd:this.context.x_state.dirs.base }); //, stdio:'inherit'
             spinner.succeed(`Bucket created in ${region}`);
         } catch(x2) { 
             spinner.fail('Bucket creation failed');
@@ -102,7 +102,7 @@ export default class s3 extends base_deploy {
         //aws s3api put-bucket-policy --bucket www.happy-bunny.xyz --policy file:///tmp/bucket_policy.json --profile equivalent
         spinner.start('Adding bucket policy');
         try {
-            results.adding_policy = await spawn('aws',['s3api','put-bucket-policy','--bucket',bucket,'--policy','file://'+policyFile,'--profile','equivalent'],{ cwd:this.context.x_state.dirs.base });
+            results.adding_policy = await spawn('aws',['s3api','put-bucket-policy','--bucket',bucket,'--policy','file://'+policyFile,'--profile','default'],{ cwd:this.context.x_state.dirs.base }); //, stdio:'inherit'
             spinner.succeed(`Bucket policy added correctly`);
         } catch(x3) { 
             spinner.fail('Adding bucket policy failed');
@@ -112,7 +112,7 @@ export default class s3 extends base_deploy {
         //aws s3 sync /tmp/SOURCE_FOLDER s3://www.happy-bunny.xyz/  --profile equivalent
         spinner.start('Uploading website files to bucket');
         try {
-            results.website_upload = await spawn('aws',['s3','sync',dist_folder,'s3://'+bucket+'/','--profile','equivalent'],{ cwd:this.context.x_state.dirs.base });
+            results.website_upload = await spawn('aws',['s3','sync',dist_folder,'s3://'+bucket+'/','--profile','default'],{ cwd:this.context.x_state.dirs.base }); //, stdio:'inherit'
             spinner.succeed(`Website uploaded successfully`);
         } catch(x4) { 
             spinner.fail('Failed uploading website files');
@@ -123,14 +123,14 @@ export default class s3 extends base_deploy {
         spinner.start('Setting S3 bucket as type website');
         try {
             results.set_as_website = await spawn('aws',
-                [   's3','sync',
-                    dist_folder,'s3://'+bucket+'/',
+                [   's3','website',
+                    's3://'+bucket+'/',
                     '--index-document','index.html',
                     '--error-document','200.html',
-                    '--profile','equivalent'],
+                    '--profile','default'],
                 { cwd:this.context.x_state.dirs.base });
             spinner.succeed(`Bucket configured as website successfully`);
-            this.context.x_console.outT({ message:`Website ready at http://${bucket}.s3-website-${region}.amazonaws.com/`, color:'green'});
+            this.context.x_console.out({ message:`Website ready at http://${bucket}.s3-website-${region}.amazonaws.com/`, color:'brightCyan'});
         } catch(x5) { 
             spinner.fail('Failed configuring bucket as website');
             errors.push(x5);
