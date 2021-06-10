@@ -2353,9 +2353,7 @@ ${cur.attr('name')}: {
         // map our values to real database values 
         let type_map = {
             id: { value: 'INT AUTOINCREMENT PRIMARY KEY', alias: ['identificador', 'autoid', 'autonum', 'key'] },
-            string: { value: 'STRING', alias: ['varchar', 'string'] },
-            text: { value: 'TEXT', alias: ['texto', 'largo'] },
-            smalltext: { value: `TEXT('tiny')`, alias: ['textochico', 'textocorto', 'corto'] },
+            string: { value: 'STRING', alias: ['varchar', 'string', 'text'] },
             int: { value: 'INTEGER', alias: ['numero chico', 'small int', 'numero'] },
             float: { value: 'FLOAT', alias: ['decimal', 'real'] },
             boolean: { value: 'BOOLEAN', alias: ['boleano', 'true/false'] },
