@@ -1361,17 +1361,17 @@ module.exports = async function(context) {
                         'hora-seg,hora-segs,hora-s,time-secs,time-s':   '**:**:**'
                     };
                     let getRealMask = function(key) {
+                        let resp = key;
                         let mask_keys = Object.keys(mask_map).join(',').split(',');
                         if (mask_keys.includes(key)) {
                             for (let mask_key in mask_map) {
                                 if (key==mask_key) {
-                                    return mask_map[mask_key].replaceAll('*','#');
+                                    resp = mask_map[mask_key];
+                                    break;
                                 }
                             }
-                            return key;
-                        } else {
-                            return key;
                         }
+                        return key.replaceAll('*','#');
                     };
                     if (tmp[':mask']) {
                         tmp['v-mask'] = getRealMask(tmp[':mask']);
