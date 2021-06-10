@@ -787,13 +787,25 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (nodes.length > 0) this.debug('post-processing vue_mounted tag');
         if (nodes.length > 0 && vue.first) vue.script += ',\n';
         vue.first = true;
-        if (nodes.length > 0) vue.script += `async mounted() {\n`;
+        let uses_await = false, mounted_content = '';
         nodes.map(function(elem) {
             let cur = $(elem);
             //console.log('valor vue_mounted',elem.children[0].data);
-            vue.script += elem.children[0].data; //cur.text();
+            if (elem.children[0].data.includes('await ')) {
+                uses_await = true;
+            }
+            mounted_content += elem.children[0].data; //cur.text();
+            //vue.script += elem.children[0].data; //cur.text();
             cur.remove();
         });
+        if (nodes.length > 0) {
+            if (uses_await) {
+                vue.script += `async mounted() {\n`;
+            } else {
+                vue.script += `mounted() {\n`;
+            }
+            vue.script += mounted_content;
+        }
         vue.template = $.html();
         if (nodes.length > 0) vue.script += `}\n`;
         // process ?var (vue_computed)
