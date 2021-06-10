@@ -4103,6 +4103,7 @@ module.exports = async function(context) {
             x_icons: 'help',
             x_level: '>2',
             x_text_contains: 'condicion si',
+            x_watch: 'def_condicion_view',
             hint:   `Declara que los hijo/s deben cumplir la condicion indicada para ser ejecutados.`,
             func: async function(node, state) {
                 let resp = context.reply_template({
@@ -4113,7 +4114,7 @@ module.exports = async function(context) {
                 let condicion = await context.x_commands['def_condicion_view'].func(node, { ...state, ...{
                     from_script:false
                 }});
-                //code
+                //code.
                 if (node.text_note != '') resp.open = `/* ${node.text_note.cleanLines()} */\n`;
                 if (condicion.state.meta.script) {
                     resp.open += condicion.state.meta.script;
