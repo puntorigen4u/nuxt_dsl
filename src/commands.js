@@ -4024,6 +4024,7 @@ module.exports = async function(context) {
                     resp.open += `const { validarRUT } = require('validar-rut');`;
                     resp.open += `return validarRUT;`;
                     resp.open += `--></vue_computed>`;
+                    resp.state.meta.script = `let { validarRUT } = require('validar-rut');\n`;
                 }
                 // prepare virtual vars for underscore support
                 if (params.expresion && params.expresion.includes('_.')) {
@@ -4114,6 +4115,9 @@ module.exports = async function(context) {
                 }});
                 //code
                 if (node.text_note != '') resp.open = `/* ${node.text_note.cleanLines()} */\n`;
+                if (condicion.state.meta.script) {
+                    resp.open += condicion.state.meta.script;
+                }
                 if (condicion.state.meta.params.tipo=='v-if') {
                     resp.open += `if (${condicion.state.meta.if_js}) {\n`;
                 } else {
