@@ -4747,8 +4747,12 @@ module.exports = async function(context) {
                 if (tmp.text.includes('_.')) {
                     context.x_state.pages[resp.state.current_page].imports['underscore'] = '_';
                 }
+                /*if (tmp.text.includes('google.')) {
+                    context.x_state.pages[resp.state.current_page].imports['vue2-google-maps'] = '{ gmapApi }';
+                    resp.open += 'if (!google) var google = gmapApi;\n';
+                }*/
                 //code
-                if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
+                if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
                 resp.open += tmp.text;
                 if (resp.open.right(1)!=';') resp.open += ';';
                 resp.open += '\n';

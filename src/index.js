@@ -801,13 +801,21 @@ ${this.x_state.dirs.compile_folder}/secrets/`;
         if (nodes.length > 0) {
             if (uses_await) {
                 vue.script += `async mounted() {\n`;
+                vue.script += `this.$nextTick(async function() {\n`;
+
             } else {
                 vue.script += `mounted() {\n`;
             }
             vue.script += mounted_content;
         }
         vue.template = $.html();
-        if (nodes.length > 0) vue.script += `}\n`;
+        if (nodes.length > 0) {
+            if (uses_await) {
+                vue.script += `});\n}\n`;
+            } else {
+                vue.script += `}\n`;
+            }
+        }   
         // process ?var (vue_computed)
         nodes = $('vue\_computed').toArray();
         //this.debug('nodes',nodes);
