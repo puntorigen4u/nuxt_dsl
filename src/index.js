@@ -24,7 +24,140 @@ export default class vue_dsl extends concepto {
         };
         let nuevo_config = {...my_config, ...config };
         super(file, nuevo_config); //,...my_config
+        // custom dsl_git version
+        this.x_config.dsl_git = async function(content) {
+            //save git version
+            let tmp = {}, fs = require('fs').promises, path = require('path');
+            //SECRETS
+            this.x_state.config_node = await this._readConfig(false);
+            if (this.x_flags.dsl.includes('_git.dsl')) {
+                // if file is x_git.dsl, expand secrets
+                this.x_console.outT({ message:'we are the git!', color:'green' });
+                this.x_state.config_node = await this._restoreSecrets(this.x_state.config_node);
+                delete this.x_state.config_node[':id'];
+                delete this.x_state.config_node[':secrets'];
+                delete this.x_state.config_node['::secrets'];
+                //search and erase config->:secrets node
+                //this.x_console.out({ message:'config read on git',data:this.x_state.config_node });
+            } else {
+                // if file is x.dsl,
+                // write x_git.dsl
+                tmp.dsl_path = path.dirname(path.resolve(this.x_flags.dsl));
+                tmp.dsl_git = path.join(tmp.dsl_path,path.basename(this.x_flags.dsl).replace('.dsl','_git.dsl'));
+                await fs.writeFile(tmp.dsl_git,content,'utf-8');
+                this.debug(`custom dsl_git file saved as: ${tmp.dsl_git}`);
+                // export secret keys as :secrets node to eb_git.dsl
+                await this._secretsToGIT(this.x_state.config_node);
+            }
+            //
+        }.bind(this);
+        //
     }
+
+    // SECRETS helpers (@todo move this to concepto class)
+    async _secretsToGIT(resp) {
+        let path = require('path'), fs = require('fs').promises;
+        let encrypt = require('encrypt-with-password');
+        let curr_dsl = path.basename(this.x_flags.dsl);
+        // secret nodes to _git.dsl file
+        if (resp['::secrets'] && resp['::secrets'].length>0 && !curr_dsl.includes('_git.')) {
+            //encrypt existing secret (password) nodes and save them as config->:secrets within _git.dsl file version
+            let password = '';
+            if (this.x_config.secrets_pass && this.x_config.secrets_pass!='') password = this.x_config.secrets_pass.trim();
+            if (password=='') {
+                //if a password was not given, invent a memorable one
+                let gpass = require('password-generator');
+                password = gpass();
+                resp[':password'] = password; //inform a pass was created
+            }
+            //encrypt secrets object
+            let to_secrets = encrypt.encryptJSON(resp['::secrets'],password);
+            //create :secrets node within eb_git.dsl file
+            let dsl_parser = require('dsl_parser');
+			let dsl = new dsl_parser({ file:this.x_flags.dsl.replace('.dsl','_git.dsl'), config:{ cancelled:false, debug:false } });
+			try {
+				await dsl.process();
+			} catch(d_err) {
+				this.x_console.out({ message:`error: file ${this.x_flags.dsl.replace('.dsl','_git.dsl')} does't exist!`,data:d_err });
+				return;
+			}
+            let new_content = await dsl.addNode({ parent_id:resp[':id'], node:{
+                text:':secrets',
+                icons: ['password'],
+                text_note: to_secrets
+            }});
+            let tmp={};
+            tmp.dsl_git_path = path.dirname(path.resolve(this.x_flags.dsl));
+            let git_target = path.join(tmp.dsl_git_path,path.basename(this.x_flags.dsl).replace('.dsl','_git.dsl')); //,path.basename(this.x_flags.dsl)
+            await fs.writeFile(git_target,new_content,'utf-8');
+            this.debug(`dsl_git file saved as: ${git_target}`);
+            if (resp[':password']) {
+                this.x_console.outT({ message:`Password generated for DSL GIT secrets ->${password}`, color:'brightGreen' });
+            }
+            //
+        }
+        return resp;
+    }
+    // restore :secrets node info if it exists and a password was given
+    async _restoreSecrets(resp) {
+        let path = require('path'), fs = require('fs').promises;
+        let encrypt = require('encrypt-with-password');
+        let curr_dsl = path.basename(this.x_flags.dsl);
+        if (curr_dsl.includes('_git.') && resp[':secrets']) {
+            this.x_console.outT({ message:`Secrets node detected!`, color:'brightCyan' });
+            if (this.x_config.secrets_pass && this.x_config.secrets_pass!='') {
+                this.x_console.outT({ message:'Decrypting config->secrets', color:'brightGreen' });
+                try {
+                    let from_secrets = encrypt.decryptJSON(resp[':secrets'],this.x_config.secrets_pass);
+                    // read nodes into resp struct
+                    for (let xs of from_secrets) {
+                        resp = {...resp,...this.configFromNode(resp,xs)};
+                    }
+                    let tmp = {};
+                    tmp.dsl_git_path = path.dirname(path.resolve(this.x_flags.dsl));
+                    tmp.non_target = path.join(tmp.dsl_git_path,path.basename(this.x_flags.dsl).replace('_git.dsl','.dsl'));
+                    tmp.exists_non = await this.exists(tmp.non_target);
+                    if (!tmp.exists_non) {
+                        this.x_console.outT({ message:'Expanding secrets into '+curr_dsl.replace('_git.dsl','.dsl'), color:'cyan' });
+                        // expand secret nodes into non _git.dsl version config key
+                        let dsl_parser = require('dsl_parser');
+                        let dsl = new dsl_parser({ file:this.x_flags.dsl, config:{ cancelled:false, debug:false } });
+                        try {
+                            await dsl.process();
+                        } catch(d_err) {
+                            this.x_console.out({ message:`error: file ${this.x_flags.dsl} does't exist!`,data:d_err });
+                            return;
+                        }
+                        // remove config->:secrets node if it exists
+                        let $ = dsl.getParser();
+                        let search = $(`node[TEXT=config] node[TEXT=\:secrets]`).toArray();
+                        search.map(function(elem) {
+                            $(elem).remove();
+                        });
+                        //
+                        let new_content = '';
+                        for (let sn of from_secrets) {
+                            new_content = await dsl.addNode({ parent_id:resp[':id'], node:sn });
+                        }
+                        // save expanded x.dsl file (only if it doesnt exist)
+                        await fs.writeFile(tmp.non_target,new_content,'utf-8');
+                        this.debug(`recovered dsl file saved as: ${tmp.non_target}`);
+                    }
+                    //
+
+                } catch(invpass) {
+                    //console.log(invpass);
+                    this.x_console.outT({ message:'Invalid --secret-pass value for map (check your password)', color:'brightRed' });
+                    this.x_console.outT({ message:'WARNING: The process may fail if keys are needed', color:'red' });
+                }
+            } else {
+                this.x_console.outT({ message:'WARNING: file contains secrets, but no --secrets-pass arg was given', color:'brightRed' });
+                this.x_console.outT({ message:'WARNING: The process may fail if keys are needed', color:'red' });
+            }
+        }
+        return resp;
+    }
+    //
 
     // **************************
     // methods to be auto-called
@@ -40,7 +173,7 @@ export default class vue_dsl extends concepto {
         //this.x_crypto_key = require('crypto').randomBytes(32); // for hash helper method
         // init vue
         // set x_state defaults
-        this.x_state = {
+        this.x_state = {...this.x_state,...{
             plugins: {},
             npm: {},
             dev_npm: {},
@@ -55,8 +188,8 @@ export default class vue_dsl extends concepto {
             stores: {},
             stores_types: { versions: {}, expires: {} },
             nuxt_config: { head_script: {}, build_modules: {}, modules: {} },
-        };
-        this.x_state.config_node = await this._readConfig();
+        }};
+        if (!this.x_state.config_node) this.x_state.config_node = await this._readConfig();
         //this.debug('config_node',this.x_state.config_node);
         this.x_state.central_config = await this._readCentralConfig();
         //if requested change deploy target
@@ -2570,10 +2703,51 @@ ${cur.attr('name')}: {
         return resp;
     }
 
+    /* helper for readConfig and secrets extraction */
+    configFromNode(resp,key) {
+        if (key.icons.includes('button_cancel')==false) {                
+            if (Object.keys(key.attributes).length > 0) {
+                // prepare config key
+                let config_key = key.text.toLowerCase().replace(/ /g, '');
+                //alt1 let values = {...key.attributes }; 
+                //alt2, bit slower but considers booleans as string
+                let values = {};
+                for (let xz in key.attributes) {
+                    let x = key.attributes[xz];
+                    if (x=='true') { 
+                        x=true;
+                    } else if (x=='false') {
+                        x=false;
+                    }
+                    values = {...values,...{[xz]:x}};
+                }
+                resp[config_key] = values;
+                // mark secret status true if contains 'password' icon
+                if (key.icons.includes('password')) {
+                    resp[config_key][':secret'] = true;
+                    if (!resp['::secrets']) resp['::secrets']=[];
+                    resp['::secrets'].push(key); //add key as secret
+                }
+                // add link attribute if defined
+                if (key.link != '') resp[config_key][':link'] = key.link;
+
+            } else if (key.nodes.length > 0) {
+                resp[key.text] = key.nodes[0].text;
+            } else if (key.link != '') {
+                resp[key.text] = key.link;
+            }
+            //
+            if (key.text==':secrets' && key.icons.includes('password')) {
+                resp[':secrets'] = key.text_note.replaceAll('\n','').trim();
+            }
+        }
+        return resp;
+    }
+
     /*
      * Grabs the configuration from node named 'config'
      */
-    async _readConfig() {
+    async _readConfig(delete_secrets=true) {
         this.debug('_readConfig');
         let resp = { id: '', meta: [], seo: {}, secrets: {} },
             config_node = {};
@@ -2583,6 +2757,7 @@ ${cur.attr('name')}: {
         if (search.length > 0) {
             config_node = search[0];
             // define default font_face
+            if (!delete_secrets) resp[':id'] = config_node.id;
             resp.default_face = config_node.font.face;
             resp.default_size = config_node.font.size;
             // apply children nodes as keys/value for resp
@@ -2614,32 +2789,7 @@ ${cur.attr('name')}: {
                     }
                 } else {
                     // apply keys as config keys (standard config node by content types)
-                    if (Object.keys(key.attributes).length > 0) {
-                        // prepare config key
-                        let config_key = key.text.toLowerCase().replace(/ /g, '');
-                        //alt1 let values = {...key.attributes }; 
-                        //alt2, bit slower but considers booleans as string
-                        let values = {};
-                        for (let xz in key.attributes) {
-                        	let x = key.attributes[xz];
-                            if (x=='true') { 
-                                x=true;
-                            } else if (x=='false') {
-                                x=false;
-                            }
-                            values = {...values,...{[xz]:x}};
-                        }
-                        resp[config_key] = values;
-                        // mark secret status true if contains 'password' icon
-                        if (key.icons.includes('password')) resp[config_key][':secret'] = true;
-                        // add link attribute if defined
-                        if (key.link != '') resp[config_key][':link'] = key.link;
-
-                    } else if (key.nodes.length > 0) {
-                        resp[key.text] = key.nodes[0].text;
-                    } else if (key.link != '') {
-                        resp[key.text] = key.link;
-                    }
+                    resp = {...resp,...this.configFromNode(resp,key)};
                     //
                 }
             }
@@ -2656,6 +2806,8 @@ ${cur.attr('name')}: {
         }
         // create id if not given
         if (!resp.id) resp.id = 'com.puntorigen.' + resp.name;
+        // *********************************************
+        if (delete_secrets==true) delete resp[':secrets'];
         return resp;
     }
 

@@ -16,7 +16,8 @@ let myArgs = mri(process.argv, {
         nodeploy: ['n','nodeploy'],
         deploy: ['p','deploy'],
         folder: ['f','folder'],
-        aws_region: ['aws_region']
+        aws_region: ['aws_region'],
+        secrets_pass: ['secrets-pass']
     },
     boolean: ['clean','debug','justgit','nodeploy'],
     default: {
@@ -57,6 +58,7 @@ if (myArgs.cpu) {
             console.log('');
             x_console.out({ message:'Special options:', color:'brightYellow' });
             x_console.out({ message:'--aws_region\t\t\tAWS region overwrite (default:us-east-1)', color:'yellow' });
+            x_console.out({ message:'--secrets-pass [string]\t\tSecret password for encrypting / decrypting config->secrets', color:'yellow' });
             console.log('');
         //}
     };
