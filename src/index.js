@@ -117,7 +117,7 @@ export default class vue_dsl extends concepto {
                     tmp.dsl_git_path = path.dirname(path.resolve(this.x_flags.dsl));
                     tmp.non_target = path.join(tmp.dsl_git_path,path.basename(this.x_flags.dsl).replace('_git.dsl','.dsl'));
                     tmp.exists_non = await this.exists(tmp.non_target);
-                    if (!tmp.exists_non) {
+                    if (true) { //!tmp.exists_non
                         this.x_console.outT({ message:'Expanding secrets into '+curr_dsl.replace('_git.dsl','.dsl'), color:'cyan' });
                         // expand secret nodes into non _git.dsl version config key
                         let dsl_parser = require('dsl_parser');
