@@ -665,11 +665,11 @@ _MACOSX/
 Thumbs.db
 # VUE files
 # Concepto files
-dsl_cache/
-dsl_cache.ini
+.concepto/
 vue.dsl
-tmp.ini
-${this.x_state.dirs.compile_folder}/node_modules/`;
+policy.json
+aws_backup.ini
+${this.x_state.dirs.compile_folder}/`;
             await fs.writeFile(`${this.x_state.dirs.base}.gitignore`, git, 'utf-8'); //.gitignore
             this.x_console.out({ message: 'writing component .gitignore file' });
             git =
@@ -682,6 +682,7 @@ Thumbs.db
 package-lock.json
 node_modules/
 # AWS EB files
+.ebextensions/*
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml`;
@@ -694,18 +695,24 @@ node_modules/
 .DS_Store?
 _MACOSX/
 Thumbs.db
+# NPM files
+package.json
+package-lock.json
+node_modules/
+# AWS EB files
+policy.json
+.ebextensions/
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
 # VUE files
 .nuxt/
 # Concepto files
-dsl_cache/
-dsl_cache.ini
-tmp.ini
+.concepto/
+aws_backup.ini
 vue.dsl
-stats.txt
-stats.json
 store/
-${this.x_state.dirs.compile_folder}/node_modules/
-${this.x_state.dirs.compile_folder}/secrets/`;
+${this.x_state.dirs.compile_folder}/`;
             await fs.writeFile(`${this.x_state.dirs.base}.gitignore`, git, 'utf-8'); //.gitignore
         }
     }
