@@ -17,7 +17,8 @@ let myArgs = mri(process.argv, {
         deploy: ['p','deploy'],
         folder: ['f','folder'],
         aws_region: ['aws_region'],
-        secrets_pass: ['secrets-pass']
+        secrets_pass: ['secrets-pass'],
+        save_password: ['secrets-pass-save']
     },
     boolean: ['clean','debug','justgit','nodeploy'],
     default: {
@@ -33,13 +34,60 @@ if (myArgs.cpu) {
     delete myArgs.cpu;
 }
 
+let getSerial = function() {
+    return new Promise(function(resolve,reject) {
+        let _serial = require('serial-number');
+        _serial(function(err,value) {
+            if (err) reject(err);
+            resolve(value);
+        });
+    });
+};
+
 /* */
 (async () => {
     // testing code here
     //let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
     //let debug = (myArgs.length>1)?eval(myArgs[1].trim()):false;
     let x_console = new open_console();
+    let serial = await getSerial();
     x_console.title({ title:`Concepto VUE_DSL Compiler v${pkg.version}`, titleColor:'brightYellow', color:'green' });
+    //x_console.out({ message:`computer serial number: ${serial}`, color:'dim' });
+    //
+    let savePassword = async function(args) {
+        let path = require('path'), fs = require('fs').promises;
+        let _secret_file = path.join(process.cwd(),'.secrets-pass');
+        let encrypt = require('encrypt-with-password');
+        if (args.save_password) {
+            //save the given password to disk and set myArgs.secrets_pass
+            args.secrets_pass = args.save_password;
+            let new_content = encrypt.encrypt(args.save_password,serial);
+            await fs.writeFile(_secret_file,new_content,'utf-8');
+            x_console.out({ message:`secret password saved as requested!\n`, color:'brightGreen'});
+        } else {
+            //test if there is a .secrets-pass file, recover encrypted saved pass
+            let exists = async function(dir_or_file) {
+                let fs = require('fs').promises;
+                try {
+                    await fs.access(dir_or_file);
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            }            
+            if ((await exists(_secret_file))) {
+                x_console.out({ message:`.secrets-pass file found on current directory`, color:'dim'});
+                try {
+                    let fdata = await fs.readFile(_secret_file,'utf-8');
+                    args.secrets_pass = encrypt.decrypt(fdata,serial);
+                    x_console.out({ message:`.secret-pass read successfully!\n`, color:'brightGreen' });
+                } catch(badpass) {
+                    x_console.out({ message:`error reading .secret-pass file (maybe you changed computer?)\n`, color:'brightRed' });
+                }
+            }
+        }
+        return args;
+    };
     let printUsage = function() {
         x_console.out({ message:'Usage:', color:'cyan' });
         x_console.out({ message:'vue_dsl [options]', color:'yellow' });
@@ -59,16 +107,19 @@ if (myArgs.cpu) {
             x_console.out({ message:'Special options:', color:'brightYellow' });
             x_console.out({ message:'--aws_region\t\t\tAWS region overwrite (default:us-east-1)', color:'yellow' });
             x_console.out({ message:'--secrets-pass [string]\t\tSecret password for encrypting / decrypting config->secrets', color:'yellow' });
+            x_console.out({ message:'--secrets-pass-save [string]\tSave to disk the given secret password encrypted', color:'yellow' });
             console.log('');
         //}
+        //copyright
+        x_console.out({ message:`Copyright © 2021, Punto Origen SpA. All rights reserved.`, color:'dim' });
     };
+    //save or recover password
+    myArgs = await savePassword(myArgs);
     if (myArgs.help || !myArgs.src) {
         printUsage();
     } else {
-        let opts = { debug:false }, file = '';
-        if (myArgs.src) file = myArgs.src;
-        if (file!='') {
-            let base = new vue(file,myArgs);
+        if (myArgs.src) {
+            let base = new vue(myArgs.src,myArgs);
             await base.init();
             await base.addCommands(require('../lib/commands.js'));
             await base.process();

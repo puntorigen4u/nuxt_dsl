@@ -667,6 +667,7 @@ Thumbs.db
 # Concepto files
 .concepto/
 vue.dsl
+.secrets-pass
 policy.json
 aws_backup.ini
 ${this.x_state.dirs.compile_folder}/`;
@@ -711,6 +712,7 @@ policy.json
 .concepto/
 aws_backup.ini
 vue.dsl
+.secrets-pass
 store/
 ${this.x_state.dirs.compile_folder}/`;
             await fs.writeFile(`${this.x_state.dirs.base}.gitignore`, git, 'utf-8'); //.gitignore
