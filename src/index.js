@@ -1925,12 +1925,12 @@ ${cur.attr('name')}: {
             config.proxy = this.x_state.nuxt_config.modules['@nuxtjs/proxy'];
         }
         //nuxt env variables
-        config.env={};
+        config.publicRuntimeConfig={};
         for (let node_key in this.x_state.config_node) {
             if (node_key.includes(':')==false) {
                 if ('aurora,vpc,aws'.split(',').includes(node_key)==false) {
                     if (this.x_state.secrets[node_key]===undefined && typeof this.x_state.config_node[node_key] === 'object') {
-                        config.env[node_key.toLowerCase()]={...this.x_state.config_node[node_key]};
+                        config.publicRuntimeConfig[node_key.toLowerCase()]={...this.x_state.config_node[node_key]};
                     }
                 }
             }
