@@ -55,6 +55,7 @@ module.exports = async function(context) {
                 tmp.var = tmp.var.replaceAll('$variables.', 'this.')
                                 .replaceAll('$vars.', 'this.')
                                 .replaceAll('$params.', 'this.')
+                                .replaceAll('$config.', 'this.$config.')
                                 .replaceAll('$store.', 'this.$store.state.');
                 if (tmp.var=='this.') tmp.var='this';
             }
@@ -76,6 +77,7 @@ module.exports = async function(context) {
                 tmp.original = tmp.original.replaceAll('$variables.', 'this.')
                                             .replaceAll('$vars.', 'this.')
                                             .replaceAll('$params.', 'this.')
+                                            .replaceAll('$config.', 'this.$config.')
                                             .replaceAll('$store.', 'this.$store.state.');
                 if (tmp.original=='this.') tmp.original='this';
             }
