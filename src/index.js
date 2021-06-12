@@ -1560,7 +1560,7 @@ ${cur.attr('name')}: {
                 }
                 //add proxy code
                 content += 
-                `export default async function ({ route, store, redirect, $axios }) {
+                `export default async function ({ route, store, redirect, $axios, $config }) {
                     ${proxy.code}\n
                 }
                 `;
