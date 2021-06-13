@@ -12,6 +12,14 @@ export default class remote extends base_deploy {
         super({ context, name:'Remote' });
     }
 
+    async modifyPackageJSON(config) {
+        //little sass errors hack fix 13jun21
+        config.devDependencies['sass-migrator']='*';
+        config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
+        config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
+        return config;
+    }
+
     async modifyPackageJSON(data) {
         if (this.context.x_state.central_config.deploy=='remote' && !this.context.x_state.central_config[':hostname']) {
             data.scripts.dev += ` --hostname '0.0.0.0'`;

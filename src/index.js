@@ -2296,7 +2296,14 @@ ${cur.attr('name')}: {
                 resp = beautify_js(resp,{});
             }
         } else if (ext=='json') {
-            resp = prettier.format(resp, { parser: 'json' });
+            try {
+                resp = prettier.format(resp, { parser: 'json' });
+            } catch(ee) {
+                this.debug(`error: could not format the JSON file; trying js-beautify`);
+                let beautify = require('js-beautify');
+                let beautify_js = beautify.js;
+                resp = beautify_js(resp,{});
+            }
         } else if (ext=='vue') {
             /*
             let beautify = require('js-beautify');

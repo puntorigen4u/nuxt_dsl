@@ -12,6 +12,14 @@ export default class local extends base_deploy {
         super({ context, name:'Local' });
     }
 
+    async modifyPackageJSON(config) {
+        //little sass errors hack fix 13jun21
+        config.devDependencies['sass-migrator']='*';
+        config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
+        config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
+        return config;
+    }
+
     async modifyNuxtConfig(config) {
         if (this.context.x_state.config_node.axios) {
             let ax_config = config.axios;
@@ -25,6 +33,7 @@ export default class local extends base_deploy {
             delete ax_config.deploy;
             config.axios = ax_config;
         }
+        //
         return config;
     }
 

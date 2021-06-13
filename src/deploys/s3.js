@@ -14,17 +14,15 @@ export default class s3 extends base_deploy {
     async logo() {
         let cfonts = require('cfonts');
         cfonts.say(this.name, {...{ font:'3d', colors:['red','#333'] }});
-        /*
-        let asciify = require('asciify-image'), path = require('path');
-        let aws = path.join(__dirname,'assets','aws.png');
-        let logo_txt = await asciify(aws, 
-            { 
-                fit:'width',
-                width:25
-            }
-        );
-        console.log(logo_txt);
-        */
+    }
+
+    async modifyPackageJSON(config) {
+        //little sass errors hack fix 13jun21
+        config.devDependencies['sass-migrator']='*';
+        config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
+        config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
+        config.scripts.build = 'npm run hackfix && '+config.scripts.build;
+        return config;
     }
 
     async modifyNuxtConfig(config) {
