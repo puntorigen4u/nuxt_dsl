@@ -61,14 +61,23 @@ export default class s3 extends base_deploy {
         let path = require('path');
         let errors = [], results={};
         let bucket = this.context.x_state.central_config.deploy.replaceAll('s3:','').trim();
+        let aliases = [];
         if (this.context.x_state.central_config.dominio) {
             bucket = this.context.x_state.central_config.dominio.trim();
         }
+        //support for domain aliases
+        if (bucket.includes('<-')==true) {
+            let extract = require('extractjs');
+            aliases = bucket.split('<-').pop().split(',');
+            bucket = bucket.split('<-')[0].replaceAll('s3:','').trim();
+        }
+        //
         let region = 'us-east-1';
         if (this.context.x_state.config_node.aws.region) region = this.context.x_state.config_node.aws.region;
         let dist_folder = path.join(this.context.x_state.dirs.compile_folder,'dist/');
         //AWS S3 deploy        
         this.context.debug('AWS S3 deploy');
+        //MAIN
         //create bucket policy
         let spinner = this.context.x_console.spinner({ message:`Creating policy for bucket:${bucket}` });
         let policy = {
@@ -132,10 +141,60 @@ export default class s3 extends base_deploy {
                     '--profile','default'],
                 { cwd:this.context.x_state.dirs.base });
             spinner.succeed(`Bucket configured as website successfully`);
-            this.context.x_console.out({ message:`Website ready at http://${bucket}.s3-website-${region}.amazonaws.com/`, color:'brightCyan'});
         } catch(x5) { 
             spinner.fail('Failed configuring bucket as website');
             errors.push(x5);
+        }
+        //ALIASES
+        let fs = require('fs').promises;
+        if (aliases.length>0) {
+            for (let alias of aliases) {            
+                let spinner = this.context.x_console.spinner({ message:`Creating policy for bucket alias:${alias}` });
+                let policy = {
+                    RedirectAllRequestsTo: {
+                        HostName: bucket
+                    }
+                };
+                let policyFile = path.join(this.context.x_state.dirs.base,'policy_alias.json');
+                try {
+                    await this.context.writeFile(policyFile,JSON.stringify(policy));
+                    spinner.succeed(`Bucket alias '${alias}' policy created`);    
+                } catch(x1) {
+                    spinner.fail(`Bucket alias '${alias}' policy creation failed`);
+                    errors.push(x1);
+                }
+                //create bucket
+                spinner.start(`Creating bucket alias '${alias}'`);
+                try {
+                    results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',alias,'--region',region],{ cwd:this.context.x_state.dirs.base }); //, stdio:'inherit'
+                    spinner.succeed(`Bucket alias '${alias}' created in ${region}`);
+                } catch(x2) { 
+                    spinner.fail(`Bucket alias '${alias}' creation failed`);
+                    errors.push(x2);
+                }
+                //add bucket policy
+                spinner.start(`Adding bucket alias '${alias}' policy`);
+                try {
+                    results.adding_policy = await spawn('aws',['s3api','put-bucket-website','--bucket',alias,'--website-configuration','file://policy_alias.json'],{ cwd:this.context.x_state.dirs.base }); //, stdio:'inherit'
+                    spinner.succeed(`Bucket alias '${alias}' policy added correctly`);
+                } catch(x2) { 
+                    spinner.fail(`Adding bucket alias '${alias}' policy failed`);
+                    errors.push(x2);
+                }
+                //erase policy_alias.json file
+                try {
+                    await fs.unlink(policyFile);
+                } catch(err_erasepolicy_alias) {
+                }
+            }
+        }
+        if (errors.length==0) {
+            this.context.x_console.out({ message:`Website ready at http://${bucket}.s3-website-${region}.amazonaws.com/`, color:'brightCyan'});
+        }
+        //erase policy.json file
+        try {
+            await fs.unlink(policyFile);
+        } catch(err_erasepolicy) {
         }
         //ready
         return errors;
