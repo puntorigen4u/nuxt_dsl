@@ -201,7 +201,6 @@ export default class vue_dsl extends concepto {
         //if requested change deploy target
         if (this.x_config.deploy && this.x_config.deploy.trim()!='') {
             this.x_console.outT({ message: `(as requested) force changing deploy target to: ${this.x_config.deploy.trim()}`, color: `brightYellow` });
-            this.x_console.outT({ message: `(as requested) force changing deploy target to: ${this.x_config.deploy.trim()}`, color: `brightYellow` });
             this.x_state.central_config.deploy = this.x_config.deploy;
         }
         let compile_folder = this.x_state.central_config.apptitle;
