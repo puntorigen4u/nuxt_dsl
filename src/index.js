@@ -192,8 +192,15 @@ export default class vue_dsl extends concepto {
         if (!this.x_state.config_node) this.x_state.config_node = await this._readConfig();
         //this.debug('config_node',this.x_state.config_node);
         this.x_state.central_config = await this._readCentralConfig();
+        //if requested silence...
+        if (this.x_config.silent) {
+            this.x_console.outT({ message: `silent mode requested`, color: `dim` });
+            //this.x_console.setSilent(true);
+            this.x_config.debug=false;
+        }
         //if requested change deploy target
         if (this.x_config.deploy && this.x_config.deploy.trim()!='') {
+            this.x_console.outT({ message: `(as requested) force changing deploy target to: ${this.x_config.deploy.trim()}`, color: `brightYellow` });
             this.x_console.outT({ message: `(as requested) force changing deploy target to: ${this.x_config.deploy.trim()}`, color: `brightYellow` });
             this.x_state.central_config.deploy = this.x_config.deploy;
         }

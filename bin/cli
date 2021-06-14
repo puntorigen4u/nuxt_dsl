@@ -18,7 +18,8 @@ let myArgs = mri(process.argv, {
         folder: ['f','folder'],
         aws_region: ['aws_region'],
         secrets_pass: ['secrets-pass'],
-        save_password: ['secrets-pass-save']
+        save_password: ['secrets-pass-save'],
+        silent: ['--silent']
     },
     boolean: ['clean','debug','justgit','nodeploy'],
     default: {
@@ -111,6 +112,7 @@ let getSerial = function() {
             x_console.out({ message:'--aws_region\t\t\tAWS region overwrite (default:us-east-1)', color:'yellow' });
             x_console.out({ message:'--secrets-pass [string]\t\tSecret password for encrypting / decrypting config->secrets', color:'yellow' });
             x_console.out({ message:'--secrets-pass-save [string]\tSave to disk the given secret password encrypted', color:'yellow' });
+            x_console.out({ message:'--silent\tCompiles in the most quiet mode posible (CI default mode)', color:'yellow' });
             console.log('');
         //}
         //copyright

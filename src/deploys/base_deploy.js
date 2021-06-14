@@ -78,18 +78,27 @@ export default class base_deploy {
         }
         // issue npm run build
         spinner.start(`Building NUXT project`);
+        let ci = require('ci-info');
         try {
-            npm.build = await spawn('npm',['run','build'],{ cwd:this.context.x_state.dirs.app });
+            if (ci.isCI==false) {
+                npm.build = await spawn('npm',['run','build'],{ cwd:this.context.x_state.dirs.app });
+            } else {
+                npm.build = await spawn('npm',['run','build'],{ cwd:this.context.x_state.dirs.app, stdio:'inherit' });
+            }
             spinner.succeed('Project build successfully');
         } catch(nb) { 
             npm.build = nb; 
             spinner.fail('NUXT build failed');
-            this.context.x_console.out({ message:`Building NUXT again to show error in console`, color:'red' });
-            //build again with output redirected to console, to show it to user
-            try {
-                console.log('\n');
-                npm.build = await spawn('npm',['run','dev'],{ cwd:this.context.x_state.dirs.app, stdio:'inherit', timeout:15000 });
-            } catch(eg) {
+            if (ci.isCI==false) {
+                this.context.x_console.out({ message:`Building NUXT again to show error in console`, color:'red' });
+                //build again with output redirected to console, to show it to user
+                try {
+                    console.log('\n');
+                    npm.build = await spawn('npm',['run','dev'],{ cwd:this.context.x_state.dirs.app, stdio:'inherit', timeout:15000 });
+                } catch(eg) {
+                }
+            } else {
+                this.context.x_console.out({ message:`CI system detected; please double-check your code locally before pushing!`, color:'red' });
             }
             errors.push(nb);
         }
