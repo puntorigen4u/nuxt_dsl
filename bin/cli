@@ -52,7 +52,16 @@ let getSerial = function() {
     let x_console = new open_console();
     let serial = await getSerial();
     x_console.title({ title:`Concepto VUE_DSL Compiler v${pkg.version}`, titleColor:'brightYellow', color:'green' });
-    //x_console.out({ message:`computer serial number: ${serial}`, color:'dim' });
+    //
+    let exists = async function(dir_or_file) {
+        let fs = require('fs').promises;
+        try {
+            await fs.access(dir_or_file);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    }
     //
     let savePassword = async function(args) {
         let path = require('path'), fs = require('fs').promises;
@@ -68,16 +77,7 @@ let getSerial = function() {
             await fs.writeFile(_secret_file,new_content,'utf-8');
             x_console.out({ message:`secret password saved as requested!\n`, color:'brightGreen'});
         } else {
-            //test if there is a .secrets-pass file, recover encrypted saved pass
-            let exists = async function(dir_or_file) {
-                let fs = require('fs').promises;
-                try {
-                    await fs.access(dir_or_file);
-                    return true;
-                } catch(e) {
-                    return false;
-                }
-            }            
+            //test if there is a .secrets-pass file, recover encrypted saved pass       
             if ((await exists(_secret_file))) {
                 x_console.out({ message:`.secrets-pass file found on current directory`, color:'dim'});
                 try {
@@ -116,6 +116,15 @@ let getSerial = function() {
         //copyright
         x_console.out({ message:`Copyright © 2021, Punto Origen SpA. All rights reserved.`, color:'dim' });
     };
+    //detect if there is a vue.dsl file in current dir and src was not specified
+    if (!myArgs.src) {
+        let path = require('path');
+        let test = path.join(process.cwd(),'vue.dsl');
+        if ((await exists(test))) {
+            myArgs.src = test;
+            x_console.out({ message:`vue.dsl file found on current directory, using it as source`, color:'dim'});
+        }
+    }
     //save or recover password
     myArgs = await savePassword(myArgs);
     if (myArgs.help || !myArgs.src) {
