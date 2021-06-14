@@ -58,7 +58,7 @@ let getSerial = function() {
         let path = require('path'), fs = require('fs').promises;
         let _secret_file = path.join(process.cwd(),'.secrets-pass');
         if (args.src) {
-            _secret_file = path.join(path.resolve(args.src),'.secrets-pass');
+            _secret_file = path.join(path.dirname(path.resolve(args.src)),'.secrets-pass');
         }
         let encrypt = require('encrypt-with-password');
         if (args.save_password) {
