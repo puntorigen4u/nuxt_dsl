@@ -238,11 +238,12 @@ node_modules/`;
     // onPrepare and onEnd steps
     //****************************
     async post() {
+        let ci = require('ci-info');
         //restores aws credentials if modified by onPrepare after deployment
         if (!this.context.x_state.central_config.componente && 
             this.context.x_state.central_config.deploy && 
             this.context.x_state.central_config.deploy.indexOf('eb:') != -1 && 
-            this.context.x_state.config_node.aws) {
+            this.context.x_state.config_node.aws && ci.isCI==false) {
             // @TODO add this block to deploys/eb 'post' method and onPrepare to 'pre' 20-br-21
             // only execute after deploy and if user requested specific aws credentials on map
             let path = require('path'), copy = require('recursive-copy'), os = require('os');
@@ -260,9 +261,11 @@ node_modules/`;
     }
 
     async pre() {
+        let ci = require('ci-info');
         if (!this.context.x_state.central_config.componente && 
              this.context.x_state.central_config.deploy && 
-             this.context.x_state.central_config.deploy.indexOf('eb:') != -1) {
+             this.context.x_state.central_config.deploy.indexOf('eb:') != -1 &&
+             ci.isCI==false) {
             // if deploying to AWS eb:x, then recover/backup AWS credentials from local system
             let ini = require('ini'),
                 path = require('path'),
