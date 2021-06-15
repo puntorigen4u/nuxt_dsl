@@ -67,10 +67,10 @@ export default class s3 extends base_deploy {
         let aliases = [];
         let ci = require('ci-info');
         let spa_opt = { cwd:this.context.x_state.dirs.base };
-        let profile = [];
+        let profile = ['--profile','default'];
         if (ci.isCI==true) {
             //spa_opt.stdio = 'inherit';
-            profile = ['--profile','default'];
+            profile = [];
         }
         if (this.context.x_state.central_config.dominio) {
             bucket = this.context.x_state.central_config.dominio.trim();
