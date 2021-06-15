@@ -67,8 +67,10 @@ export default class s3 extends base_deploy {
         let aliases = [];
         let ci = require('ci-info');
         let spa_opt = { cwd:this.context.x_state.dirs.base };
+        let profile = [];
         if (ci.isCI==true) {
-            spa_opt.stdio = 'inherit';
+            //spa_opt.stdio = 'inherit';
+            profile = ['--profile','default'];
         }
         if (this.context.x_state.central_config.dominio) {
             bucket = this.context.x_state.central_config.dominio.trim();
@@ -111,7 +113,7 @@ export default class s3 extends base_deploy {
         //create bucket
         spinner.start('Creating bucket');
         try {
-            results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',bucket,'--region',region,'--profile','default'],spa_opt); //, stdio:'inherit'
+            results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',bucket,'--region',region,...profile],spa_opt); //, stdio:'inherit'
             spinner.succeed(`Bucket created in ${region}`);
         } catch(x2) { 
             spinner.fail('Bucket creation failed');
@@ -121,7 +123,7 @@ export default class s3 extends base_deploy {
         //aws s3api put-bucket-policy --bucket www.happy-bunny.xyz --policy file:///tmp/bucket_policy.json --profile equivalent
         spinner.start('Adding bucket policy');
         try {
-            results.adding_policy = await spawn('aws',['s3api','put-bucket-policy','--bucket',bucket,'--policy','file://'+policyFile,'--profile','default'],spa_opt); //, stdio:'inherit'
+            results.adding_policy = await spawn('aws',['s3api','put-bucket-policy','--bucket',bucket,'--policy','file://'+policyFile,...profile],spa_opt); //, stdio:'inherit'
             spinner.succeed(`Bucket policy added correctly`);
         } catch(x3) { 
             spinner.fail('Adding bucket policy failed');
@@ -131,7 +133,7 @@ export default class s3 extends base_deploy {
         //aws s3 sync /tmp/SOURCE_FOLDER s3://www.happy-bunny.xyz/  --profile equivalent
         spinner.start('Uploading website files to bucket');
         try {
-            results.website_upload = await spawn('aws',['s3','sync',dist_folder,'s3://'+bucket+'/','--profile','default'],spa_opt); //, stdio:'inherit'
+            results.website_upload = await spawn('aws',['s3','sync',dist_folder,'s3://'+bucket+'/',...profile],spa_opt); //, stdio:'inherit'
             spinner.succeed(`Website uploaded successfully`);
         } catch(x4) { 
             spinner.fail('Failed uploading website files');
@@ -146,7 +148,7 @@ export default class s3 extends base_deploy {
                     's3://'+bucket+'/',
                     '--index-document','index.html',
                     '--error-document','200.html',
-                    '--profile','default'],
+                    ...profile],
                     spa_opt);
             spinner.succeed(`Bucket configured as website successfully`);
         } catch(x5) { 
@@ -174,7 +176,7 @@ export default class s3 extends base_deploy {
                 //create bucket
                 spinner.start(`Creating bucket alias '${alias}'`);
                 try {
-                    results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',alias,'--region',region],spa_opt); //, stdio:'inherit'
+                    results.create_bucket = await spawn('aws',['s3api','create-bucket','--bucket',alias,'--region',region,...profile],spa_opt); //, stdio:'inherit'
                     spinner.succeed(`Bucket alias '${alias}' created in ${region}`);
                 } catch(x2) { 
                     spinner.fail(`Bucket alias '${alias}' creation failed`);
@@ -183,7 +185,7 @@ export default class s3 extends base_deploy {
                 //add bucket policy
                 spinner.start(`Adding bucket alias '${alias}' policy`);
                 try {
-                    results.adding_policy = await spawn('aws',['s3api','put-bucket-website','--bucket',alias,'--website-configuration','file://policy_alias.json'],spa_opt); //, stdio:'inherit'
+                    results.adding_policy = await spawn('aws',['s3api','put-bucket-website','--bucket',alias,'--website-configuration','file://policy_alias.json',...profile],spa_opt); //, stdio:'inherit'
                     spinner.succeed(`Bucket alias '${alias}' policy added correctly`);
                 } catch(x2) { 
                     spinner.fail(`Adding bucket alias '${alias}' policy failed`);
