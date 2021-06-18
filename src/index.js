@@ -2268,8 +2268,15 @@ ${cur.attr('name')}: {
             //only deploy if no errors were found
             if (!(await this.deploy_module.deploy()) && !this.x_state.central_config.componente) {
                 this.x_console.outT({ message:'Something went wrong deploying, check the console, fix it and run again.', color:'red' });
-            };
-            await this.deploy_module.post();
+                await this.deploy_module.post();
+                // found errors deploying
+                process.exit(100);
+            } else {
+                await this.deploy_module.post();
+            }
+        } else {
+            //found errors compiling
+            process.exit(50);
         }
     }
 
