@@ -673,6 +673,7 @@ Thumbs.db
 # Concepto files
 .concepto/
 vue.dsl
+vue_*.dsl
 .secrets-pass
 policy.json
 aws_backup.ini
@@ -718,6 +719,7 @@ policy.json
 .concepto/
 aws_backup.ini
 vue.dsl
+vue_*.dsl
 .secrets-pass
 store/
 ${this.x_state.dirs.compile_folder}/`;
