@@ -115,7 +115,7 @@ let getSerial = function() {
             x_console.out({ message:'--secrets-pass [string]\t\tSecret password for encrypting / decrypting config->secrets', color:'yellow' });
             x_console.out({ message:'--secrets-pass-save [string]\tSave to disk the given secret password encrypted', color:'yellow' });
             x_console.out({ message:'--diff-from [file]\t\tCreates a eb_diff.dsl file with the differences between the --source file and this one', color:'yellow' });
-            x_console.out({ message:'--export-html [file]\t\tCreates an html representation of given dsl file it the specified directory', color:'yellow' });
+            x_console.out({ message:'--export-html [file]\t\tCreates an html representation of given dsl file within the specified directory', color:'yellow' });
             x_console.out({ message:'--silent\t\t\tCompiles in the most quiet mode posible (CI default mode)', color:'yellow' });
             console.log('');
         //}
