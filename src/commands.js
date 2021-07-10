@@ -2206,7 +2206,8 @@ module.exports = async function(context) {
                     extra_imports: attrs.extra_imports,
                     config: attrs.config
                 };
-                if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag.toLowerCase();
+                context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag.toLowerCase();
+                if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = attrs.use;
                 if (Object.keys(attrs.config)=='') delete context.x_state.plugins[attrs.npm.npm].config;
                 //code
                 if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
@@ -2215,6 +2216,8 @@ module.exports = async function(context) {
                 attrs.refx = node.id;
                 resp.open += context.tagParams(tmp.tag, attrs, false) + '\n';
                 resp.close += `</${tmp.tag}>\n`;
+                context.x_state.pages[resp.state.current_page].imports[attrs.npm.npm] = context.x_state.plugins[attrs.npm.npm].customvar;
+                context.x_state.pages[resp.state.current_page].components[tmp.tag] = context.x_state.plugins[attrs.npm.npm].customvar;
                 resp.state.friendly_name = tmp.tag.split('-').splice(-1)[0].trim();
                 return resp;
             }
