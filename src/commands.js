@@ -2209,7 +2209,7 @@ module.exports = async function(context) {
                 context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag.toLowerCase();
                 if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = attrs.use;
                 if (Object.keys(attrs.config)=='') delete context.x_state.plugins[attrs.npm.npm].config;
-                if (current_page in context.x_state.pages) {
+                if (resp.state.current_page && resp.state.current_page in context.x_state.pages) {
                     context.x_state.pages[resp.state.current_page].imports[attrs.npm.npm] = context.x_state.plugins[attrs.npm.npm].customvar;
                     context.x_state.pages[resp.state.current_page].components[tmp.tag] = context.x_state.plugins[attrs.npm.npm].customvar;
                 }
