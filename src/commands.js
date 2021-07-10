@@ -2206,7 +2206,12 @@ module.exports = async function(context) {
                     extra_imports: attrs.extra_imports,
                     config: attrs.config
                 };
-                context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag.toLowerCase();
+                context.x_state.plugins[attrs.npm.npm].customvar = tmp.tag  .replaceAll('-','')
+                                                                            .replaceAll('_','')
+                                                                            .replaceAll('/','')
+                                                                            .replaceAll('.css','')
+                                                                            .replaceAll('.','_')
+                                                                            .toLowerCase().trim();
                 if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = attrs.use;
                 if (Object.keys(attrs.config)=='') delete context.x_state.plugins[attrs.npm.npm].config;
                 if (resp.state.current_page && resp.state.current_page in context.x_state.pages) {
