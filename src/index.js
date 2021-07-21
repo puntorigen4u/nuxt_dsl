@@ -2933,6 +2933,8 @@ ${cur.attr('name')}: {
             //
             if (typeof ob === 'number') {
                 nuevo += ob;
+            } else if (ob == null) {
+                nuevo = null;
             } else if (typeof ob === 'boolean') {
                 nuevo += ob;
             } else if (typeof ob === 'string' &&
@@ -2960,11 +2962,18 @@ ${cur.attr('name')}: {
         };
         if (Array.isArray(obj)) {
             let tmp = [];
+            let resx = '[';
             for (let item in obj) {
                 tmp.push(this.jsDump(obj[item]));
+                if (resx=='[') {
+                    resx += tmp[item];
+                } else {
+                    resx += ','+tmp[item];
+                }
             }
-            resp = `[${tmp.join(',')}]`;
-        } else if (typeof obj === 'object') {
+            resp = resx+']';
+            //resp = `[${tmp.join(',')}]`;
+        } else if (typeof obj === 'object' && obj!=null) {
             let tmp=[];
             for (let llave in obj) {
                 let llavet = llave;
