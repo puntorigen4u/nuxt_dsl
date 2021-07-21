@@ -2135,13 +2135,14 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                let tmp = { install:{ config:{}, npm_version:'*', extra_imports:[] }, tag:node.text.replaceAll('tag:','').trim() };
+                let tmp = { install:{ config:{}, npm_version:'*', extra_imports:[] }, tag:node.text.replaceAll('tag:','').trim(), customcode:'' };
                 //params
                 let attrs = {
                     mode:'client',
                     config:{},
                     extra_imports: []
                 };
+                let npms = {};
                 Object.keys(node.attributes).map(function(key) {
                     let keytest = key.toLowerCase().trim();
                     let value = node.attributes[key].trim();
@@ -2174,49 +2175,75 @@ module.exports = async function(context) {
                     } else if (keytest.includes(':use')) {
                         attrs.use = value;
                     } else if (keytest.includes(':import')) {
-                        attrs.extra_imports.push(value);
+                        attrs.extra_imports = value.split(',');
                     } else if (keytest.includes(':mode')) {
                         attrs.mode = value;
                     } else if (keytest==':npm') {
-                        let original = value;
-                        value = { npm:value, version:'*' };
-                        if (original.includes(',')) {
-                            value.npm = original.split(',')[0].trim();
-                            value.version = original.split(',').pop().trim();
+                        let parseNPM = function(keyvalue) {
+                            let original = keyvalue;
+                            let value = { npm:keyvalue, version:'*' };
+                            if (original.includes(',')) {
+                                value.npm = original.split(',')[0].trim();
+                                value.version = original.split(',').pop().trim();
+                            }
+                            if (value.npm.includes('/')) {
+                                value.version = `https://github.com/${value.npm}.git`;
+                                value.npm = value.npm.split('/').pop().trim();
+                            }
+                            return value;
                         }
-                        if (value.npm.includes('/')) {
-                            value.version = `https://github.com/${value.npm}.git`;
-                            value.npm = value.npm.split('/').pop().trim();
+                        if (value.includes('|')) {
+                            value.split('|').map(x => {
+                                let tmpn = parseNPM(x);
+                                npms[tmpn.npm] = tmpn.version;
+                            });
+                        } else {
+                            attrs.npm = parseNPM(value);
+                            npms[attrs.npm.npm] = attrs.npm.version;
                         }
-                        attrs.npm = value;
                     } else {
                         attrs[key] = value;
                     }
                 });
-                
-                if (!attrs.npm) throw `the required attribute :npm is missing! Please specify it.`;
+                //assign child node as custom code
+                /*let sons = await node.getNodes();
+                if (sons.length>0) {
+                    tmp.customcode=trim(sons[0].text);
+                    //context.x_console.outT({ message:`DEBUG child of def_tag says`, color:'cyan', data:sons });
+                }*/
+                if (Object.keys(npms).length==0) throw `the required attribute :npm is missing! Please specify it.`;
                 // install plugin
-                context.x_state.npm[attrs.npm.npm] = attrs.npm.version;
-                context.x_state.plugins[attrs.npm.npm] = {
+                context.x_state.npm = {...context.x_state.npm,...npms};
+                /*tmp.xn = npms[Object.keys(npms)[0]];
+                attrs.npm = {
+                    [Object.keys(npms)[0]]: tmp.xn
+                };*/
+                let f_npm = Object.keys(npms)[0];
+                attrs.npm = npms[f_npm];
+                context.x_state.plugins[f_npm] = {
                     global: true,
-                    npm: {
-                        [attrs.npm.npm]: attrs.npm.version
-                    },
+                    npm: npms,
                     mode: attrs.mode,
                     extra_imports: attrs.extra_imports,
                     config: attrs.config
                 };
-                if (attrs.use) context.x_state.plugins[attrs.npm.npm].customvar = attrs.use.replaceAll('-','')
+                if (node.text_note.trim()!='') {
+                    let he = require('he');
+                    context.x_state.plugins[f_npm].customcode = he.decode(node.text_note.trim()).replaceAll('\n\n','');
+                }
+                //context.x_console.outT({ message:'plugin', data:context.x_state.plugins[f_npm] });
+                
+                if (attrs.use) context.x_state.plugins[f_npm].customvar = attrs.use.replaceAll('-','')
                                                                                             .replaceAll('_','')
                                                                                             .replaceAll('/','')
                                                                                             .replaceAll('.css','')
                                                                                             .replaceAll('.','_')
                                                                                             .toLowerCase().trim();
-                if (Object.keys(attrs.config)=='') delete context.x_state.plugins[attrs.npm.npm].config;
+                if (Object.keys(attrs.config)=='') delete context.x_state.plugins[f_npm].config;
                 if (resp.state.current_page && resp.state.current_page in context.x_state.pages) {
-                    if (context.x_state.plugins[attrs.npm.npm].customvar) {
-                        context.x_state.pages[resp.state.current_page].imports[attrs.npm.npm] = context.x_state.plugins[attrs.npm.npm].customvar;
-                        context.x_state.pages[resp.state.current_page].components[tmp.tag] = context.x_state.plugins[attrs.npm.npm].customvar;
+                    if (context.x_state.plugins[f_npm].customvar) {
+                        context.x_state.pages[resp.state.current_page].imports[f_npm] = context.x_state.plugins[f_npm].customvar;
+                        context.x_state.pages[resp.state.current_page].components[tmp.tag] = context.x_state.plugins[f_npm].customvar;
                     } else {
                         let assign_ = tmp.tag   .replaceAll('-','')
                                                 .replaceAll('_','')
@@ -2224,12 +2251,12 @@ module.exports = async function(context) {
                                                 .replaceAll('.css','')
                                                 .replaceAll('.','_')
                                                 .toLowerCase().trim();
-                        context.x_state.pages[resp.state.current_page].imports[attrs.npm.npm] = assign_;
+                        context.x_state.pages[resp.state.current_page].imports[f_npm] = assign_;
                         context.x_state.pages[resp.state.current_page].components[tmp.tag] = assign_;
                     }
                 }
                 //code
-                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
+                //if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
                 delete attrs.npm; delete attrs.mode; delete attrs.use;
                 delete attrs.extra_imports; delete attrs.config;
                 attrs.refx = node.id;
