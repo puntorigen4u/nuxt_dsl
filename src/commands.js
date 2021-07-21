@@ -2245,14 +2245,14 @@ module.exports = async function(context) {
                         context.x_state.pages[resp.state.current_page].imports[f_npm] = context.x_state.plugins[f_npm].customvar;
                         context.x_state.pages[resp.state.current_page].components[tmp.tag] = context.x_state.plugins[f_npm].customvar;
                     } else {
-                        let assign_ = tmp.tag   .replaceAll('-','')
+                        /*let assign_ = tmp.tag   .replaceAll('-','')
                                                 .replaceAll('_','')
                                                 .replaceAll('/','')
                                                 .replaceAll('.css','')
                                                 .replaceAll('.','_')
-                                                .toLowerCase().trim();
-                        context.x_state.pages[resp.state.current_page].imports[f_npm] = assign_;
-                        context.x_state.pages[resp.state.current_page].components[tmp.tag] = assign_;
+                                                .toLowerCase().trim();*/
+                        //context.x_state.pages[resp.state.current_page].imports[f_npm] = assign_;
+                        //context.x_state.pages[resp.state.current_page].components[tmp.tag] = assign_;
                     }
                 }
                 //code
