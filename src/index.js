@@ -903,6 +903,7 @@ ${this.x_state.dirs.compile_folder}/`;
                 vue.script += `data() {\n`;
                 vue.script += ` return ${this.jsDump(page.variables)}\n`;
                 vue.script += `}\n`;
+                //this.debug('- declare data() variables dump',page.variables);
             }
         }
         return vue;
