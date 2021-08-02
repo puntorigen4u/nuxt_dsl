@@ -2225,7 +2225,8 @@ module.exports = async function(context) {
                     npm: npms,
                     mode: attrs.mode,
                     extra_imports: attrs.extra_imports,
-                    config: attrs.config
+                    config: attrs.config,
+                    tag: tmp.tag
                 };
                 if (node.text_note.trim()!='') {
                     let he = require('he');
