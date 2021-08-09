@@ -840,7 +840,7 @@ ${this.x_state.dirs.compile_folder}/`;
                 js.script += `import ${compName} from '../client/components/${title}/${thefile.file.replace('.vue','-story.vue')}';\n\n`;
                 js.script += `export default {
                     title: '${camel(this.x_state.central_config.apptitle,{pascalCase:true})}/${title}',
-                    component: ${title},
+                    component: ${compName},
                     argTypes: ${JSON.stringify(argType)}
                 };\n\n`;
                 js.script += `const Template = (args, { argTypes }) => ({
