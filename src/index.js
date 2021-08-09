@@ -241,7 +241,8 @@ export default class vue_dsl extends concepto {
             };
             if (this.x_state.central_config.storybook==true) {
                 target_folders['storybook'] = '.storybook/';
-                target_folders['stories'] = 'stories/';
+                target_folders['stories'] = 'stories2/';
+                target_folders['stories_assets'] = 'stories2/assets/';
             }
         }
         this.x_state.dirs = await this._appFolders(target_folders,compile_folder);
@@ -2232,8 +2233,9 @@ ${cur.attr('name')}: {
             data.devDependencies['@storybook/vue'] = '^6.3.6';
             data.devDependencies['babel-loader'] = '^8.2.2';
             data.devDependencies['vue-loader'] = '^15.9.8';
-            data.scripts['storybook'] = 'start-storybook -p 6006';
-            data.scripts['build-storybook'] = 'build-storybook';*/
+            */
+            data.scripts['storybook2'] = 'start-storybook -s ./stories/assets -p 6006';
+            data.scripts['build-storybook2'] = 'build-storybook -s ./stories/assets';
         }
         //write to disk
         let path = require('path');
@@ -2249,16 +2251,15 @@ ${cur.attr('name')}: {
     async createStorybookFiles() {
         // creates Storybook required files
         if (this.x_state.central_config.storybook==true) {
+            let path = require('path');
             let spawn = require('await-spawn');
-            let spinner = this.x_console.spinner({ message:'Initializing storybook' });
+            let spinner = this.x_console.spinner({ message:'Installing storybook' });
             try {
                 let install = await spawn('npx',['sb','init','-f'],{ cwd:this.x_state.dirs.app });
-                spinner.succeed(`storybook initialized successfully`);
+                spinner.succeed(`Storybook installed and initialized successfully`);
             } catch(n) { 
-                spinner.fail('storybook failed to initialize');
+                spinner.fail('Storybook failed to initialize');
             }
-            //
-            let path = require('path');
             // creates .storybook/main.js file
             let data = {
                 'stories': [
@@ -2294,6 +2295,47 @@ export const decorators = [
 ]`;
             // write preview.js to disk
             target = path.join(this.x_state.dirs['storybook'],`preview.js`);
+            await this.writeFile(target,content);
+            // creates/writes .storybook/preview-head.html
+            content = `<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">`;
+            target = path.join(this.x_state.dirs['storybook'],`preview-head.html`);
+            await this.writeFile(target,content);
+            // creates custom Theme
+            // copy po logo
+            let po_logo = path.join(__dirname,'assets','po.png');
+            let po_target = path.join(this.x_state.dirs['stories_assets'],'po.png');
+            let fs = require('fs-extra');
+            await fs.copy(po_logo,po_target);
+            // remove original stories
+            //let fso = require('fs').promises;
+            await fs.rmdir(this.x_state.dirs['stories'].replace('stories2','stories'), { recursive:true })
+            // copy stories2 to stories folder
+            await fs.copy(this.x_state.dirs['stories'],this.x_state.dirs['stories'].replace('stories2','stories'));
+            await fs.rmdir(this.x_state.dirs['stories'], { recursive:true })
+            //await fs.remove(path.resolve());
+            // creates/writes .storybook/potheme.js
+            let config = {
+                base: 'light',
+                brandTitle: 'Punto Origen SpA',
+                brandUrl: 'http://www.puntorigen.com',
+                brandImage: 'po.png',
+                colorPrimary: '#E10106',
+                colorSecondary: '#86CD46',
+                // UI
+                appBg: '#FFFFFF',
+                appContentBg: '#F6F8FC',
+                appBorderColor: 'grey',
+                appBorderRadius: 1,
+            };
+            content = `import { create } from '@storybook/theming'\n`;
+            content += `export default create(${JSON.stringify(config)});`;
+            target = path.join(this.x_state.dirs['storybook'],`po.js`);
+            await this.writeFile(target,content);
+            // creates/writes .storybook/manager.js
+            content = `import { addons } from '@storybook/addons';\n`;
+            content += `import poTheme from './po';\n\n`;
+            content += `addons.setConfig({ theme: poTheme });`;
+            target = path.join(this.x_state.dirs['storybook'],`manager.js`);
             await this.writeFile(target,content);
         }
     }
