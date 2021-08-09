@@ -214,16 +214,17 @@ export default class vue_dsl extends concepto {
         //this.debug('central_config',this.x_state.central_config);
         this.x_state.assets = await this._readAssets();
         //this.debug('assets_node',this.x_state.assets);
+        let target_folders = {};
         if (this.x_state.central_config.componente) {
-            this.x_state.dirs = await this._appFolders({
+            target_folders = {
                 'components': '',
                 'pages': '',
                 'assets': 'assets/',
                 'static': 'static/',
                 'umd': 'umd/'
-            },compile_folder);
+            };
         } else {
-            this.x_state.dirs = await this._appFolders({
+            target_folders = {
                 'client': 'client/',
                 'layouts': 'client/layouts/',
                 'components': 'client/components/',
@@ -237,8 +238,13 @@ export default class vue_dsl extends concepto {
                 'store': 'client/store/',
                 'lang': 'client/lang/',
                 'secrets': 'secrets/'
-            },compile_folder);
+            };
+            if (this.x_state.central_config.storybook==true) {
+                target_folders['storybook'] = '.storybook/';
+                target_folders['stories'] = 'stories/';
+            }
         }
+        this.x_state.dirs = await this._appFolders(target_folders,compile_folder);
         // read modelos node (virtual DB)
         this.x_state.models = await this._readModelos(); //alias: database tables
         //is local server running? if so, don't re-launch it
@@ -773,6 +779,84 @@ ${this.x_state.dirs.compile_folder}/`;
                 self.x_state.functions[name].code = cur.text().trim();
             });
         }
+    }
+
+    async getComponentStory(thefile) {
+        // {component}.stories.js file
+        let js = { script: '', style: '', first: false };
+        let page = this.x_state.pages[thefile.title];
+        let camel = require('camelcase');
+        if (page) {
+            if (page.tipo == 'componente' && page.params != '') {
+                let argType = {}, title = thefile.title.split(':')[1].trim(), evts = '';
+                //prepare events
+                let events = page.stories['_default'].events;
+                for (let evt in events) {
+                    let on_name = camel(`on_${evt}`);
+                    evts += ` @${evt}="${on_name}"`;
+                    argType[on_name] = {
+                        action:'clicked'
+                    }
+                }
+                //prepare component attributes (props)
+                let isNumeric = function(n) {
+                    return !isNaN(parseFloat(n)) && isFinite(n);
+                };
+                //let props = []; // story attr control type
+                let default_args = [];
+                if (Object.keys(page.defaults) != '') {
+                    page.params.split(',').map(function(key) {
+                        let def_val = '';
+                        if (page.defaults[key]) def_val = page.defaults[key];
+                        if (def_val == 'true' || def_val == 'false') {
+                            default_args.push(`${key}: ${def_val}`);
+                            //props.push(`${key}: { type: Boolean, default: ${def_val}}`);
+                        } else if (isNumeric(def_val)) { //if def_val is number or string with number
+                            default_args.push(`${key}: ${def_val}`);
+                            //props.push(`${key}: { type: Number, default: ${def_val}}`);
+                        } else if (def_val.indexOf('[') != -1 && def_val.indexOf(']') != -1) {
+                            default_args.push(`${key}: ${def_val}`);
+                            //props.push(`${key}: { type: Array, default: () => ${def_val}}`);
+                        } else if (def_val.indexOf('{') != -1 && def_val.indexOf('}') != -1) {
+                            default_args.push(`${key}: ${def_val}`);
+                            //props.push(`${key}: { type: Object, default: () => ${def_val}}`);
+                        } else if (def_val.indexOf("()") != -1) { //ex. new Date()
+                            default_args.push(`${key}: ${def_val}`);
+                            //props.push(`${key}: { type: Object, default: () => ${def_val}}`);
+                        } else if (def_val.toLowerCase().indexOf("null") != -1) {
+                            default_args.push(`${key}: null`);
+                            //props.push(`${key}: { default: null }`);
+                        } else if (def_val.indexOf("'") != -1) {
+                            default_args.push(`${key}: ${def_val}`);
+                            //props.push(`${key}: { type: String, default: ${def_val}}`);
+                        } else {
+                            default_args.push(`${key}: '${def_val}'`);
+                            //props.push(`${key}: { default: '${def_val}' }`);
+                        }
+                    });
+                }
+                //write story code
+                let compName = camel(title,{pascalCase:true});
+                js.script += `import ${compName} from '../client/components/${title}/${thefile.file}';\n\n`;
+                js.script += `export default {
+                    title: '${camel(this.x_state.central_config.apptitle,{pascalCase:true})}/${title}',
+                    component: ${compName},
+                    argTypes: ${JSON.stringify(argType)}
+                };\n\n`;
+                js.script += `const Template = (args, { argTypes }) => ({
+                    props: Object.keys(argTypes),
+                    components: { ${compName} },
+                    template: '<${title} v-bind="$props"${evts}/>'
+                });\n`;
+                //default story
+                js.script += `export const Default = Template.bind({});\n`;
+                js.script += `Default.args = {\n`;
+                js.script += `${default_args.join(',')}\n};\n`
+                //additional defined stories
+                //@todo
+            }
+        }
+        return js;
     }
 
     async getBasicVue(thefile) {
@@ -2136,6 +2220,20 @@ ${cur.attr('name')}: {
                 data.devDependencies[pack] = this.x_state.dev_npm[pack];
             }
         }
+        //storybook support
+        /*
+        if (this.x_state.central_config.storybook==true) {
+            data.devDependencies['@babel/core'] = '^7.15.0';
+            data.devDependencies['@storybook/addon-actions'] = '^6.3.6';
+            data.devDependencies['@storybook/addon-essentials'] = '^6.3.6';
+            data.devDependencies['@storybook/addon-links'] = '^6.3.6';
+            data.devDependencies['@storybook/vue'] = '^6.3.6';
+            data.devDependencies['@socheatsok78/storybook-addon-vuetify'] = '^0.1.8';
+            data.devDependencies['babel-loader'] = '^8.2.2';
+            data.devDependencies['vue-loader'] = '^15.9.8';
+            data.scripts['storybook'] = 'start-storybook -p 6006';
+            data.scripts['build-storybook'] = 'build-storybook';
+        }*/
         //write to disk
         let path = require('path');
         let target = path.join(this.x_state.dirs.app,`package.json`);
@@ -2145,6 +2243,58 @@ ${cur.attr('name')}: {
         let content = JSON.stringify(data);
         await this.writeFile(target,content);
         //this.x_console.outT({ message:'future package.json', data:data});
+    }
+
+    async createStorybookFiles() {
+        // creates Storybook required files
+        if (this.x_state.central_config.storybook==true) {
+            let spawn = require('await-spawn');
+            let spinner = this.x_console.spinner({ message:'Initializing storybook' });
+            try {
+                let install = await spawn('npx',['sb','init'],{ cwd:this.x_state.dirs.app });
+                spinner.succeed(`storybook initialized successfully`);
+            } catch(n) { 
+                spinner.fail('storybook failed to initialize');
+            }
+            //
+            let path = require('path');
+            // creates .storybook/main.js file
+            let data = {
+                'stories': [
+                    '../stories/**/*.stories.mdx',
+                    '../stories/**/*.stories.@(js|jsx|ts|tsx)'
+                ],
+                'addons': [
+                    "@storybook/addon-links",
+                    "@storybook/addon-essentials",
+                    '@socheatsok78/storybook-addon-vuetify'
+                ]
+            };
+            //write main.js to disk
+            //this.x_console.outT({ message:'STORYBOOK dirs', color:'yellow', data:this.x_state.dirs });
+            let target = path.join(this.x_state.dirs['storybook'],`main.js`);
+            let content = 'module.exports = '+JSON.stringify(data);
+            await this.writeFile(target,content);
+            // creates .storybook/preview.js
+            content = `import { withVuetify } from '@socheatsok78/storybook-addon-vuetify/dist/decorators'
+
+export const parameters = {
+    actions: { argTypesRegex: "^on[A-Z].*" },
+    controls: {
+        matchers: {
+            color: /(background|color)$/i,
+            date: /Date$/,
+        },
+    },
+}
+
+export const decorators = [
+    withVuetify
+]`;
+            // write preview.js to disk
+            target = path.join(this.x_state.dirs['storybook'],`preview.js`);
+            await this.writeFile(target,content);
+        }
     }
 
     async createVSCodeHelpers() {
@@ -2426,6 +2576,14 @@ ${cur.attr('name')}: {
                         await fs.mkdir(w_path, { recursive:true });
                     } catch(errdir) {
                     }
+                    if (this.x_state.central_config.storybook==true) {
+                        this.x_console.outT({ message: `writing story 'component' for ${thefile.file}`, color: 'brightCyan' });
+                        let story = await this.getComponentStory(thefile);
+                        let story_file = thefile.file.replace('.vue','.stories.js');
+                        let story_full = path.join(this.x_state.dirs.stories,story_file);
+                        await this.writeFile(story_full, story.script);
+                    }
+                    //
                     if (page.for_export) {
                         // save component version for publishing component as plugin
                         let djson = thefile.file.replace('.vue','.json');
@@ -2497,6 +2655,8 @@ ${cur.attr('name')}: {
             await this.createNuxtConfig()
             //create package.json
             await this.createPackageJSON();
+            //create storybook related files
+            await this.createStorybookFiles();
             //create VSCode helpers
             await this.createVSCodeHelpers();
             //create serverless.yml for deploy:sls - cfc:12881
@@ -2690,6 +2850,7 @@ ${cur.attr('name')}: {
             timeout: 30,
             modelos: 'aurora',
             componente: false,
+            storybook: false,
             'keep-alive': true,
             'keep-warm': true,
             port: 3000,

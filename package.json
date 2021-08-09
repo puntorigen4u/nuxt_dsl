@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "vue_dsl",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
@@ -38,6 +38,7 @@
   "dependencies": {
     "asciify-image": "^0.1.6",
     "await-spawn": "^4.0.2",
+    "camelcase": "^5.3.1",
     "cfonts": "^2.9.1",
     "cheerio": "^1.0.0-rc.3",
     "ci-info": "^3.1.1",
