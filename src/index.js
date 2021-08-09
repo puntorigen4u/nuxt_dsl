@@ -837,16 +837,16 @@ ${this.x_state.dirs.compile_folder}/`;
                 }
                 //write story code
                 let compName = camel(title,{pascalCase:true});
-                js.script += `import ${compName} from '../client/components/${title}/${thefile.file}';\n\n`;
+                js.script += `import ${compName} from '../client/components/${title}/${thefile.file.replace('.vue','-story.vue')}';\n\n`;
                 js.script += `export default {
                     title: '${camel(this.x_state.central_config.apptitle,{pascalCase:true})}/${title}',
-                    component: ${compName},
+                    component: ${title},
                     argTypes: ${JSON.stringify(argType)}
                 };\n\n`;
                 js.script += `const Template = (args, { argTypes }) => ({
                     props: Object.keys(argTypes),
                     components: { ${compName} },
-                    template: '<${title} v-bind="$props"${evts}/>'
+                    template: '<${compName} v-bind="$props"${evts}/>'
                 });\n`;
                 //default story
                 js.script += `export const Default = Template.bind({});\n`;
@@ -2578,14 +2578,21 @@ export const decorators = [
                     } catch(errdir) {
                     }
                     if (this.x_state.central_config.storybook==true) {
-                        if (vue.template.includes('<c-')==false && vue.template.includes(`~/assets/`)==false) {
+                        //@todo write {component}-story.vue alongside component file, with paths modified
+                        let vue_story = vue.full;
+                        let svue_path = path.join(w_path, thefile.file.replace('.vue','-story.vue'));
+                        vue_story = vue_story.replaceAll('~/assets','../../assets');
+                        vue_story = vue_story.replaceAll('~/components','../../components');
+                        vue_story = vue_story.replaceAll('.vue','-story.vue');
+                        await this.writeFile(svue_path, vue_story);
+                        //
+                        //if (vue.template.includes('<c-')==false && vue.template.includes(`~/assets/`)==false) {
                             this.x_console.outT({ message: `writing story 'component' for ${thefile.file}`, color: 'brightCyan' });
                             let story = await this.getComponentStory(thefile);
                             let story_file = thefile.file.replace('.vue','.stories.js');
                             let story_full = path.join(this.x_state.dirs.stories,story_file);
                             await this.writeFile(story_full, story.script);
-                        }
-                        //@todo write .vue in stories dir, with paths modified
+                        //}
                     }
                     //
                     if (page.for_export) {
