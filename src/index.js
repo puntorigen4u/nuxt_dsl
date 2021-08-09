@@ -792,8 +792,8 @@ ${this.x_state.dirs.compile_folder}/`;
                 //prepare events
                 let events = page.stories['_default'].events;
                 for (let evt in events) {
-                    let on_name = camel(`on_${evt}`);
-                    evts += ` @${evt}="${on_name}"`;
+                    let on_name = camel(`on_${evt.replaceAll(':','_')}`);
+                    evts += ` v-on:${evt}="${on_name}"`;
                     argType[on_name] = {
                         action:'clicked'
                     }
@@ -2221,19 +2221,20 @@ ${cur.attr('name')}: {
             }
         }
         //storybook support
-        /*
+        /* */
         if (this.x_state.central_config.storybook==true) {
+            data.devDependencies['@socheatsok78/storybook-addon-vuetify'] = '^0.1.8';
+            /*
             data.devDependencies['@babel/core'] = '^7.15.0';
             data.devDependencies['@storybook/addon-actions'] = '^6.3.6';
             data.devDependencies['@storybook/addon-essentials'] = '^6.3.6';
             data.devDependencies['@storybook/addon-links'] = '^6.3.6';
             data.devDependencies['@storybook/vue'] = '^6.3.6';
-            data.devDependencies['@socheatsok78/storybook-addon-vuetify'] = '^0.1.8';
             data.devDependencies['babel-loader'] = '^8.2.2';
             data.devDependencies['vue-loader'] = '^15.9.8';
             data.scripts['storybook'] = 'start-storybook -p 6006';
-            data.scripts['build-storybook'] = 'build-storybook';
-        }*/
+            data.scripts['build-storybook'] = 'build-storybook';*/
+        }
         //write to disk
         let path = require('path');
         let target = path.join(this.x_state.dirs.app,`package.json`);
@@ -2251,7 +2252,7 @@ ${cur.attr('name')}: {
             let spawn = require('await-spawn');
             let spinner = this.x_console.spinner({ message:'Initializing storybook' });
             try {
-                let install = await spawn('npx',['sb','init'],{ cwd:this.x_state.dirs.app });
+                let install = await spawn('npx',['sb','init','-f'],{ cwd:this.x_state.dirs.app });
                 spinner.succeed(`storybook initialized successfully`);
             } catch(n) { 
                 spinner.fail('storybook failed to initialize');
@@ -2577,11 +2578,14 @@ export const decorators = [
                     } catch(errdir) {
                     }
                     if (this.x_state.central_config.storybook==true) {
-                        this.x_console.outT({ message: `writing story 'component' for ${thefile.file}`, color: 'brightCyan' });
-                        let story = await this.getComponentStory(thefile);
-                        let story_file = thefile.file.replace('.vue','.stories.js');
-                        let story_full = path.join(this.x_state.dirs.stories,story_file);
-                        await this.writeFile(story_full, story.script);
+                        if (vue.template.includes('<c-')==false && vue.template.includes(`~/assets/`)==false) {
+                            this.x_console.outT({ message: `writing story 'component' for ${thefile.file}`, color: 'brightCyan' });
+                            let story = await this.getComponentStory(thefile);
+                            let story_file = thefile.file.replace('.vue','.stories.js');
+                            let story_full = path.join(this.x_state.dirs.stories,story_file);
+                            await this.writeFile(story_full, story.script);
+                        }
+                        //@todo write .vue in stories dir, with paths modified
                     }
                     //
                     if (page.for_export) {
