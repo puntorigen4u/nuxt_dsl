@@ -2554,9 +2554,40 @@ export const decorators = [
     //Transforms the processed nodes into files.
     async onCreateFiles(processedNodes) {
         //this.x_console.out({ message:'onCreateFiles', data:processedNodes });
-        //this.x_console.out({ message:'x_state', data:this.x_state });
+        //this.x_console.out({ message:'x_state.plugins', data:this.x_state.plugins });
         await this.generalConfigSetup();
         await this.createGitIgnore();
+        let tag_plugins = (function() {
+            let tags = {};
+            for (let y in this.x_state.plugins) {
+                let x = this.x_state.plugins[y];
+                if (x.tag) {
+                    tags[x.tag] = x;
+                } else {
+                    if (!tags['_']) tags['_']=[];
+                    tags['_'].push(x);
+                }
+            }
+            return tags;
+        }.bind(this))();
+        let add_plugins2story = function(story_vue) {
+            let tags = Object.keys(tag_plugins);
+            let resp = story_vue;
+            for (let tag of tags) {
+                if (story_vue.includes(tag)) {
+                    if (tag_plugins[tag].customcode) {
+                        let nscript = `<script>\n`;
+                        nscript += tag_plugins[tag].customcode.replace(`import Vue from 'vue';`,'');
+                        resp = resp.replace('<script>\n',nscript);
+                    } else {
+                        //let nscript = `<script>\n`;
+                        //nscript += `import Vue from 'vue';\n`;
+                        //resp = resp.replace('<script>\n',nscript);
+                    }
+                }
+            }
+            return resp;
+        };
         this.debug('processing nodes');
         let fs = require('fs').promises, path = require('path');
         for (let thefile_num in processedNodes)  {
@@ -2620,12 +2651,27 @@ export const decorators = [
                     } catch(errdir) {
                     }
                     if (this.x_state.central_config.storybook==true) {
-                        //@todo write {component}-story.vue alongside component file, with paths modified
+                        //write {component}-story.vue alongside component file, with paths modified
                         let vue_story = vue.full;
                         let svue_path = path.join(w_path, thefile.file.replace('.vue','-story.vue'));
                         vue_story = vue_story.replaceAll('~/assets','../../assets');
                         vue_story = vue_story.replaceAll('~/components','../../components');
                         vue_story = vue_story.replaceAll('.vue','-story.vue');
+                        vue_story = add_plugins2story(vue_story);
+                        // @todo apply sub-tags and plugins directly to .vue
+                        if (vue.script.includes('asyncComputed')) {
+                            let nscript = `<script>\n`;
+                            nscript += `import vueasynccomputed from 'vue-async-computed';\n`;
+                            nscript += `Vue.use(vueasynccomputed);\n`;
+                            vue_story = vue_story.replace('<script>\n',nscript);
+                        }
+                        //put this after everything else
+                        if (vue.script.includes(`import Vue from 'vue'`)==false) {
+                            let nscript = `<script>\n`;
+                            nscript += `import Vue from 'vue';\n`;
+                            vue_story = vue_story.replace('<script>\n',nscript);
+                        }
+                        //
                         await this.writeFile(svue_path, vue_story);
                         //
                         //if (vue.template.includes('<c-')==false && vue.template.includes(`~/assets/`)==false) {
