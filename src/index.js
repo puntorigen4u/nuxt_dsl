@@ -1767,9 +1767,9 @@ ${cur.attr('name')}: {
         };
     }
 
-    async createNuxtPlugins() {
+    async createNuxtPlugins(write=true) {
         let path = require('path');
-        let resp = { global_plugins:{}, css_files:[], nuxt_config:[] };
+        let resp = { global_plugins:{}, css_files:[], nuxt_config:[], stories:{} };
         for (let plugin_key in this.x_state.plugins) {
             let plugin = this.x_state.plugins[plugin_key];
             if (typeof plugin === 'object') {
@@ -1862,8 +1862,11 @@ ${cur.attr('name')}: {
                         resp.nuxt_config.push({ src:`~/plugins/${import_as}.js` });
                     }
                     let target = path.join(this.x_state.dirs.plugins, `${import_as}.js`);
-                    await this.writeFile(target, code);
+                    if (write) await this.writeFile(target, code);
                 }
+                //10-ago-21 assign code to plugin registry (for storybook)
+                resp.stories[plugin_key] = plugin;
+                resp.stories[plugin_key].code = code;
             } else {
                 //simple plugin
                 this.x_state.npm[plugin_key] = plugin;
@@ -1879,8 +1882,11 @@ ${cur.attr('name')}: {
                 if (import_as!='vuetify') {
                     resp.nuxt_config.push({ src:`~/plugins/${import_as}.js` });
                     let target = path.join(this.x_state.dirs.plugins, `${import_as}.js`);
-                    await this.writeFile(target, code);
+                    if (write) await this.writeFile(target, code);
                 }
+                //10-ago-21 assign code to plugin registry (for storybook)
+                resp.stories[plugin_key] = plugin;
+                resp.stories[plugin_key].code = code;
             }
         }
         return resp;
@@ -2557,36 +2563,19 @@ export const decorators = [
         //this.x_console.out({ message:'x_state.plugins', data:this.x_state.plugins });
         await this.generalConfigSetup();
         await this.createGitIgnore();
-        let tag_plugins = (function() {
-            let tags = {};
-            for (let y in this.x_state.plugins) {
-                let x = this.x_state.plugins[y];
-                if (x.tag) {
-                    tags[x.tag] = x;
-                } else {
-                    if (!tags['_']) tags['_']=[];
-                    tags['_'].push(x);
-                }
-            }
-            return tags;
-        }.bind(this))();
+        let plugins_info4stories = await this.createNuxtPlugins(false);
+        //this.x_console.out({ message:'plugins_info4stories', data:plugins_info4stories });
         let add_plugins2story = function(story_vue) {
-            let tags = Object.keys(tag_plugins);
+            let plugins = plugins_info4stories.stories;
             let resp = story_vue;
-            for (let tag of tags) {
-                if (story_vue.includes(tag)) {
-                    if (tag_plugins[tag].customcode) {
-                        let nscript = `<script>\n`;
-                        nscript += tag_plugins[tag].customcode.replace(`import Vue from 'vue';`,'');
-                        resp = resp.replace('<script>\n',nscript);
-                    } else {
-                        //let nscript = `<script>\n`;
-                        //nscript += `import Vue from 'vue';\n`;
-                        //resp = resp.replace('<script>\n',nscript);
-                    }
+            for (let plugin in plugins) {
+                if (plugins[plugin].code.includes('vuetify')==false) {
+                    let nscript = `<script>\n`;
+                    nscript += plugins[plugin].code.replace(`import Vue from 'vue';`,'');
+                    resp = resp.replace('<script>\n',nscript);
                 }
             }
-            return resp;
+            return resp.replaceAll('\n\n','\n');
         };
         this.debug('processing nodes');
         let fs = require('fs').promises, path = require('path');
@@ -2659,12 +2648,12 @@ export const decorators = [
                         vue_story = vue_story.replaceAll('.vue','-story.vue');
                         vue_story = add_plugins2story(vue_story);
                         // @todo apply sub-tags and plugins directly to .vue
-                        if (vue.script.includes('asyncComputed')) {
+                        /*if (vue.script.includes('asyncComputed')) {
                             let nscript = `<script>\n`;
                             nscript += `import vueasynccomputed from 'vue-async-computed';\n`;
                             nscript += `Vue.use(vueasynccomputed);\n`;
                             vue_story = vue_story.replace('<script>\n',nscript);
-                        }
+                        }*/
                         //put this after everything else
                         if (vue.script.includes(`import Vue from 'vue'`)==false) {
                             let nscript = `<script>\n`;
