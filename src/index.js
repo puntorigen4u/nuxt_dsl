@@ -1843,6 +1843,8 @@ ${cur.attr('name')}: {
                     } else {
                         code += `Vue.use(${import_as},${plugin.config});\n`;
                     }
+                } else if (plugin.tag && plugin.customvar=='') {
+                    code += `Vue.use(${import_as},'${plugin.tag}');\n`;
                 } else if (plugin.tag) {
                     code += `Vue.component('${plugin.tag}',${import_as});\n`;
                 } else if (plugin.customvar) {
