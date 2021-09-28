@@ -4905,7 +4905,6 @@ module.exports = async function(context) {
                 }).trim();
                 attr.var = attr.tipo_ = node.text.split(',').pop();
                 //code
-                context.x_state.npm[attr.text] = attr.version;
                 if (node.text_note != '') resp.open = `// ${node.text_note.cleanLines()}\n`;
                 if (!attr.require) {
                     if ('current_func' in resp.state) {
@@ -4913,6 +4912,7 @@ module.exports = async function(context) {
                     } else {
                         context.x_state.pages[resp.state.current_page].imports[attr.text] = attr.tipo_;
                     }
+                    context.x_state.npm[attr.text] = attr.version;
                 } else {
                     //add support for user/repo
                     let pkg_name = attr.text; 
@@ -4920,6 +4920,7 @@ module.exports = async function(context) {
                         pkg_name = pkg_name.split('/')[1];
                     }
                     resp.open += `let ${attr.var} = require('${pkg_name}');\n`;
+                    context.x_state.npm[pkg_name] = `https://github.com/${attr.text}.git`;
                 }
                 return resp;
             }
