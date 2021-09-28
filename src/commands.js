@@ -4886,7 +4886,8 @@ module.exports = async function(context) {
 
         'def_npm_instalar': {
             x_icons: 'desktop_new',
-            x_text_pattern: [`npm:+(install|instalar) "*"`,`npm:+(install|instalar) "*",*`],
+            x_text_pattern: [`npm:+(install|instalar) "*"`,`npm:+(install|instalar) "*",*`,
+                             `npm:+(install|instalar) "*/*"`,`npm:+(install|instalar) "*/*",*`],
             x_level: '>2',
             hint: 'Instala el paquete npm indicado entrecomillas y lo instancia en la página (import:true) o función actual, o lo asigna a la variable indicada luego de la coma.',
             func: async function(node, state) {
