@@ -4918,9 +4918,11 @@ module.exports = async function(context) {
                     let pkg_name = attr.text; 
                     if (attr.text.includes('/') && !attr.text.includes('http') && !attr.text.includes('github.com')) {
                         pkg_name = pkg_name.split('/')[1];
+                        context.x_state.npm[pkg_name] = `https://github.com/${attr.text}.git`;
+                    } else {
+                        context.x_state.npm[attr.text] = attr.version;
                     }
                     resp.open += `let ${attr.var} = require('${pkg_name}');\n`;
-                    context.x_state.npm[pkg_name] = `https://github.com/${attr.text}.git`;
                 }
                 return resp;
             }
