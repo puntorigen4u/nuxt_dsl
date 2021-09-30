@@ -1053,6 +1053,16 @@ module.exports = async function(context) {
                 context.x_state.pages[state.current_page].components[tag_name] = var_name;
                 // process attributes and write output
                 let params = aliases2params('def_componente_view', node);
+                //translate asset if defined
+                for (let x in params) {
+                    if (params[x] && params[x].includes('assets:')) {
+                        let pre_x = x, valu = params[x];
+                        delete params[x];
+                        if (pre_x.charAt(0)!=':') pre_x = ':'+pre_x;
+                        params[pre_x] = context.getAsset(valu, 'js');
+                    }
+                    await setImmediatePromise(); //@improved
+                }
                 // transform numeric valuas as :key
                 let isNumeric = function(n) {
                     return !isNaN(parseFloat(n)) && isFinite(n);
@@ -2532,7 +2542,7 @@ module.exports = async function(context) {
         //*def_barrainferior
 
         'def_contenido': {
-            x_level: 3,
+            x_level: '3,4',
             x_icons: 'idea',
             x_text_exact: 'contenido',
             x_or_hasparent: 'def_page,def_componente',
