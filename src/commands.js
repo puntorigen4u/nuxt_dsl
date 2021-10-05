@@ -4674,7 +4674,10 @@ module.exports = async function(context) {
                 let tmp = {
                     type: 'computed',
                     repeat: 1,
-                    template: ''
+                    template: '',
+                    _min:null,
+                    _max:null,
+                    seed:null
                 };
                 // process attributes
                 Object.keys(node.attributes).map(function(key) {
@@ -4690,6 +4693,12 @@ module.exports = async function(context) {
                         params.watch = value;
                     } else if ('async' == keytest) {
                         tmp.type = (value == 'true') ? 'async' : 'sync';
+                    } else if ('min' == keytest) {
+                        tmp._min = value;
+                    } else if ('max' == keytest) {
+                        tmp._max = value;
+                    } else if ('seed' == keytest) {
+                        tmp.seed = value;
                     } else if ('cantidad' == keytest) {
                         tmp.repeat = value;
                     }
@@ -4742,8 +4751,35 @@ module.exports = async function(context) {
                             }
                         } else if (cmd[0]=='boolean') {
                             value = '{{boolean}}';
-                        } else if (cmd[0]=='id'|cmd[0]=='@index') {
+                        } else if (cmd[0]=='id' || cmd[0]=='@index') {
                             value = '{{@index}}';
+                        } else if (cmd[0]=='nombre' || cmd[0]=='firstname') {
+                            value = '{{firstName}}';
+                        } else if (cmd[0]=='apellido' || cmd[0]=='lastname') {
+                            value = '{{lastName}}';
+                        } else if (cmd[0]=='empresa' || cmd[0]=='company') {
+                            value = '{{company}}';
+                        } else if (cmd[0]=='email' || cmd[0]=='correo') {
+                            value = '{{email}}';
+                        } else if (cmd[0]=='ciudad' || cmd[0]=='city') {
+                            value = '{{city}}';
+                        } else if (cmd[0]=='calle' || cmd[0]=='street') {
+                            value = '{{street}}';
+                        } else if (cmd[0]=='pais' || cmd[0]=='country') {
+                            value = '{{country}}';
+                        } else if (cmd[0]=='latitud' || cmd[0]=='latitude') {
+                            value = '{{lat}}';
+                        } else if (cmd[0]=='longitud' || cmd[0]=='longitude') {
+                            value = '{{long}}';
+                        } else if (cmd[0]=='dominio' || cmd[0]=='domain') {
+                            value = '{{domain}}';
+                        } else if (cmd[0]=='telefono' || cmd[0]=='phone') {
+                            cmd[0] = 'phone';
+                            if (cmd.length>1) {
+                                value = `{{${cmd.join(' ')}}}`;
+                            } else {
+                                value = `{{phone "+56x xxxx xxxx"}}`;
+                            }
                         } else if (cmd[0]=='int') {
                             if (cmd.length>1 && cmd.length<4) {
                                 value = `{{${cmd.join(' ')}}}`;
@@ -4753,30 +4789,66 @@ module.exports = async function(context) {
                             } else {
                                 value = `{{int 0 999999}}`;
                             }
-                        } else if (cmd[0]=='date') {
+                        } else if (cmd[0]=='float') {
                             if (cmd.length>1) {
-                                value = `"{{${cmd.join(' ')}}}"`;
+                                value = `{{${cmd.join(' ')}}}`;
+                            } else {
+                                value = `{{float 0 999999 '0.00'}}`;
+                            }
+                        } else if (cmd[0]=='date' || cmd[0]=='fecha') {
+                            if (cmd.length>1) {
+                                cmd[0]='date';
+                                if (cmd.length==4 && cmd[3].includes('unix')) {
+                                    value = `{{${cmd.join(' ')}}}`;
+                                } else {
+                                    value = `"{{${cmd.join(' ')}}}"`;
+                                }
                             } else {
                                 value = `"{{date '1970-1-1' '2021-10-1'}}"`;
                             }
+                        } else if (cmd[0]=='time' || cmd[0]=='hora') {
+                            if (cmd.length>1) {
+                                cmd[0]='time';
+                                if (cmd.length==4 && cmd[3].includes('unix')) {
+                                    value = `{{${cmd.join(' ')}}}`;
+                                } else {
+                                    value = `"{{${cmd.join(' ')}}}"`;
+                                }
+                            } else {
+                                value = `"{{time '00:00' '23:59'}}"`;
+                            }
                         } else if (cmd[0].includes('$variables.')) {
                             value = '${JSON.stringify('+cmd[0].replaceAll('$variables.','this.')+')}';
+                        } else if (cmd[0].includes('{{')) {
+                            //custom type {{int 0 10}} {{ciudad}}
+                            value = `"${cmd.join(' ')}"`;
                         }
                         rows.push(`\t\t\t"${key}":${value}`);
                     }
                     tmp.template = rows.join(',').replaceAll(`",\t`,`",\n\t`).replaceAll(`},\t`,`},\n\t`);
                     //console.log('future template',rows);
                 }
-                tmp.template = `[
+                if (tmp._min && tmp._max) {
+                    tmp.template = `[
+    {{#repeat min=${tmp._min} max=${tmp._max}}}
+        {
+${tmp.template}
+        }
+    {{/repeat}}
+]`;
+                } else {
+                    tmp.template = `[
     {{#repeat ${tmp.repeat}}}
         {
 ${tmp.template}
         }
     {{/repeat}}
 ]`;
+                }
                 // build response
                 let code = '';
                 code += `let dummy_json = require('dummy-json');\n`;
+                if (tmp.seed) code += `dummyjson.seed = '${tmp.seed}';\n`;
                 code += `let template = \`${tmp.template}\`;\n`;
                 code += `return JSON.parse(dummy_json.parse(template));\n`;
                 //
