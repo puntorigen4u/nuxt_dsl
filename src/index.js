@@ -443,6 +443,8 @@ Vue.use(VueMask);`,
                 resp = 'config.omit';
             } else if (node.text.indexOf('modelos') != -1) {
                 resp = 'modelos.omit';
+            } else if (node.icons.includes('list') != -1) {
+                resp = resp.replaceAll('.vue','.group');
             } else if (['servidor', 'server', 'api'].includes(node.text)) {
                 resp = 'server.omit';
             }
@@ -1282,9 +1284,9 @@ ${cur.attr('name')}: {
                 } else {
                     if (cur.attr('m_params')) {
                         if (cur.attr('type') == 'async') {
-                            tmp += `${cur.attr('name')}: async function(${cur.attr('m_params')}) {`;
+                            tmp += `${cur.attr('name')}: async function(params) {`; //${cur.attr('m_params')}
                         } else {
-                            tmp += `${cur.attr('name')}: function(${cur.attr('m_params')}) {`;
+                            tmp += `${cur.attr('name')}: function(params) {`; //${cur.attr('m_params')}
                         }
                     } else {
                         if (cur.attr('type') == 'async') {
@@ -1526,6 +1528,7 @@ ${cur.attr('name')}: {
             let path = require('path');
             let util = require('util');
             let safe = require('safe-eval');
+            //console.log('debug stores complete',this.x_state.stores);
             for (let store_name in this.x_state.stores) {
                 let store = this.x_state.stores[store_name];
                 let file = path.join(this.x_state.dirs.store,`${store_name}.js`);
@@ -1574,6 +1577,7 @@ ${cur.attr('name')}: {
                     let muts=[];
                     for (let mut_name in store[':mutations']) {
                         let mutation = store[':mutations'][mut_name];
+                        //console.log('mutation debug',{mutation, mut_name});
                         let mut = { params:['state'] };
                         if (Object.keys(mutation.params).length>0) mut.params.push('objeto');
                         muts.push(`${mut_name}(${mut.params.join(',')}) {
@@ -2583,15 +2587,20 @@ export const decorators = [
         let fs = require('fs').promises, path = require('path');
         for (let thefile_num in processedNodes)  {
             //await processedNodes.map(async function(thefile) {
-            let thefile = processedNodes[thefile_num];
+            let thefile = processedNodes[thefile_num]; // only level 2 nodes!
             let contenido = thefile.code + '\n';
             if (thefile.file.split('.').slice(-1) == 'omit') {
                 await this.processOmitFile(thefile);
                 //process special non 'files'
+            } else if (thefile.file.split('.').slice(-1) == 'group') {
+                console.log('@TODO pending support for "grouped" componentes');
+                //await this.processOmitFile(thefile);
+                //expand 'grouped' pages a sub-process them
             } else {
+                //@todo transform this whole block into a function (so .grouped) can also called it per file
                 this.debug('processing node ' + thefile.title);
-                let vue = await this.getBasicVue(thefile);
                 let page = this.x_state.pages[thefile.title];
+                let vue = await this.getBasicVue(thefile);
                 // @TODO check the vue.template replacements (8-mar-21)
                 // declare server:asyncData
                 this.debug('post-processing internal custom tags');
