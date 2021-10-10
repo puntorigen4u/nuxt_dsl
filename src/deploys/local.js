@@ -14,9 +14,9 @@ export default class local extends base_deploy {
 
     async modifyPackageJSON(config) {
         //little sass errors hack fix 13jun21
-        config.devDependencies['sass-migrator']='*';
-        config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
-        config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
+        //config.devDependencies['sass-migrator']='*';
+        //config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
+        //config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
         return config;
     }
 
