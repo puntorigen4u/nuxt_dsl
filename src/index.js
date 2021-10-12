@@ -3223,6 +3223,7 @@ export const decorators = [
         let escape = function(obi) {
             let nuevo = '', ob = obi;
             //special escapes first
+            if (typeof ob === 'string' && ob=='{null}') ob = null;
             if (typeof ob === 'string') ob = ob.replaceAll('{now}','new Date()');
             //
             if (typeof ob === 'number') {
@@ -3238,6 +3239,7 @@ export const decorators = [
                 ob.charAt(0)=='!' || 
                 ob.indexOf('this.')!=-1 || 
                 ob.indexOf('new ')!=-1 || 
+                ob.indexOf('require(')!=-1 || 
                 ob.indexOf(`'`)!=-1 || 
                 ob.indexOf('`')!=-1 ||
                 (ob.charAt(0)!='0' && isNumeric(ob)) ||

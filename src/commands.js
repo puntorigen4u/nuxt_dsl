@@ -5065,7 +5065,8 @@ ${tmp.template}
                 } else {
                     tmp.var = tmp.var.replaceAll('$variables.', 'this.')
                         .replaceAll('$store.', 'this.$store.state.')
-                        .replaceAll('$config.', 'this.$config.');
+                        .replaceAll('$config.', 'this.$config.')
+                        .replaceAll('$params.', 'this.');
                     tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
                 }
                 // process attributes
@@ -5132,7 +5133,7 @@ ${tmp.template}
                                      .replaceAll('$vars.', 'resp.').replaceAll('$params.', 'resp.');
                     tmp.var = (tmp.var == 'resp.') ? 'resp' : tmp.var;
                 } else {
-                    tmp.var = tmp.var.replaceAll('$variables.', 'this.').replaceAll('$store.', 'this.$store.state.').replaceAll('$config.', 'this.$config.');
+                    tmp.var = tmp.var.replaceAll('$variables.', 'this.').replaceAll('$params.', 'this.').replaceAll('$store.', 'this.$store.state.').replaceAll('$config.', 'this.$config.');
                     tmp.var = (tmp.var == 'this.') ? 'this' : tmp.var;
                 }
                 // extend given var with 'extend_node' content
