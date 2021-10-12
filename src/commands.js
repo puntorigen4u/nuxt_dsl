@@ -1871,7 +1871,7 @@ module.exports = async function(context) {
             x_level: '>2',
             x_icons: 'idea',
             x_text_contains: 'dialog',
-            x_not_text_contains: 'boton:',
+            x_not_text_contains: 'boton:,:',
             attributes_aliases: {
                 'width': 'width,ancho',
                 'max-width': 'max-width,ancho-max,max-ancho',
@@ -3710,6 +3710,26 @@ module.exports = async function(context) {
             }
         },
 
+        'def_event_created': {
+            x_icons: 'help',
+            x_level: '3,4',
+            x_text_contains: ':created',
+            hint: 'Evento especial :created en pagina vue',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state,
+                    hasChildren: true
+                });
+                if (node.nodes_raw.length==0) return resp;
+                let params = {};
+                resp.open = context.tagParams('vue_created', {}, false)+'<!--';
+                if (node.text_note != '') resp.open += `/*${node.text_note.cleanLines()}*/\n`;
+                resp.close = '--></vue_created>';
+                resp.state.from_script=true;
+                return resp;
+            }
+        },
+
         'def_event_server': {
             x_icons: 'help',
             x_level: '3,4',
@@ -4995,12 +5015,14 @@ ${tmp.template}
                     symbol_closing: `"`
                 });
                 // tests return types
+                if (text.includes('$')) {
+                    text = text.replaceAll('$params.', 'this.')
+                               .replaceAll('$variables.', 'this.');
+                }
                 if (text.includes('**') && node.icons.includes('bell')) {
                     let new_vars = getTranslatedTextVar(text);
                     resp.open += `return ${new_vars};\n`;
-                } else if (text.includes('$')) {
-                    text = text.replaceAll('$params.', 'this.')
-                        .replaceAll('$variables.', 'this.');
+                } else if (node.text.includes('$')) {
                     resp.open += `return ${text};\n`;
                 } else if (text.includes('assets:')) {
                     text = context.getAsset(text, 'js');

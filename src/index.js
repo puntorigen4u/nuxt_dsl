@@ -1053,7 +1053,41 @@ ${this.x_state.dirs.compile_folder}/`;
             } else {
                 vue.script += `}\n`;
             }
-        }   
+        }
+        // process ?created event
+        nodes = $(`vue\_created`).toArray();
+        if (nodes.length > 0) this.debug('post-processing vue_created tag');
+        if (nodes.length > 0 && vue.first) vue.script += ',\n';
+        vue.first = true;
+        uses_await = false, mounted_content = '';
+        nodes.map(function(elem) {
+            let cur = $(elem);
+            //console.log('valor vue_mounted',elem.children[0].data);
+            if (elem.children[0].data.includes('await ')) {
+                uses_await = true;
+            }
+            mounted_content += elem.children[0].data; //cur.text();
+            //vue.script += elem.children[0].data; //cur.text();
+            cur.remove();
+        });
+        if (nodes.length > 0) {
+            if (uses_await) {
+                vue.script += `async created() {\n`;
+                vue.script += `this.$nextTick(async function() {\n`;
+
+            } else {
+                vue.script += `created() {\n`;
+            }
+            vue.script += mounted_content;
+        }
+        vue.template = $.html();
+        if (nodes.length > 0) {
+            if (uses_await) {
+                vue.script += `});\n}\n`;
+            } else {
+                vue.script += `}\n`;
+            }
+        }
         // process ?var (vue_computed)
         nodes = $('vue\_computed').toArray();
         //this.debug('nodes',nodes);
