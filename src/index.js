@@ -443,8 +443,6 @@ Vue.use(VueMask);`,
                 resp = 'config.omit';
             } else if (node.text.indexOf('modelos') != -1) {
                 resp = 'modelos.omit';
-            } else if (node.icons.includes('list') != -1) {
-                resp = resp.replaceAll('.vue','.group');
             } else if (['servidor', 'server', 'api'].includes(node.text)) {
                 resp = 'server.omit';
             }
@@ -453,6 +451,8 @@ Vue.use(VueMask);`,
             resp = node.text.split(':')[node.text.split(':').length - 1] + '.vue';
         } else if (node.text.indexOf('layout:') != -1) {
             resp = node.text.split(':')[node.text.split(':').length - 1] + '.vue';
+        } else if (node.icons.includes('list')) {
+            resp = resp.replaceAll('.vue','.group');
         }
         return resp;
     }
@@ -2623,14 +2623,7 @@ export const decorators = [
             //await processedNodes.map(async function(thefile) {
             let thefile = processedNodes[thefile_num]; // only level 2 nodes!
             let contenido = thefile.code + '\n';
-            if (thefile.file.split('.').slice(-1) == 'omit') {
-                await this.processOmitFile(thefile);
-                //process special non 'files'
-            } else if (thefile.file.split('.').slice(-1) == 'group') {
-                console.log('@TODO pending support for "grouped" componentes');
-                //await this.processOmitFile(thefile);
-                //expand 'grouped' pages a sub-process them
-            } else {
+            let toDisk = async function(thefile) {
                 //@todo transform this whole block into a function (so .grouped) can also called it per file
                 this.debug('processing node ' + thefile.title);
                 let page = this.x_state.pages[thefile.title];
@@ -2650,11 +2643,11 @@ export const decorators = [
                 }
                 // export default
                 vue.script = `{concepto:mixins:import}
-				${script_imports}
-				export default {
-					${vue.script}
+                ${script_imports}
+                export default {
+                    ${vue.script}
                     {concepto:mixins:array}
-				}`
+                }`
                 // **** **** end script wrap **** **** 
                 // process Mixins
                 vue = this.processMixins(vue, page);
@@ -2737,6 +2730,49 @@ export const decorators = [
                 await this.writeFile(w_path, vue.full);
                 //
                 //this.x_console.out({ message: 'vue ' + thefile.title, data: { vue, page_style: page.styles } });
+            }.bind(this);
+            //
+            if (thefile.file.split('.').slice(-1) == 'omit') {
+                await this.processOmitFile(thefile);
+                //process special non 'files'
+            } else if (thefile.file.includes('.group')==true) {
+                this.x_console.outT({ message: `segmenting 'group' file ${thefile.file}`, color: 'cyan' });
+                //console.log('@TODO pending support for "grouped" componentes');
+                //extract vue_file tags
+                this.debug('processing group '+thefile.file+' of files',thefile);
+                let cheerio = require('cheerio');
+                let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
+                let files_ = $(`vue_file`).toArray();
+                let tobe_created = [];
+                files_.map(async function(file_) {
+                    let cur = $(file_);
+                    let title = cur.attr('title') ? cur.attr('title') : '';
+                    let node_id = cur.attr('node_id') ? cur.attr('node_id') : '';
+                    let code = cur.html();
+                    tobe_created.push({
+                        id:node_id,
+                        code:code,
+                        valid:true,
+                        error:false,
+                        hasChildren:true,
+                        open:'',
+                        close:'',
+                        x_ids:''
+                    });
+                });
+                for (let tobe of tobe_created) {
+                    let the_node = await this.dsl_parser.getNode({ id:tobe.id, recurse: false });
+                    tobe.title = await this.onDefineTitle(the_node);
+                    tobe.file = await this.onDefineFilename(the_node);
+                    //console.log('to create ',tobe);
+                    //console.log('the page',this.x_state.pages[tobe.title]);
+                    //process.exit(0);
+                    await toDisk(tobe);
+                }
+                //await this.processOmitFile(thefile);
+                //expand 'grouped' pages a sub-process them
+            } else {
+                await toDisk(thefile);
             }
             //this.x_console.out({ message:'pages debug', data:this.x_state.pages });
             await this.setImmediatePromise(); //@improved

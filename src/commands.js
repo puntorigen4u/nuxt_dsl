@@ -727,9 +727,9 @@ module.exports = async function(context) {
                     }
                 }
                 resp.close += `</template>\n`;
-                if (context.x_state.from_def_dummy_group) {
-                    resp.open = `<file title="${resp.state.current_page}">\n` + resp.open;
-                    resp.close += `</file>\n`;
+                if (state.from_def_dummy_group) {
+                    resp.open = context.tagParams('vue_file',{ title:resp.state.current_page,node_id:node.id,node_text:node.text },false)+`\n` + resp.open;
+                    resp.close += `</vue_file>\n`;
                 }
                 // return
                 return resp;
@@ -814,7 +814,7 @@ module.exports = async function(context) {
             }
         },
         'def_page_estilos_class': {
-            x_level: 4,
+            x_level: '4,5',
             x_empty: 'icons',
             x_all_hasparent: 'def_page_estilos',
             hint: 'Definicion de clase CSS en template VUE',
@@ -856,7 +856,7 @@ module.exports = async function(context) {
         //*def_componente_emitir (ex: def_llamar_evento, script)
 
         'def_layout': {
-            x_level: 2,
+            x_level: '2,3',
             x_not_icons: 'button_cancel,desktop_new,list,help,idea',
             x_text_contains: 'layout:',
             x_empty: 'icons',
@@ -995,6 +995,7 @@ module.exports = async function(context) {
                     state,
                     hasChildren: true
                 });
+                //console.log('dummy node',resp);
                 resp.state.from_def_dummy_group=true;
                 return resp;
             }
