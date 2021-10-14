@@ -953,7 +953,7 @@ ${this.x_state.dirs.compile_folder}/`;
                 
             }
             // declare meta data
-            if (page.xtitle || page.meta.length > 0) {
+            if (page.xtitle || page.meta.length > 0 || page.link.length > 0) {
                 this.debug('- declare head() meta data');
                 if (vue.first) vue.script += ',\n';
                 vue.first = true;
@@ -978,6 +978,11 @@ ${this.x_state.dirs.compile_folder}/`;
                 if (page.meta.length > 0) {
                     if (page.xtitle) vue.script += `,`;
                     vue.script += `meta: ${JSON.stringify(page.meta)}\n`;
+                }
+                // define head LINK
+                if (page.link.length > 0) {
+                    if (page.xtitle || page.meta.length > 0) vue.script += `,`;
+                    vue.script += `link: ${JSON.stringify(page.link)}\n`;
                 }
                 vue.script += `};\n}`;
             }
