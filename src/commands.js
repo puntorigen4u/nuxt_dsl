@@ -2369,6 +2369,7 @@ module.exports = async function(context) {
                 resp.open += context.tagParams(tmp.tag, attrs, false) + '\n';
                 resp.close += `</${tmp.tag}>\n`;
                 resp.state.friendly_name = tmp.tag.split('-').splice(-1)[0].trim();
+                resp.state.from_script = false;
                 return resp;
             }
         },
@@ -3715,11 +3716,19 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
+                let padre = await context.dsl_parser.getParentNode({ id:node.id });
+                if (!padre.icons.includes('idea')) {
+                    //console.log('state y padre',{state,padre});
+                    resp.valid=false;
+                    resp.state.from_script=false;
+                    return resp;
+                }
+                /*
                 if (state.from_script && state.from_script==true) {
                     resp.valid=false;
                     return resp;
-                }
-                let params = (await context.x_commands['def_xcada_registro'].func(node, {...state,...{ get_params:true } })).state.params;
+                }*/
+                let params = (await context.x_commands['def_xcada_registro'].func(node, {...state,...{ get_params:true, from_xcada_view:true } })).state.params;
                 //code
                 if (node.text_note != '') resp.open += `<!-- ${node.text_note.cleanLines()} -->\n`;
                 resp.open += context.tagParams('vue_for', params, false) + '\n';
@@ -5794,8 +5803,11 @@ ${tmp.template}
                     resp.valid=false;
                     return resp;
                 }
-                if (state.from_script && state.from_script==false) {
+                let padre = await context.dsl_parser.getParentNode({ id:node.id });
+                if (padre.icons.includes('idea') && !state.from_xcada_view) {
+                    //console.log('state y padre',{state,padre});
                     resp.valid=false;
+                    resp.state.from_script=false;
                     return resp;
                 }
                 if (tmp.query.includes('$store.')) tmp.query = tmp.query.replaceAll('$store.','$store.state.');
