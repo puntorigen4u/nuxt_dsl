@@ -3715,7 +3715,7 @@ module.exports = async function(context) {
                 let resp = context.reply_template({
                     state
                 });
-                if (state.from_script) {
+                if (state.from_script && state.from_script==true) {
                     resp.valid=false;
                     return resp;
                 }
@@ -5791,6 +5791,10 @@ ${tmp.template}
                 let resp = context.reply_template({ state });
                 let tmp = { key:'', has_await:false, query:node.text, target:'' };
                 if (!state.from_script && !state.get_params) {
+                    resp.valid=false;
+                    return resp;
+                }
+                if (state.from_script && state.from_script==false) {
                     resp.valid=false;
                     return resp;
                 }
