@@ -2895,7 +2895,7 @@ module.exports = async function(context) {
             hint: 'Muestra el mensaje definido cuando se detecta mouse sobre sus hijos',
         	func: async function(node, state) {
                 let resp = context.reply_template({ state });
-                let params = aliases2params('def_tooltip', node, false, 'this.');
+                let params = aliases2params('def_tooltip', node, false, '');
                 let tmp = { text:'', params_span:{} };
                 if (params.texto) tmp.text = params.texto;
                 if (params[':texto']) tmp.text = params[':texto'];
@@ -4498,7 +4498,7 @@ module.exports = async function(context) {
                     let subnodes = await node.getNodes();
                     let has_event = false;
                     for (let i of subnodes) {
-                        if (i.icons.includes('help')) {
+                        if (i.icons.includes('help') && i.text!='change') {
                             has_event = true;
                         }
                         await setImmediatePromise(); //@improved
@@ -4749,7 +4749,21 @@ module.exports = async function(context) {
                         params.deep = value;
                     }
                 });
-                params.flat = resp.state.vars_path.join('.'); // inherit parent var from def_variables_field last state
+                //get parent node (for deep vars)@todo
+                if (resp.state.vars_path.length>1) {
+                    //search real parent var tree
+                    let parents = await context.dsl_parser.getParentNodesIDs({ id:node.id, array:true });
+                    let parents_ = [];
+                    for (let parent_id of parents) {
+                        let node = await context.dsl_parser.getNode({ id:parent_id, recurse:false });
+                        if (node.icons.length>0) break;
+                        parents_.push(node.text.split(':')[0]);
+                    }
+                    //console.log('parents_: ',parents_.reverse().join('.'));
+                    params.flat = parents_.reverse().join('.'); 
+                } else {
+                    params.flat = resp.state.vars_path.join('.'); // inherit parent var from def_variables_field last state
+                }
                 // write tag
                 resp.open = context.tagParams('vue_watched_var', params, false)+'<!--';
                 if (node.text_note != '') resp.open += `// ${node.text_note.cleanLines()}\n`;
