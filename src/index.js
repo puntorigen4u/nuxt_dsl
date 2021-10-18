@@ -1185,7 +1185,7 @@ ${cur.attr('name')}: {
             if (cur.attr('deep')) {
                 watched.push(`
 				'${cur.attr('flat')}': {
-					handler(newVal, oldVal) {
+					async handler(newVal, oldVal) {
 						let evento = { ${cur.attr('newvar')}:newVal, ${cur.attr('oldvar')}:oldVal };
 						${code}
 					},
@@ -1194,7 +1194,7 @@ ${cur.attr('name')}: {
 				`);
             } else {
                 watched.push(`
-				'${cur.attr('flat')}': function (newVal, oldVal) {
+				'${cur.attr('flat')}': async function (newVal, oldVal) {
 					let evento = { ${cur.attr('newvar')}:newVal, ${cur.attr('oldvar')}:oldVal };
 					${code}
 				}

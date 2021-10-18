@@ -513,7 +513,7 @@ module.exports = async function(context) {
             x_level: '>1',
             x_icons: 'desktop_new',
             x_text_contains: 'store:',
-            x_or_hasparent: 'def_event_element,def_event_method,def_event_server,def_condicion,def_otra_condicion,def_event_mounted',
+            x_or_hasparent: 'def_event_element,def_event_method,def_event_server,def_condicion,def_otra_condicion,def_event_mounted,def_variables_watch',
             hint: 'Representa al llamdo de un evento de un store',
             func: async function(node, state) {
                 let resp = context.reply_template({
@@ -1183,7 +1183,7 @@ module.exports = async function(context) {
             x_level: '>2',
             x_icons: 'idea',
             x_text_contains: 'card',
-            x_not_text_contains: ':text,:texto,:title,:action,:image,:media',
+            x_not_text_contains: ':text,:texto,:title,:action,:image,:media,html:,:subtitle',
             attributes_aliases: {
                 'width': 'width,ancho',
                 'height': 'height,alto'
@@ -1215,6 +1215,24 @@ module.exports = async function(context) {
                 let params = aliases2params('def_card_title', node);
                 resp.open += context.tagParams('v-card-title', params, false) + '\n';
                 resp.close += `</v-card-title>\n`;
+                resp.state.from_card_title=true;
+                return resp;
+            }
+        },
+        'def_card_subtitle': {
+            x_level: '>3',
+            x_icons: 'idea',
+            x_text_contains: 'card:subtitle',
+            x_all_hasparent: 'def_card',
+            hint: 'Sub-titulo de card de vuetify',
+            func: async function(node, state) {
+                let resp = context.reply_template({
+                    state
+                });
+                if (node.text_note != '') resp.open = `<!-- ${node.text_note.cleanLines()} -->`;
+                let params = aliases2params('def_card_subtitle', node);
+                resp.open += context.tagParams('v-card-subtitle', params, false) + '\n';
+                resp.close += `</v-card-subtitle>\n`;
                 resp.state.from_card_title=true;
                 return resp;
             }
@@ -4706,7 +4724,7 @@ module.exports = async function(context) {
             x_icons: 'help',
             x_level: '>4',
             x_text_contains: 'change',
-            x_all_hasparent: 'def_variables',
+            x_all_hasparent: 'def_variables,def_variables_field',
             hint: 'Monitorea los cambios realizados a la variable padre',
             func: async function(node, state) {
                 let resp = context.reply_template({
