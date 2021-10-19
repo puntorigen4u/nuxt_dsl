@@ -3899,7 +3899,7 @@ module.exports = async function(context) {
                 if (tmp.return) resp.open += `let ${tmp.return} = `;
                 if (Object.keys(params).length==0) data='';
                 if (tmp.link.includes('$refs')) {
-                    resp.open += `if (this.${tmp.link}) await this.${tmp.link}(${data});`;
+                    resp.open += `if (this.${tmp.link.split('.').slice(0,-1).join('.')}) await this.${tmp.link}(${data});`;
                 } else {
                     resp.open += `await this.${tmp.link}(${data});`;
                 }
