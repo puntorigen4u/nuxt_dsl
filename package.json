@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "vue_dsl",
-  "version": "1.9.17",
+  "version": "1.9.18",
   "description": "Punto Origen - ES6 VUE DSL Class Parser",
   "keywords": [
     "creador",
