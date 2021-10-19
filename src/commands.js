@@ -3888,16 +3888,21 @@ module.exports = async function(context) {
                                 symbol_closing: `"`
                             }).trim();
                             tmp.link = "$refs."+link_node.id+'.'+func_name_;
-                            delete params.refx;
                         }
                     }
+                    delete params.refx;
                 } else {
                     return {...resp,valid:false};
                 }
                 // write code convertjs(params)
                 let data = context.jsDump(params).replaceAll("'`","`").replaceAll("`'","`");
                 if (tmp.return) resp.open += `let ${tmp.return} = `;
-                resp.open += `await this.${tmp.link}(${data});`;
+                if (Object.keys(params).length==0) data='';
+                if (tmp.link.includes('$refs')) {
+                    resp.open += `if (this.${tmp.link}) await this.${tmp.link}(${data});`;
+                } else {
+                    resp.open += `await this.${tmp.link}(${data});`;
+                }
                 //
                 return resp;
             }
