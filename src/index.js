@@ -2569,8 +2569,9 @@ export const decorators = [
             let beautify = require('js-beautify');
             let beautify_vue = beautify.html;
             resp = beautify_vue(resp.replaceAll(`="xpropx"`,''),{});*/
+            resp = resp.replaceAll(`="xpropx"`,'');
             try {
-                resp = prettier.format(resp.replaceAll(`="xpropx"`,''), { 
+                resp = prettier.format(resp, { 
                     parser: 'vue',
                     htmlWhitespaceSensitivity: 'ignore',
                     useTabs: true,
@@ -2749,7 +2750,7 @@ export const decorators = [
                 let $ = cheerio.load(thefile.code, { ignoreWhitespace: false, xmlMode: true, decodeEntities: false });
                 let files_ = $(`vue_file`).toArray();
                 let tobe_created = [];
-                files_.map(async function(file_) {
+                files_.map(function(file_) {
                     let cur = $(file_);
                     let title = cur.attr('title') ? cur.attr('title') : '';
                     let node_id = cur.attr('node_id') ? cur.attr('node_id') : '';
