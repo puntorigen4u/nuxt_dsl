@@ -2801,6 +2801,7 @@ module.exports = async function(context) {
                 resp.open += context.tagParams('template',params,false)+'\n';
                 resp.close = '</template>\n';
                 resp.state.from_slot=true;
+                resp.state.from_script=false;
                 return resp;
             }
         },
@@ -3736,11 +3737,14 @@ module.exports = async function(context) {
                     state
                 });
                 let padre = await context.dsl_parser.getParentNode({ id:node.id });
+                let hijos = await node.getNodes();
                 if (!padre.icons.includes('idea') && !padre.icons.includes('list')) {
                     //console.log('state y padre',{state,padre});
-                    resp.valid=false;
-                    resp.state.from_script=false;
-                    return resp;
+                    if (hijos.length>0 && !hijos[0].icons.includes('idea')) {
+                        resp.valid=false;
+                        resp.state.from_script=false;
+                        return resp;
+                    }
                 }
                 /*
                 if (state.from_script && state.from_script==true) {
@@ -4526,7 +4530,7 @@ module.exports = async function(context) {
                     let subnodes = await node.getNodes();
                     let has_event = false;
                     for (let i of subnodes) {
-                        if (i.icons.includes('help') && i.text!='change') {
+                        if (i.icons.includes('help') && i.text=='change') {
                             has_event = true;
                         }
                         await setImmediatePromise(); //@improved
@@ -5280,6 +5284,10 @@ ${tmp.template}
                     state
                 });
                 let tmp = { text:node.text };
+                if (node.icons.includes('idea')) {
+                    resp.valid=false;
+                    return resp;
+                }
                 if (node.text.includes('$variables.') && node.text.right(2)=='()') {
                     tmp.text = tmp.text .replaceAll('$variables.','this.$asyncComputed.')
                                         .replaceAll('()','.update();')
@@ -5331,6 +5339,7 @@ ${tmp.template}
                 resp.open += tmp.text;
                 if (resp.open.right(1)!=';') resp.open += ';';
                 resp.open += '\n';
+                resp.state.from_script=true;
                 return resp;
             }
         },
@@ -5939,6 +5948,7 @@ ${tmp.template}
                     resp.close = `}\n`;
                 }
                 //
+                resp.state.from_script=true;
                 return resp;
             }
         },

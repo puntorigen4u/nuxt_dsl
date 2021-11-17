@@ -61,7 +61,7 @@ export default class eb extends base_deploy {
         let eb_full = this.context.x_state.central_config.deploy.replaceAll('eb:','');
         let eb_appname = eb_full;
         let eb_instance = `${eb_appname}-dev`;
-        if (this.context.x_state.central_config.deploy.contains(',')) {
+        if (this.context.x_state.central_config.deploy.includes(',')) {
             eb_appname = eb_full.split(',')[0];
             eb_instance = eb_full.split(',').splice(-1)[0];
         }
@@ -72,7 +72,7 @@ export default class eb extends base_deploy {
             let data = {
                 'branch-defaults': {
                     master: {
-                        enviroment: eb_instance,
+                        environment: eb_instance,
                         group_suffix: null
                     }
                 },
@@ -80,7 +80,7 @@ export default class eb extends base_deploy {
                     application_name: eb_appname,
                     branch: null,
                     default_ec2_keyname: 'aws-eb',
-                    default_platform: 'Node.js',
+                    default_platform: 'Node.js 14 running on 64bit Amazon Linux 2',
                     default_region: 'us-east-1',
                     include_git_submodules: true,
                     instance_profile: null,
