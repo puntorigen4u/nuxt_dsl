@@ -5,7 +5,7 @@ npm i puntorigen4u/vue_dsl -g
 ```
 ## Usage:
 ```terminal
-vue_dsl absolute_or_relative_file_to_compile.dsl
+vue_dsl -s absolute_or_relative_file_to_compile.dsl
 ```
 ## Help:
 ```terminal
