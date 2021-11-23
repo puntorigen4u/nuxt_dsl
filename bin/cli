@@ -120,7 +120,7 @@ let getSerial = function() {
             console.log('');
         //}
         //copyright
-        x_console.out({ message:`Copyright © 2021, Punto Origen SpA. All rights reserved.`, color:'dim' });
+        x_console.out({ message:`Copyright © 2021, Pablo Schaffner. All rights reserved.`, color:'dim' });
     };
     //detect if there is a vue.dsl file in current dir and src was not specified
     if (!myArgs.src) {

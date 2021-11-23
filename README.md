@@ -1,4 +1,16 @@
-# Punto Origen OPEN Framework : ES6 Classes
+# Concepto VUE_DSL Compiler
+## CLI Installation:
+```terminal
+npm i puntorigen4u/vue_dsl -g
+```
+## Usage:
+```terminal
+vue_dsl absolute_or_relative_file_to_compile.dsl
+```
+## Help:
+```terminal
+vue_dsl --help
+```
 
 # API Reference
 Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
