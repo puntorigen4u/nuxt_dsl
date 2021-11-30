@@ -1776,7 +1776,7 @@ ${cur.attr('name')}: {
         this.x_state.plugins['vuetify'] = {
             global: true,
             npm: { 'node-sass':'*' },
-            dev_npm: { '@nuxtjs/vuetify':'*' },
+            dev_npm: { '@nuxtjs/vuetify':'1.12.1' },
             nuxt_config: {
                 vuetify: {
                     theme: {
