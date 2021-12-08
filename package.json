@@ -1,13 +1,15 @@
 {
-  "private": true,
-  "name": "vue_dsl",
-  "version": "1.9.28",
-  "description": "Punto Origen - ES6 VUE DSL Class Parser",
+  "name": "@concepto/vue",
+  "version": "1.9.29",
+  "description": "Concepto DSL - visually create and maintain modern node.js based apps (@vue)",
   "keywords": [
     "creador",
     "puntorigen",
     "concepto",
-    "dsl"
+    "conceptodsl",
+    "dsl",
+    "vue",
+    "nuxtjs"
   ],
   "license": "AGPL-3.0-or-later",
   "author": "Pablo Schaffner",
