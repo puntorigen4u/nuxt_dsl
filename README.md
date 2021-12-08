@@ -16,7 +16,7 @@
 ## Installation
 
 ```
-$ npm install -g @concepto/cli
+$ npm install -g @concepto/vue
 ```
 
 ## Usage

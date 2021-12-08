@@ -1,6 +1,6 @@
 {
   "name": "@concepto/vue",
-  "version": "1.9.293",
+  "version": "1.9.294",
   "description": "Concepto DSL - visually create and maintain modern node.js based apps (@vue)",
   "keywords": [
     "creador",
@@ -30,12 +30,7 @@
     "dev": "cross-env NODE_ENV=development rollup -c",
     "build": "cross-env NODE_ENV=production rollup -c && npm run docs",
     "docs": "jsdoc2md -t README.hbs src/*.js > README.md",
-    "test_dsl": "npm run dev && node test/pablo.js test/testchico/vue.dsl",
-    "test_www": "npm run dev && node test/pablo.js test/www/vue.dsl",
-    "test_dsls": "npm run dev && node test/pablo.js test/sitio/vue.dsl",
-    "test_dsle": "npm run dev && node test/pablo.js test/ejecutivos/vue.dsl",
-    "test_dslm": "npm run dev && node test/pablo.js test/master/vue.dsl",
-    "test_dsla": "npm run dev && node test/pablo.js test/apoderado/vue.dsl"
+    "test_dsl": "npm run dev && node test/pablo.js test/testchico/vue.dsl"
   },
   "dependencies": {
     "asciify-image": "^0.1.6",
