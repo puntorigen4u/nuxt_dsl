@@ -2600,7 +2600,17 @@ export const decorators = [
         } else if (ext=='css') {
             resp = beautify_css(resp, { indent_scripts: 'keep' });
         }*/
-        await fs.writeFile(file, resp, encoding);
+        //12-dic-21: only write if target content is different from existing.
+        let target_exists = await this.exists(file);
+        let same=false;
+        if (target_exists) {
+			let prev = await fs.readFile(file,encoding);
+            let prev_hash = await this.hash(prev);
+            let curr_hash = await this.hash(resp);
+            //this.debug('testing file writing hashes',{prev_hash,curr_hash});
+            if (prev_hash==curr_hash) same=true;
+        }
+        if (!same) await fs.writeFile(file, resp, encoding);
     }
 
     //Transforms the processed nodes into files.
