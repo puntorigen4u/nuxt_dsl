@@ -1,4 +1,4 @@
-const concepto = require('concepto');
+const concepto = require('@concepto/interface');
 //import { timingSafeEqual } from 'crypto';
 //import { isContext, runInThisContext } from 'vm';
 //import concepto from '../../concepto/src/index'

@@ -151,15 +151,16 @@ let getSerial = function() {
                 fs.watchFile(myArgs.src, async function(curr,prev) {
                     x_console.clear();
                     x_console.out({ message:`file changed, recompiling ...`, color:'yellow'});
-                    let base = new vue(myArgs.src,{...myArgs,...{
+                    base.abortProcessing();
+                    let base2 = new vue(myArgs.src,{...myArgs,...{
                         nodeploy:true
                     }});
-                    await base.init();
-                    await base.addCommands(require('../lib/commands.js'));
-                    await base.process();
-                    console.log('total time passed, since constructor: '+base.secsPassed_());
+                    await base2.init();
+                    await base2.addCommands(require('../lib/commands.js'));
+                    await base2.process();
+                    console.log('total time passed, since constructor: '+base2.secsPassed_());
                     x_console.title({ title:`watching for file changes ...`, color:'dim'});
-                });
+                }.bind(base));
             }
         } else {
             console.log('--src requires a file to be specified!')

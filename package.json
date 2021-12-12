@@ -1,6 +1,6 @@
 {
   "name": "@concepto/vue",
-  "version": "1.9.31",
+  "version": "1.9.33",
   "description": "Concepto DSL - visually create and maintain modern node.js based apps (@vue)",
   "keywords": [
     "creador",
@@ -39,9 +39,9 @@
     "cfonts": "^2.9.1",
     "cheerio": "^1.0.0-rc.3",
     "ci-info": "^3.1.1",
-    "concepto": "github:puntorigen4u/concepto",
-    "crypto-hash": "^1.3.0",
+    "@concepto/interface": "*",
     "dsl_parser": "github:puntorigen4u/dsl_parser",
+    "crypto-hash": "^1.3.0",
     "encrypt-with-password": "^1.0.0",
     "extractjs": "^0.3.1",
     "fast-case": "^1.6.0",
