@@ -15,6 +15,7 @@ let myArgs = mri(process.argv, {
         justgit: ['g','justgit'],
         nodeploy: ['n','nodeploy'],
         deploy: ['p','deploy'],
+        watch: ['w','watch'],
         folder: ['f','folder'],
         aws_region: ['aws_region'],
         secrets_pass: ['secrets-pass'],
@@ -107,6 +108,7 @@ let getSerial = function() {
             x_console.out({ message:'-n, --nodeploy\t\t\tdo everything as requested, except launching the terminal', color:'cyan' });
             x_console.out({ message:'-f, --folder name\t\toutput folder name. default: central node text', color:'cyan' });
             x_console.out({ message:'-c, --cpu [float]\t\tamount of cpus to use. default:'+require('os').cpus().length, color:'cyan' });
+            x_console.out({ message:'-w, --watch\t\t\tkeep watching for file changes to given file after compilation', color:'cyan' });
             x_console.out({ message:'-d, --debug\t\t\tturns verbose logging on', color:'cyan' });
             x_console.out({ message:'-h, --help\t\t\tthis console output', color:'cyan' });
             console.log('');
@@ -142,6 +144,23 @@ let getSerial = function() {
             await base.addCommands(require('../lib/commands.js'));
             await base.process();
             console.log('total time passed, since constructor: '+base.secsPassed_());
+            if (myArgs.watch) {
+                const fs = require('fs');
+                x_console.title({ title:`watching for file changes ...`, color:'dim'});
+                //console.log('watching for file changes ...');
+                fs.watchFile(myArgs.src, async function(curr,prev) {
+                    x_console.clear();
+                    x_console.out({ message:`file changed, recompiling ...`, color:'yellow'});
+                    let base = new vue(myArgs.src,{...myArgs,...{
+                        nodeploy:true
+                    }});
+                    await base.init();
+                    await base.addCommands(require('../lib/commands.js'));
+                    await base.process();
+                    console.log('total time passed, since constructor: '+base.secsPassed_());
+                    x_console.title({ title:`watching for file changes ...`, color:'dim'});
+                });
+            }
         } else {
             console.log('--src requires a file to be specified!')
             printUsage();
