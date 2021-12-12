@@ -73,7 +73,7 @@ export default class vue_dsl extends concepto {
             //encrypt secrets object
             let to_secrets = encrypt.encryptJSON(resp['::secrets'],password);
             //create :secrets node within eb_git.dsl file
-            let dsl_parser = require('dsl_parser');
+            let dsl_parser = require('@concepto/dsl_parser');
 			let dsl = new dsl_parser({ file:this.x_flags.dsl.replace('.dsl','_git.dsl'), config:{ cancelled:true, debug:false } });
 			try {
 				await dsl.process();
@@ -120,7 +120,7 @@ export default class vue_dsl extends concepto {
                     if (true) { //!tmp.exists_non
                         this.x_console.outT({ message:'Expanding secrets into '+curr_dsl.replace('_git.dsl','.dsl'), color:'cyan' });
                         // expand secret nodes into non _git.dsl version config key
-                        let dsl_parser = require('dsl_parser');
+                        let dsl_parser = require('@concepto/dsl_parser');
                         let dsl = new dsl_parser({ file:this.x_flags.dsl, config:{ cancelled:true, debug:false } });
                         try {
                             await dsl.process();
