@@ -20,10 +20,10 @@ export default class s3 extends base_deploy {
         //little sass errors hack fix 13jun21
         let ci = require('ci-info');
         if (ci.isCI==false) {
-            config.devDependencies['sass-migrator']='*';
-            config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
-            config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
-            config.scripts.build = 'npm run hackfix && '+config.scripts.build;
+            //config.devDependencies['sass-migrator']='*';
+            //config.scripts.hackfix = 'sass-migrator division node_modules/vuetify/**/*.sass && sass-migrator division node_modules/vuetify/**/*.scss';
+            //config.scripts.dev = 'npm run hackfix && '+config.scripts.dev;
+            //config.scripts.build = 'npm run hackfix && '+config.scripts.build;
         }
         return config;
     }
