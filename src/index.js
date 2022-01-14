@@ -272,6 +272,7 @@ export default class vue_dsl extends concepto {
                 //console.log('copying ',{ from:abs, to:this.x_state.dirs.static });
             }.bind(this));
             this.x_console.outT({ message: `copying config:copiar directories ... READY`, color: `yellow` });
+            delete this.x_state.config_node.copiar;
         }
         // *********************************************
         // install requested modules within config node
