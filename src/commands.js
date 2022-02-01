@@ -3744,6 +3744,10 @@ module.exports = async function(context) {
                         resp.valid=false;
                         resp.state.from_script=false;
                         return resp;
+                    } else if (padre.icons.includes("help")) {
+                        resp.valid=false;
+                        resp.state.from_script=true;
+                        return resp;
                     }
                 }
                 /*
