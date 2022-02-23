@@ -5997,8 +5997,9 @@ ${tmp.template}
                 //prepare
                 let tmp = { content:node.text_note };
                 tmp.var = node.text.split(',').pop().trim();
+                //context.x_console.out({ message:'DEBUG guardar nota!! ', data:node });
                 if (attrs.html) {
-                    tmp.content = node.text_rich; //this has inner of body already
+                    tmp.content = node.text_note_html; //this has inner of body already
                     //parse content
                     if (!attrs[':asis'] && !attrs.asis) {
                         //transform tags 'p' style:text-align:center to <center>x</center>
