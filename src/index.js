@@ -2145,6 +2145,9 @@ ${cur.attr('name')}: {
                 }
             }*/
         };
+        //23feb22: hack added support for vue2-google-map plugin (@todo make this controlled from the tag command)
+        config.build.transpile = [/^vue2-google-maps($|\/)/];
+        //
         if (this.x_state.central_config.static==true) {
             config.build.html = {
                 minify: {
@@ -3324,19 +3327,26 @@ export const decorators = [
             //resp = `[${tmp.join(',')}]`;
         } else if (typeof obj === 'object' && obj!=null) {
             let tmp=[];
-            for (let llave in obj) {
-                let llavet = llave;
-                if (llavet.includes('-') && llavet.includes(`'`)==false) llavet = `'${llave}'`;
-                let nuevo = `${llavet}: `;
-                let valor = obj[llave];
-                if (typeof valor === 'object' || Array.isArray(valor)) {
-                    nuevo += this.jsDump(valor);
-                } else {
-                    nuevo += escape(valor);
+            //23feb22 test if object if regEx type
+            if (obj.toString()[0]=='/' && obj.toString()[obj.toString().length-1]=='/') {
+                //regEx type
+                resp = obj.toString();
+            } else {            
+                //
+                for (let llave in obj) {
+                    let llavet = llave;
+                    if (llavet.includes('-') && llavet.includes(`'`)==false) llavet = `'${llave}'`;
+                    let nuevo = `${llavet}: `;
+                    let valor = obj[llave];
+                    if (typeof valor === 'object' || Array.isArray(valor)) {
+                        nuevo += this.jsDump(valor);
+                    } else {
+                        nuevo += escape(valor);
+                    }
+                    tmp.push(nuevo);
                 }
-                tmp.push(nuevo);
+                resp = `{\n${tmp.join(',')}\n}`;
             }
-            resp = `{\n${tmp.join(',')}\n}`;
         } else if (typeof(obj) === 'string') {
             resp = escape(obj);
         } else {
