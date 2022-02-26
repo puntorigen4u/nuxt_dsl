@@ -2181,7 +2181,7 @@ module.exports = async function(context) {
                             if (!params.style) params.styles = [];
                             params.styles.push(value);
                         } else {
-                            if (key.charAt(0) != ':' && node.text != '' && text != node.text) {
+                            if (key.charAt(0) != ':' && node.text != '' && text != node.text && key!='v-on') {
                                 params[':' + key] = value;
                             } else {
                                 params[key] = value;
@@ -3622,6 +3622,10 @@ module.exports = async function(context) {
                     installComponents: true
                 };
                 //params
+                if (params.pois) {
+                    if (!params[':options']) params[':options']={};
+                    params[':options'].clickableIcons=params.pois;
+                }
                 if (params.style)   params.style=params.style.split(';');
                 if (!params.style)  params.style=[];
                 if (params.key)     {   config.load.key=params.key;   delete params.key; }
@@ -6008,7 +6012,7 @@ ${tmp.template}
                         let sub = cheerio.load(tmp.content, { ignoreWhitespace: false, xmlMode:true, decodeEntities:false });
                         let paragraphs = sub('p').toArray();
                         paragraphs.map(function(elem) {
-                            let cur = $(elem);
+                            let cur = cheerio(elem);
                             let style = cur.attr('style');
                             if (style && style.includes('text-align:center')) {
                                 //transform tags 'p' style:text-align:center to <center>x</center>
