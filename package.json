@@ -1,6 +1,6 @@
 {
   "name": "@concepto/vue",
-  "version": "1.9.400",
+  "version": "1.9.401",
   "description": "Concepto DSL - visually create and maintain modern node.js based apps (@vue)",
   "keywords": [
     "creador",
@@ -33,9 +33,9 @@
     "test_dsl": "npm run dev && node test/pablo.js test/testchico/vue.dsl"
   },
   "dependencies": {
-    "@concepto/interface": "*",
-    "@concepto/dsl_parser": "*",
     "@concepto/console": "*",
+    "@concepto/dsl_parser": "*",
+    "@concepto/interface": "*",
     "asciify-image": "^0.1.6",
     "await-spawn": "^4.0.2",
     "camelcase": "^5.3.1",
