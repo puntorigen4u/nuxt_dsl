@@ -29,6 +29,7 @@ export default class vue_dsl extends concepto {
             //save git version
             let tmp = {}, fs = require('fs').promises, path = require('path');
             //SECRETS
+            this.x_state.central_config = await this._readCentralConfig();
             this.x_state.config_node = await this._readConfig(false);
             if (this.x_flags.dsl.includes('_git.dsl')) {
                 // if file is x_git.dsl, expand secrets
@@ -3191,6 +3192,28 @@ export const decorators = [
                     // apply keys as config keys (standard config node by content types)
                     resp = {...resp,...this.configFromNode(resp,key)};
                     //
+                }
+            }
+            //map values that reference other nodes[attr]
+            let safe_eval = require('safe-eval');
+            const resp2 = JSON.parse(JSON.stringify(resp));
+            const central2 = JSON.parse(JSON.stringify(this.x_state.central_config));
+            for (let key in resp) {
+                if (typeof resp[key] === 'object') {
+                    for (let key2 in resp[key]) {
+                        if (typeof resp[key][key2] === 'string' && resp[key][key2].indexOf('${')!=-1 && resp[key][key2].indexOf('}')!=-1) {
+                            let to_eval = resp[key][key2];
+                            to_eval = to_eval.replaceAll('${',"'+").replaceAll('}',"+'");
+                            to_eval = "'"+to_eval+"'";
+                            if (central2.deploy!='local') central2.deploy='deploy';
+                            const eval_ = safe_eval(to_eval,{
+                                config:resp2,
+                                central:central2
+                            });
+                            resp[key][key2] = eval_;
+                            //console.log('config evaluated',{ to_eval,raw:resp[key][key2], eval_ });
+                        }
+                    }
                 }
             }
         }
