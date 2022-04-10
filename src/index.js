@@ -1809,6 +1809,24 @@ ${cur.attr('name')}: {
                 app.AOS = new AOS.init({});
             };`
         };
+        //support for tawk.io
+        if (this.x_state.config_node.tawk && this.x_state.config_node.tawk.propertyId && this.x_state.config_node.tawk.widgetId) {
+            this.x_state.plugins['tawk'] = {
+                global: true,
+                npm: { '@tawk.to/tawk-messenger-vue':'*' },
+                mode: 'client',
+                customcode: 
+                `import Vue from "vue";
+                import TawkMessengerVue from '@tawk.to/tawk-messenger-vue';
+
+                export default function () {
+                    Vue.use(TawkMessengerVue, {
+                        propertyId : '${this.x_state.config_node.tawk.propertyId}',
+                        widgetId : '${this.x_state.config_node.tawk.widgetId}'
+                    });
+                }`
+            };
+        }
     }
 
     async createNuxtPlugins(write=true) {
