@@ -281,7 +281,7 @@ export default class vue_dsl extends concepto {
         // NUXT:ICON
         if (this.x_state.config_node['nuxt:icon']) {
             // add @nuxtjs/pwa module to app
-            this.x_state.npm['@nuxtjs/pwa'] = '*';
+            //this.x_state.npm['@nuxtjs/pwa'] = '*';
             // copy icon to static dir
             let path = require('path');
             let source = path.join(this.x_state.dirs.base, this.x_state.config_node['nuxt:icon']);
@@ -587,7 +587,7 @@ Vue.use(VueMask);`,
         //nuxt:icon
         if (this.x_state.config_node['nuxt:icon']) {
             this.debug('Defining nuxt.config.js : module nuxtjs/pwa (nuxt:icon)');
-            this.x_state.nuxt_config.modules['@nuxtjs/pwa'] = {};
+            //this.x_state.nuxt_config.modules['@nuxtjs/pwa'] = {};
         }
         //idiomas i18n
         if (this.x_state.central_config['idiomas'].indexOf(',') != -1) {
@@ -973,13 +973,14 @@ ${this.x_state.dirs.compile_folder}/`;
                         vue.script += `titleTemplate: this.$t('${crc32}')\n`;
                     } else {
                         // normal title
-                        vue.script += `titleTemplate: '${page.xtitle}'\n`;
+                        vue.script += `titleTemplate: ${this.jsDump(page.xtitle)}\n`;
                     }
                 }
                 // define meta SEO
                 if (page.meta.length > 0) {
                     if (page.xtitle) vue.script += `,`;
-                    vue.script += `meta: ${JSON.stringify(page.meta)}\n`;
+                    //vue.script += `meta: ${JSON.stringify(page.meta)}\n`;
+                    vue.script += `meta: ${this.jsDump(page.meta)}\n`;
                 }
                 // define head LINK
                 if (page.link.length > 0) {
@@ -1810,6 +1811,24 @@ ${cur.attr('name')}: {
                 app.AOS = new AOS.init({});
             };`
         };
+        //add font awesome 5 support
+        this.x_state.plugins['fontawesome'] = {
+            global: true,
+            npm: { '@fortawesome/fontawesome-free':'*' },
+            mode: 'client',
+            customcode: 
+            `import '@fortawesome/fontawesome-free/css/all.css' // Ensure you are using css-loader
+            import Vue from 'vue'
+            import Vuetify from 'vuetify/lib'
+            
+            Vue.use(Vuetify)
+            
+            export default new Vuetify({
+              icons: {
+                iconfont: 'fa',
+              },
+            })`
+        };
         //support for tawk.io
         if (this.x_state.config_node.tawk && this.x_state.config_node.tawk.propertyId && this.x_state.config_node.tawk.widgetId) {
             this.x_state.plugins['tawk'] = {
@@ -1980,7 +1999,8 @@ ${cur.attr('name')}: {
                 title: (this.x_state.config_node['nuxt:title'])?this.x_state.config_node['nuxt:title']:this.x_state.central_config.apptitle,
                 meta: [],
                 link: [
-                    { rel: 'icon', type: 'image/x-icon', href:'/favicon.ico' },
+                    //{ rel: 'icon', type: 'image/x-icon', href:'/favicon.ico' },
+                    { rel: 'icon', type: 'image/png', href:'/icon.png' },
                     { rel: 'stylesheet', href:'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' }
                 ],
                 script: [],

@@ -665,7 +665,7 @@ module.exports = async function(context) {
                 if (node.icons.includes('gohome')) context.x_state.pages[resp.state.current_page].path = '/';
                 // attributes overwrite anything
                 let params = {};
-                Object.keys(node.attributes).map(function(key) {
+                Object.keys(node.attributes).map(async function(key) {
                     let value = node.attributes[key];
                     // preprocess value
                     value = value.replaceAll('$variables.', '')
@@ -686,7 +686,14 @@ module.exports = async function(context) {
                         context.x_state.pages[resp.state.current_page].layout = value;
 
                     } else if (['meta:title', 'meta:titulo'].includes(key.toLowerCase())) {
-                        context.x_state.pages[resp.state.current_page].xtitle = value;
+                        context.x_state.pages[resp.state.current_page].xtitle = node.attributes[key].replaceAll('$variables.', 'this.');
+
+                    } else if (['meta:keywords', 'meta:keyword'].includes(key.toLowerCase())) {
+                        context.x_state.pages[state.current_page].meta.push({
+                            hid: await context.hash(node.attributes[key]),
+                            name: 'keywords',
+                            content: node.attributes[key].replaceAll('$variables.', 'this.')
+                        });
 
                     } else if (['background', 'fondo'].includes(key.toLowerCase())) {
                         params.id = 'tapa';
@@ -756,22 +763,29 @@ module.exports = async function(context) {
                     if (test == 'keywords') {
                         // get an array of childrens node text
                         let keys = [];
-                        key_nodes.map(x => {
-                            keys.push(x.text)
-                        });
-                        // set into current_page state
-                        context.x_state.pages[state.current_page].seo[test] = keys;
+                        if (typeof key_nodes === 'object') {
+                            key_nodes.map(x => {
+                                keys.push(x.text)
+                            });
+                            // set into current_page state
+                            context.x_state.pages[state.current_page].seo[test] = keys;
+                            keys = keys.join(',');
+                        } else {
+                            keys = key_nodes.replaceAll('$variables.','this.');
+                            // set into current_page state
+                            context.x_state.pages[state.current_page].seo[test] = keys.split(',');
+                        }
                         context.x_state.pages[state.current_page].meta.push({
-                            hid: context.hash(keys),
+                            hid: await context.hash(keys.split(',')),
                             name: 'keywords',
-                            content: keys.join(',')
+                            content: keys
                         });
 
                     } else if (test == 'language' && key_nodes.length > 0) {
                         //@TODO check this meta statement output format, because its not clear how it's supposed to work aug-20-20
                         context.x_state.pages[state.current_page].seo[test] = key_nodes[0].text;
                         context.x_state.pages[state.current_page].meta.push({
-                            hid: context.hash(keys),
+                            hid: await context.hash(keys),
                             lang: key_nodes[0].text.toLowerCase().trim(),
                             content: key_nodes[0].text
                         });
@@ -786,7 +800,7 @@ module.exports = async function(context) {
                             });
                         } else {
                             context.x_state.pages[state.current_page].meta.push({
-                                hid: context.hash(keys),
+                                hid: await context.hash(keys),
                                 name: item.text.trim(),
                                 content: key_nodes[0].text
                             });
