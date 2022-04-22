@@ -1819,10 +1819,10 @@ module.exports = async function(context) {
                         params = {...params,
                             ...setObjectKeys(`xs-${numsize},sm-${numsize},md-${numsize},lg-${numsize}`, null)
                         };
-                    } else if (keytest == 'offset') {
+                    /*} else if (keytest == 'offset') {
                         params = {...params,
                             ...setObjectKeys(`offset-xs-${numsize},offset-sm-${numsize},offset-md-${numsize},offset-lg-${numsize}`, null)
-                        };
+                        };*/
                     } else if ('muy chico,movil,small,mobile'.split(',').includes(keytest)) {
                         params[`xs${numsize}`] = null;
                     } else if ('chico,tablet,small,tableta'.split(',').includes(keytest)) {
