@@ -3453,4 +3453,68 @@ export const decorators = [
           setImmediate(() => resolve());
         });
     }
+
+    /*
+    CONCEPTO CLI methods
+    */
+
+    //create newMap; args = cli args, ex. { _: [ 'APP_PATH' ], type: 'vue', cmd_: 'app_path' }
+    async concepto_cli_create(args, prompts_=null) {
+        //creates a new map and returns obj with xml content to be written to file
+        let prompts = await this.returnPromps();
+        if (prompts_) prompts = {...prompts,...prompts_};
+        let config = { type:args.type?args.type:'vue_nuxt', name:args._.length>0?args._[0]:'', static:true }; 
+        if (config.name!='') config.name = config.name.split('/').pop();
+        // complete config
+        if (config.name=='') config.name = await prompts.ask(`What's the application's name:`);
+        if (!args.yes) {
+            //only ask details if not in yes mode
+            config.type = await prompts.choose(`Choose a type`,[
+                { title: 'Vue', value:'vue', description: `Simple HTML VueJS app` },
+                { title: 'Vue Component', value:'vue_component', description: `Simple VueJS Component` },
+                { title: 'Vue Component Library', value:'vue_component_mf', description: `VueJS Component library with Module Federation support` },
+                { title: 'NuxtJS + Vue', value:'vue_nuxt', description: `VueJS Web App builder (default)` },
+            ],2);
+            //deploy
+            if (config.type=='vue_component_mf') {
+                config.deploy = await prompts.choose(`Where do you plan to host this library?`,[
+                    { title: 'Just local for now', value:'local' },
+                    { title: 'Amazon Web Services', value:'aws' }
+                ]);
+            } else if (config.type=='vue_component') {
+                config.deploy = 'local';
+            } else {
+                config.deploy = await prompts.choose(`Where do you plan to deploy/host this app?`,[
+                    { title: 'Just local for now', value:'local' },
+                    { title: 'Amazon Web Services', value:'aws' },
+                    { title: 'Github Pages', value:'gh-pages' },
+                ]);
+            }
+            //static ?
+            //if (config.deploy=='gh-pages') config.static = true;
+            if (config.deploy=='aws') {
+                config.aws_service = await prompts.choose(`In what AWS service do you plan to host it?`,[
+                    { title: 'Elasticbean', value:'eb' },
+                    { title: 'S3', value:'s3' }
+                ],1);
+                if (config.aws_service=='eb') config.static = false;
+            } else if (config.deploy=='local' && config.type=='vue_nuxt') {
+                config.static = await prompts.choose(`Do you want to generate a static web app ?`,[
+                    { title: 'Yes', value:true },
+                    { title: 'No', value:false }
+                ],0);
+            }
+        }
+
+        //
+        return {
+            xml:'',
+            config
+        } 
+    }
+
+    async concepto_cli_add() {
+
+    }
+
 }
