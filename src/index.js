@@ -3509,7 +3509,7 @@ export const decorators = [
         //
         return {
             xml:'',
-            config
+            config:config
         } 
     }
 
