@@ -3463,18 +3463,18 @@ export const decorators = [
         //creates a new map and returns obj with xml content to be written to file
         let prompts = await this.returnPromps();
         if (prompts_) prompts = {...prompts,...prompts_};
-        let config = { type:args.type?args.type:'vue_nuxt', name:args._.length>0?args._[0]:'', static:true }; 
+        let config = { type:args.type?args.type:'vue_nuxt', name:args._.length>0?args._[0]:'', static:true, deploy:'local' }; 
         if (config.name!='') config.name = config.name.split('/').pop();
         // complete config
         if (config.name=='') config.name = await prompts.ask(`What's the application's name:`);
-        if (!args.yes) {
+        if (!args.yes || args.yes==false) {
             //only ask details if not in yes mode
             config.type = await prompts.choose(`Choose a type`,[
                 { title: 'Vue', value:'vue', description: `Simple HTML VueJS app` },
                 { title: 'Vue Component', value:'vue_component', description: `Simple VueJS Component` },
                 { title: 'Vue Component Library', value:'vue_component_mf', description: `VueJS Component library with Module Federation support` },
                 { title: 'NuxtJS + Vue', value:'vue_nuxt', description: `VueJS Web App builder (default)` },
-            ],2);
+            ],3);
             //deploy
             if (config.type=='vue_component_mf') {
                 config.deploy = await prompts.choose(`Where do you plan to host this library?`,[
@@ -3498,6 +3498,10 @@ export const decorators = [
                     { title: 'S3', value:'s3' }
                 ],1);
                 if (config.aws_service=='eb') config.static = false;
+                if (config.aws_service=='s3') {
+                    //@todo: do you plan on using a domain for the s3 bucket?
+                    config.s3_bucket = await prompts.ask(`Enter AWS S3 bucket name`);
+                }
             } else if (config.deploy=='local' && config.type=='vue_nuxt') {
                 config.static = await prompts.choose(`Do you want to generate a static web app ?`,[
                     { title: 'Yes', value:true },
@@ -3505,11 +3509,32 @@ export const decorators = [
                 ],0);
             }
         }
-
+        //create xml map
+        let xml = `<map version="1.1.3">
+        <!-- Diagrama de Concepto DSL. Para ver este archivo use Punto Origen Concepto DSL de http://www.puntorigen.com -->
+        <node CREATED="1552681669876" ID="ID_247237303" MODIFIED="1628032505691" TEXT="${config.name}">
+        <attribute_layout NAME_WIDTH="76" VALUE_WIDTH="70"/>
+        <attribute NAME="deploy" VALUE="local"/>
+        <attribute NAME="static" VALUE="true"/>
+        </node>
+        </map>`;
+        let dsl_parser = require('@concepto/dsl_parser');
+        let dsl = new dsl_parser({ source:xml, config:{ cancelled:true, debug:false } });
+        let central_attributes = {};
+        if(config.deploy) central_attributes.deploy = config.deploy;
+        if(config.static) central_attributes.static = config.static;
+        await dsl.process();
+        await dsl.editNode({ node_id:'ID_247237303', data:{
+            attributes: central_attributes
+        } });
+        //test if 'config' node exists 
+        //test if 'home' node exists
         //
+        xml = dsl.getParser().html();
         return {
-            xml:'',
-            config:config
+            xml:xml,
+            config:config,
+            dsl:dsl
         } 
     }
 
