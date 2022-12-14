@@ -330,7 +330,7 @@ Vue.use(VueMask);`,
             // axios
             this.x_state.npm['@nuxtjs/axios'] = '*';
             if (this.x_state.central_config.nuxt == 'latest') {
-                this.x_state.npm['nuxt'] = '*';
+                this.x_state.npm['nuxt'] = '2.15.8';
             } else {
                 this.x_state.npm['nuxt'] = '2.11.0'; // default for compatibility issues with existing dsl maps	
             }
