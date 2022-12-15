@@ -16,18 +16,18 @@
 ## Installation
 
 ```
-$ npm install -g @concepto/vue
+$ npm install -g @concepto/nuxt
 ```
 
 ## Usage
 
 ```terminal
-vue_dsl -s absolute_or_relative_file_to_compile.dsl
+nuxt_dsl -s absolute_or_relative_file_to_compile.dsl
 ```
 ## Help:
 
 ```terminal
-vue_dsl --help
+nuxt_dsl --help
 ```
 
 ## Stay in touch
