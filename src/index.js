@@ -3,9 +3,9 @@ const concepto = require('@concepto/interface');
 //import { isContext, runInThisContext } from 'vm';
 //import concepto from '../../concepto/src/index'
 /**
- * Concepto VUE DSL Class: A class for compiling vue.dsl Concepto diagrams into VueJS WebApps.
- * @name 	vue_dsl
- * @module 	vue_dsl
+ * Concepto NUXT DSL Class: A class for compiling nuxt.dsl Concepto diagrams into NuxtJS+VueJS static webapps.
+ * @name 	nuxt_dsl
+ * @module 	nuxt_dsl
  **/
 //import internal_commands from './commands'
 import deploy_local from './deploys/local'
@@ -14,12 +14,12 @@ import deploy_eb from './deploys/eb'
 import deploy_s3 from './deploys/s3'
 import deploy_ghpages from './deploys/ghpages'
 
-export default class vue_dsl extends concepto {
+export default class nuxt_dsl extends concepto {
 
     constructor(file, config = {}) {
         // we can get class name, from package.json name key (after its in its own project)
         let my_config = {
-            class: 'vue',
+            class: 'nuxt',
             debug: true
         };
         let nuevo_config = {...my_config, ...config };
@@ -167,12 +167,12 @@ export default class vue_dsl extends concepto {
     //Called after init method finishes
     async onInit() {
         // define and assign commands
-        //this.x_console.outT({ message: `Vue Compiler v${version}`, color: `brightCyan` });
+        //this.x_console.outT({ message: `Nuxt Compiler v${version}`, color: `brightCyan` });
         //await this.addCommands(internal_commands);
         if (Object.keys(this.x_commands).length>0) this.x_console.outT({ message: `${Object.keys(this.x_commands).length} local x_commands loaded!`, color: `green` });
         //this.debug('x_commands',this.x_commands);
         //this.x_crypto_key = require('crypto').randomBytes(32); // for hash helper method
-        // init vue
+        // init nuxt
         // set x_state defaults
         this.x_state = {...this.x_state,...{
             plugins: {},
@@ -318,7 +318,7 @@ Vue.use(VueMask);`,
         }
         // DEFAULT NPM MODULES & PLUGINS if dsl is not 'componente' type
         if (!this.x_state.central_config.componente) {
-            this.x_console.outT({ message: `vue initialized() ->` });
+            this.x_console.outT({ message: `nuxt initialized() ->` });
             this.x_state.plugins['vue-moment'] = {
                 global: true,
                 mode: 'client',
@@ -349,7 +349,7 @@ Vue.use(VueMask);`,
             }
         } else {
             // If DSL mode 'component(e)' @TODO this needs a revision (converting directly from CFC)
-            this.x_console.outT({ message: `vue initialized() -> as component/plugin` });
+            this.x_console.outT({ message: `nuxt initialized() -> as component/plugin` });
             this.x_state.npm['global'] = '^4.4.0';
             this.x_state.npm['poi'] = '9';
             this.x_state.npm['underscore'] = '*';
@@ -680,11 +680,11 @@ Vue.use(VueMask);`,
 .DS_Store?
 _MACOSX/
 Thumbs.db
-# VUE files
+# NUXT files
 # Concepto files
 .concepto/
-vue.dsl
-vue_diff.dsl
+nuxt.dsl
+nuxt_diff.dsl
 .secrets-pass
 policy.json
 aws_backup.ini
@@ -724,13 +724,13 @@ policy.json
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
-# VUE files
+# NUXT files
 .nuxt/
 # Concepto files
 .concepto/
 aws_backup.ini
-vue.dsl
-vue_diff.dsl
+nuxt.dsl
+nuxt_diff.dsl
 .secrets-pass
 store/
 ${this.x_state.dirs.compile_folder}/`;
@@ -2728,7 +2728,7 @@ export const decorators = [
                 // write files
                 let w_path = path.join(this.x_state.dirs.pages, thefile.file);
                 if (page.tipo == 'componente') {
-                    this.x_console.outT({ message: `writing vue 'component' file ${thefile.file}`, color: 'cyan' });
+                    this.x_console.outT({ message: `writing nuxt 'component' file ${thefile.file}`, color: 'cyan' });
                     w_path = path.join(this.x_state.dirs.components, thefile.file.replace('.vue',''));
                     //create individual 'component' directory
                     let fs = require('fs').promises;
@@ -2781,10 +2781,10 @@ export const decorators = [
                     //if (page.for_export) console.log('for export before writing',inspect(JSON.parse(page.for_export),{ depth:Infinity }));
                     
                 } else if (page.tipo == 'layout') {
-                    this.x_console.outT({ message: `writing vue 'layout' file ${thefile.file}`, color: 'cyan' });
+                    this.x_console.outT({ message: `writing nuxt 'layout' file ${thefile.file}`, color: 'cyan' });
                     w_path = path.join(this.x_state.dirs.layouts, thefile.file);
                 } else {
-                    this.x_console.outT({ message: `writing vue 'page' file ${thefile.file}`, color: 'cyan' });
+                    this.x_console.outT({ message: `writing nuxt 'page' file ${thefile.file}`, color: 'cyan' });
                 }
                 await this.writeFile(w_path, vue.full);
                 //

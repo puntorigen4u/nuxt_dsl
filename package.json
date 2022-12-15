@@ -1,7 +1,7 @@
 {
   "name": "@concepto/nuxt",
   "version": "1.9.427",
-  "description": "Concepto DSL - visually create and maintain modern node.js based apps (@vue)",
+  "description": "Concepto DSL - visually create and maintain modern node.js based apps (@nuxt)",
   "keywords": [
     "creador",
     "puntorigen",

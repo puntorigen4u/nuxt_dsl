@@ -3,7 +3,7 @@ process.env.UV_THREADPOOL_SIZE=8*require('os').cpus().length;
 //const cli = require('command-line-args');
 const open_console = require('@concepto/console');
 const pkg = require('../package.json');
-const vue = require('../lib/index');
+const nuxt = require('../lib/index');
 const mri = require('mri');
 let myArgs = mri(process.argv, {
     alias: {
@@ -51,11 +51,11 @@ let getSerial = function() {
 /* */
 (async () => {
     // testing code here
-    //let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
+    //let file = (myArgs.length>0)?myArgs[0]:'nuxt.dsl';
     //let debug = (myArgs.length>1)?eval(myArgs[1].trim()):false;
     let x_console = new open_console();
     let serial = await getSerial();
-    x_console.title({ title:`Concepto VUE_DSL Compiler v${pkg.version}`, titleColor:'brightYellow', color:'green' });
+    x_console.title({ title:`Concepto NUXT_DSL Compiler v${pkg.version}`, titleColor:'brightYellow', color:'green' });
     //
     let exists = async function(dir_or_file) {
         let fs = require('fs').promises;
@@ -97,13 +97,13 @@ let getSerial = function() {
     };
     let printUsage = function() {
         x_console.out({ message:'Usage:', color:'cyan' });
-        x_console.out({ message:'vue_dsl [options]', color:'yellow' });
+        x_console.out({ message:'nuxt_dsl [options]', color:'yellow' });
         console.log('');
         //if (myArgs.help) {
             x_console.out({ message:'Options:', color:'brightCyan' });
-            x_console.out({ message:'-s, --src vue.dsl\t\t(required) relative/absolute vue.dsl file to parse', color:'cyan' });
+            x_console.out({ message:'-s, --src nuxt.dsl\t\t(required) relative/absolute nuxt.dsl file to parse', color:'cyan' });
             x_console.out({ message:'-x, --clean\t\t\tclear cache before compiling', color:'cyan' });
-            x_console.out({ message:'-g, --justgit\t\t\tjust create the vue_git.dsl version', color:'cyan' });
+            x_console.out({ message:'-g, --justgit\t\t\tjust create the nuxt_git.dsl version', color:'cyan' });
             x_console.out({ message:'-p, --deploy [local,eb:x]\tforce change the deploy value', color:'cyan' });
             x_console.out({ message:'-n, --nodeploy\t\t\tdo everything as requested, except launching the terminal', color:'cyan' });
             x_console.out({ message:'-f, --folder name\t\toutput folder name. default: central node text', color:'cyan' });
@@ -116,7 +116,7 @@ let getSerial = function() {
             x_console.out({ message:'--aws_region\t\t\tAWS region overwrite (default:us-east-1)', color:'yellow' });
             x_console.out({ message:'--secrets-pass [string]\t\tSecret password for encrypting / decrypting config->secrets', color:'yellow' });
             x_console.out({ message:'--secrets-pass-save [string]\tSave to disk the given secret password encrypted', color:'yellow' });
-            x_console.out({ message:'--diff-from [file]\t\tCreates a vue_diff.dsl file with the differences between the --source file and this one', color:'yellow' });
+            x_console.out({ message:'--diff-from [file]\t\tCreates a nuxt_diff.dsl file with the differences between the --source file and this one', color:'yellow' });
             x_console.out({ message:'--export-html [file]\t\tCreates an html representation of given dsl file within the specified directory', color:'yellow' });
             x_console.out({ message:'--silent\t\t\tCompiles in the most quiet mode posible (CI default mode)', color:'yellow' });
             console.log('');
@@ -124,13 +124,13 @@ let getSerial = function() {
         //copyright
         x_console.out({ message:`Copyright © 2022, Pablo Schaffner. All rights reserved.`, color:'dim' });
     };
-    //detect if there is a vue.dsl file in current dir and src was not specified
+    //detect if there is a nuxt.dsl file in current dir and src was not specified
     if (!myArgs.src) {
         let path = require('path');
-        let test = path.join(process.cwd(),'vue.dsl');
+        let test = path.join(process.cwd(),'nuxt.dsl');
         if ((await exists(test))) {
             myArgs.src = test;
-            x_console.out({ message:`vue.dsl file found on current directory, using it as source`, color:'dim'});
+            x_console.out({ message:`nuxt.dsl file found on current directory, using it as source`, color:'dim'});
         }
     }
     //save or recover password
@@ -139,7 +139,7 @@ let getSerial = function() {
         printUsage();
     } else {
         if (myArgs.src) {
-            let base = new vue(myArgs.src,myArgs);
+            let base = new nuxt(myArgs.src,myArgs);
             await base.init();
             await base.addCommands(require('../lib/commands.js'));
             await base.process();
@@ -152,7 +152,7 @@ let getSerial = function() {
                     x_console.clear();
                     x_console.out({ message:`file changed, recompiling ...`, color:'yellow'});
                     base.abortProcessing();
-                    let base2 = new vue(myArgs.src,{...myArgs,...{
+                    let base2 = new nuxt(myArgs.src,{...myArgs,...{
                         nodeploy:true
                     }});
                     await base2.init();

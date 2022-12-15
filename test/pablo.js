@@ -1,12 +1,12 @@
 process.env.UV_THREADPOOL_SIZE=8*require('os').cpus().length;
 
-const vue = require('../lib/index');
+const nuxt = require('../lib/index');
 var myArgs = process.argv.slice(2);
 
 (async () => {
     // testing code here
-    let file = (myArgs.length>0)?myArgs[0]:'vue.dsl';
-    let base = new vue(file,{ debug:true });
+    let file = (myArgs.length>0)?myArgs[0]:'nuxt.dsl';
+    let base = new nuxt(file,{ debug:true });
     await base.init();
     // test node ID_1679802330 (should match def_store)
     //await base.addCommands(require('./more_commands.js'));

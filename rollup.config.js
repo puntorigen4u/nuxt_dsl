@@ -9,7 +9,7 @@ const config = {
   output: {
     file: 'lib/index.js',
     format: 'umd',
-    name: 'vue_dsl',
+    name: 'nuxt_dsl',
     sourcemap: false
   },
 

@@ -3,10 +3,10 @@
 </p>
 <p align="center">A progressive <a href="http://nodejs.org" target="blank">Node.js</a> framework for visually building efficient and scalable nodejs based applications.</p>
 <p align="center">
-    <a href="https://www.npmjs.com/~concepto"><img src="https://img.shields.io/npm/v/@concepto/vue.svg" alt="NPM Version" /></a>
-    <a href="https://www.npmjs.com/~concepto"><img src="https://img.shields.io/npm/l/@concepto/vue.svg" alt="Package License" /></a>
-    <a href="https://www.npmjs.com/~concepto"><img src="https://img.shields.io/npm/dm/@concepto/vue.svg" alt="NPM Downloads" /></a>
-    <a href="https://www.npmjs.com/~concepto" target="_blank"><img src="https://img.shields.io/tokei/lines/github/puntorigen4u/vue_dsl"></a>
+    <a href="https://www.npmjs.com/~concepto"><img src="https://img.shields.io/npm/v/@concepto/nuxt.svg" alt="NPM Version" /></a>
+    <a href="https://www.npmjs.com/~concepto"><img src="https://img.shields.io/npm/l/@concepto/nuxt.svg" alt="Package License" /></a>
+    <a href="https://www.npmjs.com/~concepto"><img src="https://img.shields.io/npm/dm/@concepto/nuxt.svg" alt="NPM Downloads" /></a>
+    <a href="https://www.npmjs.com/~concepto" target="_blank"><img src="https://img.shields.io/tokei/lines/github/puntorigen4u/nuxt_dsl"></a>
     <a href="https://twitter.com/punt0rigen" target="_blank"><img src="https://img.shields.io/twitter/follow/punt0rigen.svg?style=social&label=Follow"></a>
 </p>
 
@@ -39,7 +39,7 @@ nuxt_dsl --help
 
 Concepto is [MIT licensed](LICENSE).
 
-Concepto DSL - visually create and maintain modern node.js based apps (@vue).
+Concepto DSL - visually create and maintain modern node.js based apps (@nuxt).
 
 * * *
 &copy; 2020-2022 Pablo Schaffner &lt;pablo@puntorigen.com&gt;.
