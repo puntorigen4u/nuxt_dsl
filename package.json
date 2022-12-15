@@ -1,5 +1,5 @@
 {
-  "name": "@concepto/vue",
+  "name": "@concepto/nuxt",
   "version": "1.9.427",
   "description": "Concepto DSL - visually create and maintain modern node.js based apps (@vue)",
   "keywords": [
@@ -13,24 +13,24 @@
   ],
   "license": "MIT",
   "author": "Pablo Schaffner",
-  "homepage": "http://github.com/puntorigen4u/vue_dsl.git",
+  "homepage": "http://github.com/puntorigen4u/nuxt_dsl.git",
   "repository": {
     "type": "git",
-    "url": "http://github.com/puntorigen4u/vue_dsl.git"
+    "url": "http://github.com/puntorigen4u/nuxt_dsl.git"
   },
   "bugs": {
     "mail": "pablo@puntorigen.com",
-    "url": "http://github.com/puntorigen4u/vue_dsl/issues"
+    "url": "http://github.com/puntorigen4u/nuxt_dsl/issues"
   },
   "main": "lib/index.js",
   "bin": {
-    "vue_dsl": "bin/cli"
+    "nuxt_dsl": "bin/cli"
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -c",
     "build": "cross-env NODE_ENV=production rollup -c && npm run docs",
     "docs": "jsdoc2md -t README.hbs src/*.js > README.md",
-    "test_dsl": "npm run dev && node test/pablo.js test/testchico/vue.dsl"
+    "test_dsl": "npm run dev && node test/pablo.js test/testchico/nuxt.dsl"
   },
   "dependencies": {
     "@concepto/console": "*",
